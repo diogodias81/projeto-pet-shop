@@ -1,0 +1,2 @@
+# Se usar Apache, aponte o DocumentRoot para esta pasta (public/).
+Options -Indexes

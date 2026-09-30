@@ -1,0 +1,2 @@
+# Bloqueia acesso direto às pastas internas caso o servidor aponte para a raiz do projeto
+RedirectMatch 403 ^/(app|config|storage)/
