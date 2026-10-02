@@ -1,6 +1,6 @@
 <?php
 class Estoque {
-    /** RF04: registra entrada e soma ao estoque */
+    /** registra entrada e soma ao estoque */
     public static function entrada(int $produtoId, int $qtd, string $fornecedor): void {
         if (!Produto::buscar($produtoId)) throw new DomainException('Produto não encontrado.');
         if ($qtd < 1) throw new DomainException('A quantidade deve ser maior que zero.');

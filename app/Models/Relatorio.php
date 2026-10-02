@@ -3,7 +3,7 @@ class Relatorio {
     private static function um(string $sql, array $par = []) {
         $st = Database::pdo()->prepare($sql); $st->execute($par); return $st->fetchColumn();
     }
-    /** RF13: indicadores do dashboard */
+    //indicadores do dashboard */
     public static function resumo(): array {
         $hoje = date('Y-m-d'); $mes = date('Y-m');
         return [
@@ -13,7 +13,7 @@ class Relatorio {
             'baixo_estoque'    => count(Produto::baixoEstoque()),
         ];
     }
-    /** RF14: produtos mais vendidos no período */
+    /**  produtos mais vendidos no período */
     public static function maisVendidos(int $limite = 5, ?string $de = null, ?string $ate = null): array {
         $st = Database::pdo()->prepare("SELECT p.nome, SUM(vi.quantidade) AS qtd, SUM(vi.quantidade*vi.preco_unit) AS receita
             FROM venda_itens vi JOIN vendas v ON v.id=vi.venda_id JOIN produtos p ON p.id=vi.produto_id

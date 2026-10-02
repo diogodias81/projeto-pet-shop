@@ -1,4 +1,4 @@
-```php
+
 <?php
 
 $de = $_GET['de'] ?? date('Y-m-01');
@@ -214,4 +214,4 @@ $top = Relatorio::maisVendidos(10, $de, $ate);
     </div>
 
 </section>
-```
+

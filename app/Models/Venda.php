@@ -1,7 +1,7 @@
 <?php
 class Venda {
     /**
-     * RF05/RF06/RF07/RF08: registra a venda, calcula o total no servidor e baixa o estoque.
+     * registrar a venda, calcula o total no servidor e baixa o estoque.
      * @param array $itens [['produto_id'=>1,'quantidade'=>2], ...]
      * @return array ['id'=>int, 'total'=>float, 'alertas'=>string[]]
      */
@@ -31,7 +31,7 @@ class Venda {
         } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
     }
 
-    /** RF11/RF12: histórico de vendas, com filtro opcional por período (AAAA-MM-DD) */
+    //histórico de vendas, com filtro opcional por período (AAAA-MM-DD) */
     public static function listar(?string $de = null, ?string $ate = null, int $limite = 50): array {
         $sql = "SELECT v.*, u.nome AS vendedor,
                 (SELECT GROUP_CONCAT(vi.quantidade || 'x ' || p.nome, ', ') FROM venda_itens vi JOIN produtos p ON p.id=vi.produto_id WHERE vi.venda_id=v.id) AS itens

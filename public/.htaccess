@@ -1,2 +1,6 @@
-# Se usar Apache, aponte o DocumentRoot para esta pasta (public/).
+```apache
+# Se estiver usando Apache,
+# aponte o DocumentRoot para a pasta public/.
+
 Options -Indexes
+```
