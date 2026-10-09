@@ -1,6 +1,6 @@
 <?php
 class Produto {
-    //lista e pesquisa produtos ativos por nome ou categoria */
+    /** Lista e pesquisa produtos ativos por nome ou categoria */
     public static function listar(string $busca = '', int $categoriaId = 0): array {
         $sql = 'SELECT p.*, c.nome AS categoria FROM produtos p LEFT JOIN categorias c ON c.id = p.categoria_id WHERE p.ativo = 1';
         $par = [];
@@ -15,14 +15,14 @@ class Produto {
         $st->execute([$id]);
         return $st->fetch() ?: null;
     }
-    /**  cria (sem id) ou edita (com id). O estoque só muda por entrada/venda, exceto no cadastro inicial. */
+    /** Cria (sem id) ou edita (com id). O estoque só muda por entrada/venda, exceto no cadastro inicial. */
     public static function salvar(array $d): void {
         $nome = trim($d['nome'] ?? '');
         $preco = numero($d['preco'] ?? 0);
         $min = (int)($d['estoque_minimo'] ?? 0);
         $cat = (int)($d['categoria_id'] ?? 0) ?: null;
         if ($nome === '') throw new DomainException('Informe o nome do produto.');
-        if ($preco < 0)   throw new DomainException('O preço não pode ser negativo.');
+        if ($preco <= 0)  throw new DomainException('Informe um preço válido, ex.: 143,99');
         if ($min < 0)     throw new DomainException('O estoque mínimo não pode ser negativo.');
         $pdo = Database::pdo();
         if (!empty($d['id'])) {
@@ -38,7 +38,7 @@ class Produto {
     public static function excluir(int $id): void {
         Database::pdo()->prepare('UPDATE produtos SET ativo = 0 WHERE id = ?')->execute([$id]);
     }
-    /** produtos com estoque igual ou abaixo do mínimo */
+    /** Produtos com estoque igual ou abaixo do mínimo */
     public static function baixoEstoque(): array {
         return Database::pdo()->query('SELECT p.*, c.nome AS categoria FROM produtos p LEFT JOIN categorias c ON c.id=p.categoria_id WHERE p.ativo=1 AND p.estoque <= p.estoque_minimo ORDER BY p.estoque')->fetchAll();
     }

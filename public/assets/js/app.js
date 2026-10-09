@@ -1,9 +1,6 @@
-
 // <form data-confirmar="Mensagem">
 
-document
-    .querySelectorAll('form[data-confirmar]')
-    .forEach(form => {
+document.querySelectorAll('form[data-confirmar]').forEach(form => {
 
         form.addEventListener('submit', ev => {
 

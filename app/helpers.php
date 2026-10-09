@@ -1,10 +1,5 @@
-
 <?php
 
-
-// ============================================================
-// CONFIGURAÇÃO
-// ============================================================
 
 function config(string $chave)
 {
@@ -16,9 +11,6 @@ function config(string $chave)
 }
 
 
-// ============================================================
-// FORMATAÇÃO
-// ============================================================
 
 function e($v): string
 {
@@ -50,18 +42,15 @@ function dataBr(string $d): string
 }
 
 
+
 /**
- * Converte valores como:
- *
- * 1.234,56
- * 12,5
- * 12.5
- *
- * para float.
+ * Converte "143,99", "R$ 143,99", "1.234,56" ou "143.99" em número.
+ * Retorna 0 se o valor for inválido.
  */
 function numero($v): float
 {
-    $v = trim((string) $v);
+    // mantém só dígitos, vírgula, ponto e sinal de menos (remove "R$", espaços etc.)
+    $v = preg_replace('/[^\d,.\-]/', '', (string) $v);
 
     if (str_contains($v, ',')) {
 
@@ -72,13 +61,9 @@ function numero($v): float
         );
     }
 
-    return (float) $v;
+    return is_numeric($v) ? (float) $v : 0.0;
 }
 
-
-// ============================================================
-// REDIRECIONAMENTO
-// ============================================================
 
 function redirect(
     string $pagina,
@@ -103,17 +88,10 @@ function redirect(
     exit;
 }
 
-
-// ============================================================
-// MENSAGENS FLASH
-// ============================================================
-
 function flash(
     ?string $msg = null,
     string $tipo = 'ok'
 ) {
-
-    // Adiciona uma mensagem.
 
     if ($msg !== null) {
 
@@ -126,7 +104,6 @@ function flash(
     }
 
 
-    // Recupera as mensagens.
 
     $f = $_SESSION['flash'] ?? [];
 
@@ -135,10 +112,6 @@ function flash(
     return $f;
 }
 
-
-// ============================================================
-// CSRF
-// ============================================================
 
 function csrf_campo(): string
 {
@@ -169,9 +142,6 @@ function csrf_validar(): void
 }
 
 
-// ============================================================
-// AUTENTICAÇÃO
-// ============================================================
 
 function usuario(): ?array
 {
@@ -179,9 +149,6 @@ function usuario(): ?array
 }
 
 
-// ============================================================
-// PERFIS E PERMISSÕES
-// ============================================================
 
 function temPerfil(array $perfis): bool
 {
@@ -204,10 +171,7 @@ function exigirPerfil(array $perfis): void
 }
 
 
-/**
- * Quem pode alterar produtos,
- * categorias e entradas de estoque.
- */
+
 function podeGerirEstoque(): bool
 {
     return temPerfil([

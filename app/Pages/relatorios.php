@@ -1,4 +1,3 @@
-
 <?php
 
 $de = $_GET['de'] ?? date('Y-m-01');

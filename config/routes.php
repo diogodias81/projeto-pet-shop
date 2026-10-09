@@ -1,25 +1,4 @@
-
 <?php
-
-// ============================================================
-// ROTAS DO SISTEMA
-// ============================================================
-//
-// Para criar uma nova página:
-//
-// 1. Adicione uma rota neste arquivo.
-// 2. Crie o arquivo correspondente em:
-//    app/Pages/<nome>.php
-//
-// Formato:
-//
-// 'pagina' => [
-//     'Rótulo no menu',
-//     ['perfis com acesso']
-// ],
-//
-// ============================================================
-
 return [
 
     // Dashboard
