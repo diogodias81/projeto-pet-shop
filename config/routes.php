@@ -13,6 +13,18 @@ return [
         ['admin', 'vendedor']
     ],
 
+    // Histórico de vendas (vendedor vê só as próprias)
+    'historico' => [
+        'Histórico',
+        ['admin', 'vendedor', 'financeiro']
+    ],
+
+    // Comprovante de venda: rótulo null = não aparece no menu
+    'comprovante' => [
+        null,
+        ['admin', 'vendedor', 'financeiro']
+    ],
+
     // Produtos
     'produtos' => [
         'Produtos',

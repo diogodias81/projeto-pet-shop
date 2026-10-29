@@ -36,7 +36,7 @@ $rotas = require BASE_PATH . '/config/routes.php';
 
             <?php foreach ($rotas as $chave => [$rotulo, $perfis]): ?>
 
-                <?php if (!temPerfil($perfis)) continue; ?>
+                <?php if ($rotulo === null || !temPerfil($perfis)) continue; ?>
 
                 <a
                     href="index.php?page=<?= $chave ?>"

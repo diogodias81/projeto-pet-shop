@@ -179,6 +179,52 @@ class Database
                         datetime('now', 'localtime')
                     )
             );
+
+
+            -- De qual lote saiu cada unidade vendida (para devolver ao mesmo lote)
+            CREATE TABLE IF NOT EXISTS venda_item_lotes (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                venda_item_id INTEGER NOT NULL
+                    REFERENCES venda_itens(id),
+
+                lote_id INTEGER NOT NULL
+                    REFERENCES lotes(id),
+
+                quantidade INTEGER NOT NULL
+                    CHECK (quantidade > 0),
+
+                devolvida INTEGER NOT NULL
+                    DEFAULT 0
+            );
+
+
+            CREATE TABLE IF NOT EXISTS devolucoes (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                venda_id INTEGER NOT NULL
+                    REFERENCES vendas(id),
+
+                venda_item_id INTEGER NOT NULL
+                    REFERENCES venda_itens(id),
+
+                quantidade INTEGER NOT NULL
+                    CHECK (quantidade > 0),
+
+                valor REAL NOT NULL,
+
+                motivo TEXT NOT NULL,
+
+                usuario_id INTEGER
+                    REFERENCES usuarios(id),
+
+                criado_em TEXT NOT NULL
+                    DEFAULT (
+                        datetime('now', 'localtime')
+                    )
+            );
         ");
 
 
@@ -196,6 +242,21 @@ class Database
             ],
             'venda_itens' => [
                 'custo_unit' => 'REAL NOT NULL DEFAULT 0',
+                // Etapa 2
+                'quantidade_devolvida' => 'INTEGER NOT NULL DEFAULT 0',
+            ],
+            // Etapa 2: total = subtotal - desconto (valor cobrado).
+            // O que a venda rendeu de fato é total - valor_devolvido, se não estiver cancelada.
+            'vendas' => [
+                'subtotal' => 'REAL NOT NULL DEFAULT 0',
+                'desconto' => 'REAL NOT NULL DEFAULT 0',
+                'forma_pagamento' => 'TEXT',
+                'valor_recebido' => 'REAL',
+                'valor_devolvido' => 'REAL NOT NULL DEFAULT 0',
+                'status' => "TEXT NOT NULL DEFAULT 'concluida'",
+                'cancelado_em' => 'TEXT',
+                'cancelado_por' => 'INTEGER REFERENCES usuarios(id)',
+                'motivo_cancelamento' => 'TEXT',
             ],
         ];
 
@@ -211,6 +272,12 @@ class Database
                 if (!in_array($coluna, $existentes, true)) {
 
                     $pdo->exec("ALTER TABLE $tabela ADD COLUMN $coluna $tipo");
+
+                    // Vendas antigas não tinham desconto: o subtotal é o próprio total.
+                    if ($coluna === 'subtotal') {
+
+                        $pdo->exec('UPDATE vendas SET subtotal = total');
+                    }
 
                     if ($coluna === 'codigo_barras') {
 
@@ -231,6 +298,15 @@ class Database
 
             CREATE INDEX IF NOT EXISTS idx_lotes_produto
                 ON lotes (produto_id, validade);
+
+            CREATE INDEX IF NOT EXISTS idx_vendas_data
+                ON vendas (criado_em);
+
+            CREATE INDEX IF NOT EXISTS idx_venda_itens_venda
+                ON venda_itens (venda_id);
+
+            CREATE INDEX IF NOT EXISTS idx_venda_item_lotes_item
+                ON venda_item_lotes (venda_item_id);
         ');
 
 

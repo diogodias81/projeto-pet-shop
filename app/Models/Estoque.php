@@ -38,21 +38,51 @@ class Estoque {
     /**
      * Baixa a quantidade vendida dos lotes, primeiro o que vence antes (lotes sem validade por último).
      * Lotes vencidos nunca são usados. Deve rodar dentro da transação da venda.
+     * @return array [lote_id => quantidade tirada]
      */
-    public static function baixarVenda(int $produtoId, int $qtd): void {
+    public static function baixarVenda(int $produtoId, int $qtd): array {
         $pdo = Database::pdo();
         $st = $pdo->prepare("SELECT id, quantidade FROM lotes WHERE produto_id = ? AND quantidade > 0 AND (validade IS NULL OR validade >= date('now','localtime')) ORDER BY validade IS NULL, validade, id");
         $st->execute([$produtoId]);
         $upd = $pdo->prepare('UPDATE lotes SET quantidade = quantidade - ? WHERE id = ?');
         $falta = $qtd;
+        $usados = [];
         foreach ($st->fetchAll() as $l) {
             if ($falta === 0) break;
             $tira = min($falta, (int)$l['quantidade']);
             $upd->execute([$tira, $l['id']]);
+            $usados[(int)$l['id']] = $tira;
             $falta -= $tira;
         }
         if ($falta > 0) throw new DomainException('Estoque válido insuficiente: há unidades vencidas que não podem ser vendidas.');
         $pdo->prepare('UPDATE produtos SET estoque = estoque - ? WHERE id = ?')->execute([$qtd, $produtoId]);
+        return $usados;
+    }
+
+    /**
+     * Devolve ao estoque unidades de um item vendido, nos mesmos lotes de onde saíram
+     * (começando pelo último usado). Vendas anteriores à Etapa 2 não guardavam o lote:
+     * essas unidades voltam para o lote "DEVOLUCAO", sem validade. Roda dentro da transação do chamador.
+     */
+    public static function devolverItem(int $vendaItemId, int $produtoId, int $qtd): void {
+        $pdo = Database::pdo();
+        $st = $pdo->prepare('SELECT id, lote_id, quantidade - devolvida AS resta FROM venda_item_lotes WHERE venda_item_id = ? AND quantidade > devolvida ORDER BY id DESC');
+        $st->execute([$vendaItemId]);
+        $falta = $qtd;
+        foreach ($st->fetchAll() as $r) {
+            if ($falta === 0) break;
+            $volta = min($falta, (int)$r['resta']);
+            $pdo->prepare('UPDATE venda_item_lotes SET devolvida = devolvida + ? WHERE id = ?')->execute([$volta, $r['id']]);
+            $pdo->prepare('UPDATE lotes SET quantidade = quantidade + ? WHERE id = ?')->execute([$volta, $r['lote_id']]);
+            $falta -= $volta;
+        }
+        if ($falta > 0) {
+            $st = $pdo->prepare("SELECT id FROM lotes WHERE produto_id = ? AND codigo = 'DEVOLUCAO' AND validade IS NULL");
+            $st->execute([$produtoId]);
+            if ($loteId = (int)$st->fetchColumn()) $pdo->prepare('UPDATE lotes SET quantidade = quantidade + ? WHERE id = ?')->execute([$falta, $loteId]);
+            else $pdo->prepare("INSERT INTO lotes (produto_id,codigo,quantidade) VALUES (?,'DEVOLUCAO',?)")->execute([$produtoId, $falta]);
+        }
+        $pdo->prepare('UPDATE produtos SET estoque = estoque + ? WHERE id = ?')->execute([$qtd, $produtoId]);
     }
 
     /** Lotes com saldo, do vencimento mais próximo para o mais distante */

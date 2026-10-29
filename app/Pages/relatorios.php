@@ -4,9 +4,16 @@ $de = $_GET['de'] ?? date('Y-m-01');
 
 $ate = $_GET['ate'] ?? date('Y-m-d');
 
-$vendas = Venda::listar($de, $ate, 1000);
+// Canceladas e devolvidas por inteiro ficam de fora; devoluções parciais já vêm descontadas em "liquido".
+$vendas = array_filter(
+    Venda::listar(
+        ['de' => $de, 'ate' => $ate, 'status' => 'concluida'],
+        1000
+    ),
+    fn($v) => !($v['total'] > 0 && $v['valor_devolvido'] >= $v['total'])
+);
 
-$total = array_sum(array_column($vendas, 'total'));
+$total = array_sum(array_column($vendas, 'liquido'));
 
 $ticket = $vendas ? $total / count($vendas) : 0;
 
@@ -197,7 +204,7 @@ $top = Relatorio::maisVendidos(10, $de, $ate);
                             </td>
 
                             <td class="num">
-                                <?= moeda($v['total']) ?>
+                                <?= moeda($v['liquido']) ?>
                             </td>
 
                         </tr>

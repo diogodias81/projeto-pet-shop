@@ -43,9 +43,9 @@ if (!usuario()) {
 
 if ($pagina === 'inicio') {
 
-    foreach ($rotas as $nome => [, $perfis]) {
+    foreach ($rotas as $nome => [$rotulo, $perfis]) {
 
-        if (temPerfil($perfis)) {
+        if ($rotulo !== null && temPerfil($perfis)) {
             redirect($nome);
         }
     }

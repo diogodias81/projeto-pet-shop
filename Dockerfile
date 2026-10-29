@@ -11,6 +11,10 @@ WORKDIR /var/www/html
 
 COPY . /var/www/html
 
+# O Apache (www-data) precisa gravar o banco e as fotos dos produtos
+RUN mkdir -p storage public/uploads/produtos \
+    && chown -R www-data:www-data storage public/uploads
+
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \

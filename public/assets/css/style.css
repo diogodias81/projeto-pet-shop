@@ -72,6 +72,56 @@ input:focus-visible, select:focus-visible, .btn:focus-visible { outline: 2px sol
 
 .total-venda { display: flex; justify-content: flex-end; align-items: center; gap: 1rem; margin-top: 1rem; font-size: 1.2rem; }
 
+/* Venda: pesquisa rápida */
+.pesquisa { position: relative; max-width: 34rem; margin-bottom: 1rem; }
+.pesquisa label, .pesquisa input { width: 100%; }
+.sugestoes { position: absolute; z-index: 10; left: 0; right: 0; margin: .25rem 0 0; padding: .25rem; list-style: none; background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio); box-shadow: 0 8px 24px rgba(22,50,58,.12); max-height: 22rem; overflow-y: auto; }
+.sugestao { display: flex; align-items: center; gap: .75rem; padding: .4rem .5rem; border-radius: 6px; cursor: pointer; }
+.sugestao:hover, .sugestao:focus { background: #e6eef0; outline: none; }
+.sugestao .foto { width: 40px; height: 40px; flex: none; }
+.sugestao-nome small { display: block; color: var(--suave); font-size: .82rem; }
+.sugestao-vazia { padding: .5rem; color: var(--suave); }
+input.qtd { min-width: 0; width: 5rem; text-align: right; }
+
+/* Venda: fechamento */
+.fechamento { display: grid; grid-template-columns: 1fr minmax(15rem, 20rem); gap: .5rem 2rem; align-items: start; margin-top: 1rem; border-top: 1px solid var(--borda); padding-top: 1rem; }
+.fechamento .aviso, .fechamento .btn { grid-column: 2; margin: 0; }
+.fechamento .btn { justify-self: stretch; font-size: 1.05rem; padding: .7rem 1rem; }
+.campo-composto { display: flex; }
+.campo-composto select { min-width: 0; width: 4.2rem; border-radius: var(--raio) 0 0 var(--raio); border-right: 0; }
+.campo-composto input { min-width: 0; width: 8rem; border-radius: 0 var(--raio) var(--raio) 0; }
+label small { color: var(--suave); font-size: .8rem; }
+.resumo-venda, .comprovante-totais, .comprovante-dados, .detalhes { display: grid; grid-template-columns: auto 1fr; gap: .2rem 1rem; margin: 0; }
+.resumo-venda dd, .comprovante-totais dd { text-align: right; margin: 0; font-variant-numeric: tabular-nums; }
+.resumo-venda dt, .comprovante-totais dt { color: var(--suave); }
+.resumo-total { font-size: 1.35rem; font-weight: 700; color: var(--tinta) !important; }
+.detalhes { max-width: 34rem; margin-bottom: 1rem; }
+.detalhes dt { color: var(--suave); }
+.detalhes dd { margin: 0; }
+.acoes-venda { margin-top: 1rem; }
+tr.cancelada td { color: var(--suave); text-decoration: line-through; }
+tr.cancelada td:last-child, tr.cancelada td:nth-child(6) { text-decoration: none; }
+
+/* Comprovante: largura de bobina, mas cabe também em A4 */
+.comprovante { max-width: 360px; margin: 0 auto 1rem; background: #fff; border: 1px dashed var(--borda); padding: 1.25rem; font-size: .9rem; color: #000; }
+.comprovante header { display: flex; flex-direction: column; align-items: center; text-align: center; gap: .1rem; }
+.comprovante header strong { font-size: 1.1rem; }
+.comprovante-titulo { text-align: center; font-weight: 700; margin: .9rem 0 .5rem; border-top: 1px dashed #999; border-bottom: 1px dashed #999; padding: .4rem 0; }
+.comprovante-titulo small { font-weight: 400; color: #555; }
+.comprovante-situacao { text-align: center; font-weight: 700; color: var(--erro); border: 2px solid var(--erro); padding: .2rem; }
+.comprovante-dados { margin-bottom: .5rem; }
+.comprovante-dados dd { margin: 0; }
+.comprovante table { font-size: .85rem; }
+.comprovante th, .comprovante td { padding: .25rem .2rem; }
+.comprovante-totais { border-top: 1px dashed #999; padding-top: .5rem; margin-top: .5rem; }
+.comprovante-totais .resumo-total { font-size: 1.1rem; }
+.comprovante-rodape { text-align: center; margin: .75rem 0 0; font-size: .8rem; color: #555; }
+
+@media (max-width: 640px) {
+  .fechamento { grid-template-columns: 1fr; }
+  .fechamento .aviso, .fechamento .btn { grid-column: 1; }
+}
+
 /* Gráfico de barras do dashboard */
 .barras { display: flex; align-items: flex-end; gap: .6rem; height: 170px; padding-top: .5rem; }
 .barra { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: .3rem; }
@@ -83,4 +133,10 @@ body.login { display: grid; place-items: center; min-height: 100vh; padding: 1re
 .login-caixa { background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio); padding: 1.75rem; width: 100%; max-width: 360px; display: grid; gap: 1rem; }
 .login-caixa input { width: 100%; }
 
-@media print { .topo, .linha, .btn { display: none !important; } body { background: #fff; } }
+@media print { .topo, .linha, .btn, .nao-imprimir { display: none !important; } body { background: #fff; } }
+/* Na página do comprovante, imprime só o comprovante */
+@media print {
+  main:has(.comprovante) > :not(.comprovante) { display: none !important; }
+  main:has(.comprovante) { padding: 0; }
+  .comprovante { border: 0; max-width: none; margin: 0; padding: 0; }
+}

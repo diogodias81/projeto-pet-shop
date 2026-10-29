@@ -11,6 +11,19 @@ document.querySelectorAll('form[data-confirmar]').forEach(form => {
     });
 
 
+// <button data-confirmar-botao="Mensagem">: confirma só a ação deste botão
+
+document.querySelectorAll('button[data-confirmar-botao]').forEach(btn => {
+
+    btn.addEventListener('click', ev => {
+
+        if (btn.form?.checkValidity() && !confirm(btn.dataset.confirmarBotao)) {
+            ev.preventDefault();
+        }
+    });
+});
+
+
 // Leitor de código de barras: o leitor USB "digita" o código e aperta Enter.
 // <input data-sem-enter> não envia o formulário com esse Enter.
 // <input data-seleciona="id-do-select"> escolhe no select a opção com o mesmo data-codigo.
@@ -51,6 +64,7 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
 
 // Tela de vendas
+// Os valores aqui são só para mostrar na tela: o servidor refaz todas as contas ao finalizar.
 
 (function () {
 
@@ -59,19 +73,37 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
     if (!form) return;
 
 
-    const select = document.getElementById('v-produto');
+    const catalogo = JSON.parse(
+        document.getElementById('v-catalogo').textContent
+    );
 
-    const qtdInput = document.getElementById('v-qtd');
+    const busca = document.getElementById('v-busca');
+
+    const sugestoes = document.getElementById('v-sugestoes');
 
     const tbody = document.querySelector('#v-tabela tbody');
 
     const vazio = document.getElementById('v-vazio');
 
-    const totalEl = document.getElementById('v-total');
-
     const hidden = document.getElementById('venda-itens');
 
     const finalizar = document.getElementById('v-finalizar');
+
+    const descTipo = document.getElementById('v-desc-tipo');
+
+    const descInput = document.getElementById('v-desconto');
+
+    const forma = document.getElementById('v-forma');
+
+    const recebidoCampo = document.getElementById('v-recebido-campo');
+
+    const recebido = document.getElementById('v-recebido');
+
+    const erro = document.getElementById('v-erro');
+
+    const descontoMax = parseFloat(form.dataset.descontoMax);
+
+    const $ = id => document.getElementById(id);
 
 
     const moeda = valor => {
@@ -86,63 +118,375 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
     };
 
 
+    // "1.234,56", "12,5" ou "12.5" → número
+    const numero = texto => {
+
+        let v = String(texto).replace(/[^\d,.]/g, '');
+
+        if (v.includes(',')) v = v.replace(/\./g, '').replace(',', '.');
+
+        return parseFloat(v) || 0;
+    };
+
+
+    const centavos = v => Math.round(v * 100) / 100;
+
+
     let itens = [];
+
+
+    // ---- pesquisa rápida ----
+
+    function adicionar(produto, quantidade = 1) {
+
+        const existente = itens.find(i => i.produto_id === produto.id);
+
+        const jaNoCarrinho = existente ? existente.quantidade : 0;
+
+
+        if (jaNoCarrinho + quantidade > produto.estoque) {
+
+            alert('Estoque insuficiente para ' + produto.nome + '. Disponível: ' + produto.estoque);
+
+            return;
+        }
+
+
+        if (existente) {
+
+            existente.quantidade += quantidade;
+
+        } else {
+
+            itens.push({ produto_id: produto.id, produto, quantidade });
+        }
+
+
+        busca.value = '';
+
+        fecharSugestoes();
+
+        renderizar();
+
+        busca.focus();
+    }
+
+
+    function encontrar(texto) {
+
+        const t = texto.trim().toLowerCase();
+
+        if (!t) return [];
+
+        return catalogo
+            .filter(p => p.codigo === t || p.nome.toLowerCase().includes(t))
+            .slice(0, 8);
+    }
+
+
+    function fecharSugestoes() {
+
+        sugestoes.hidden = true;
+
+        sugestoes.innerHTML = '';
+
+        busca.setAttribute('aria-expanded', 'false');
+    }
+
+
+    function mostrarSugestoes() {
+
+        const achados = encontrar(busca.value);
+
+        sugestoes.innerHTML = '';
+
+
+        if (!achados.length) {
+
+            if (busca.value.trim()) {
+
+                const li = document.createElement('li');
+
+                li.className = 'sugestao-vazia';
+
+                li.textContent = 'Nenhum produto disponível encontrado.';
+
+                sugestoes.appendChild(li);
+            }
+
+        } else {
+
+            achados.forEach(p => {
+
+                const li = document.createElement('li');
+
+                li.role = 'option';
+
+                li.tabIndex = -1;
+
+                li.className = 'sugestao';
+
+
+                const img = document.createElement(p.foto ? 'img' : 'span');
+
+                img.className = 'foto' + (p.foto ? '' : ' foto-vazia');
+
+                if (p.foto) { img.src = p.foto; img.alt = ''; }
+
+
+                const nome = document.createElement('span');
+
+                nome.className = 'sugestao-nome';
+
+                nome.textContent = p.nome;
+
+
+                const info = document.createElement('small');
+
+                info.textContent = moeda(p.preco) + ' · estoque ' + p.estoque + (p.codigo ? ' · ' + p.codigo : '');
+
+                nome.appendChild(info);
+
+
+                li.append(img, nome);
+
+                li.addEventListener('mousedown', ev => { ev.preventDefault(); adicionar(p); });
+
+                li.addEventListener('keydown', ev => {
+
+                    if (ev.key === 'Enter') { ev.preventDefault(); adicionar(p); }
+
+                    if (ev.key === 'ArrowDown') { ev.preventDefault(); li.nextElementSibling?.focus(); }
+
+                    if (ev.key === 'ArrowUp') { ev.preventDefault(); (li.previousElementSibling || busca).focus(); }
+
+                    if (ev.key === 'Escape') { fecharSugestoes(); busca.focus(); }
+                });
+
+                sugestoes.appendChild(li);
+            });
+        }
+
+
+        sugestoes.hidden = !sugestoes.children.length;
+
+        busca.setAttribute('aria-expanded', String(!sugestoes.hidden));
+    }
+
+
+    busca.addEventListener('input', mostrarSugestoes);
+
+    busca.addEventListener('blur', () => setTimeout(() => {
+
+        if (!sugestoes.contains(document.activeElement)) fecharSugestoes();
+
+    }, 100));
+
+
+    busca.addEventListener('keydown', ev => {
+
+        if (ev.key === 'ArrowDown') {
+
+            ev.preventDefault();
+
+            sugestoes.querySelector('.sugestao')?.focus();
+
+            return;
+        }
+
+        if (ev.key === 'Escape') return fecharSugestoes();
+
+        if (ev.key !== 'Enter') return;
+
+
+        // Enter do leitor ou do teclado: código exato adiciona direto; senão, o primeiro da lista
+        ev.preventDefault();
+
+        const texto = busca.value.trim();
+
+        if (!texto) return;
+
+
+        const exato = catalogo.find(p => p.codigo === texto);
+
+        const produto = exato || encontrar(texto)[0];
+
+
+        if (produto) {
+
+            adicionar(produto);
+
+        } else {
+
+            alert('Nenhum produto disponível com "' + texto + '".');
+
+            busca.select();
+        }
+    });
+
+
+    // ---- itens e totais ----
+
+    function calcular() {
+
+        const subtotal = centavos(itens.reduce((s, i) => s + i.produto.preco * i.quantidade, 0));
+
+        const v = numero(descInput.value);
+
+        const desconto = centavos(descTipo.value === 'percentual' ? subtotal * v / 100 : v);
+
+        const total = centavos(subtotal - desconto);
+
+        const pago = numero(recebido.value);
+
+
+        let problema = '';
+
+        if (desconto > subtotal) {
+
+            problema = 'O desconto não pode ser maior que o subtotal.';
+
+        } else if (desconto > centavos(subtotal * descontoMax)) {
+
+            problema = 'Desconto acima do permitido para o seu perfil (máximo ' + Math.round(descontoMax * 100) + '%).';
+
+        } else if (forma.value === 'dinheiro' && recebido.value.trim() && pago < total) {
+
+            problema = 'O valor recebido é menor que o total.';
+        }
+
+
+        return { subtotal, desconto, total, pago, problema };
+    }
+
+
+    function atualizarTotais() {
+
+        const c = calcular();
+
+        const dinheiro = forma.value === 'dinheiro';
+
+
+        $('v-subtotal').textContent = moeda(c.subtotal);
+
+        $('v-desc-valor').textContent = c.desconto ? '− ' + moeda(c.desconto) : moeda(0);
+
+        $('v-total').textContent = moeda(Math.max(c.total, 0));
+
+
+        recebidoCampo.hidden = !dinheiro;
+
+        const mostraTroco = dinheiro && c.pago >= c.total && recebido.value.trim() !== '';
+
+        $('v-troco').hidden = $('v-troco-rotulo').hidden = !mostraTroco;
+
+        $('v-troco').textContent = moeda(centavos(c.pago - c.total));
+
+
+        erro.hidden = !c.problema;
+
+        erro.textContent = c.problema;
+
+        finalizar.disabled = itens.length === 0 || !!c.problema || !forma.value;
+    }
 
 
     function renderizar() {
 
         tbody.innerHTML = '';
 
-        let total = 0;
-
 
         itens.forEach((item, indice) => {
 
-            const subtotal =
-                item.preco * item.quantidade;
-
-            total += subtotal;
-
+            const p = item.produto;
 
             const tr = document.createElement('tr');
 
 
-            const celulas = [
-                item.nome,
-                item.quantidade,
-                moeda(item.preco),
-                moeda(subtotal)
-            ];
+            const tdFoto = document.createElement('td');
+
+            const img = document.createElement(p.foto ? 'img' : 'span');
+
+            img.className = 'foto' + (p.foto ? '' : ' foto-vazia');
+
+            if (p.foto) { img.src = p.foto; img.alt = ''; }
+
+            tdFoto.appendChild(img);
 
 
-            celulas.forEach((texto, coluna) => {
+            const tdNome = document.createElement('td');
 
-                const td = document.createElement('td');
-
-                td.textContent = texto;
+            tdNome.textContent = p.nome;
 
 
-                if (coluna > 0) {
-                    td.className = 'num';
+            const tdQtd = document.createElement('td');
+
+            tdQtd.className = 'num';
+
+            const qtd = document.createElement('input');
+
+            qtd.type = 'number';
+
+            qtd.min = 1;
+
+            qtd.max = p.estoque;
+
+            qtd.value = item.quantidade;
+
+            qtd.className = 'qtd';
+
+            qtd.setAttribute('aria-label', 'Quantidade de ' + p.nome);
+
+            qtd.addEventListener('input', () => {
+
+                const n = parseInt(qtd.value, 10);
+
+                if (!n || n < 1) return;
+
+                if (n > p.estoque) {
+
+                    qtd.value = item.quantidade = p.estoque;
+
+                    alert('Estoque disponível de ' + p.nome + ': ' + p.estoque);
+
+                } else {
+
+                    item.quantidade = n;
                 }
 
+                tdSub.textContent = moeda(p.preco * item.quantidade);
 
-                tr.appendChild(td);
+                sincronizar();
             });
+
+            qtd.addEventListener('change', () => { qtd.value = item.quantidade; });
+
+            tdQtd.appendChild(qtd);
+
+
+            const tdUnit = document.createElement('td');
+
+            tdUnit.className = 'num';
+
+            tdUnit.textContent = moeda(p.preco);
+
+
+            const tdSub = document.createElement('td');
+
+            tdSub.className = 'num';
+
+            tdSub.textContent = moeda(p.preco * item.quantidade);
 
 
             const tdAcao = document.createElement('td');
 
             const btn = document.createElement('button');
 
-
             btn.type = 'button';
 
-            btn.className =
-                'btn btn-perigo btn-pequeno';
+            btn.className = 'btn btn-perigo btn-pequeno';
 
             btn.textContent = 'Remover';
-
 
             btn.addEventListener('click', () => {
 
@@ -151,112 +495,44 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
                 renderizar();
             });
 
-
             tdAcao.appendChild(btn);
 
-            tr.appendChild(tdAcao);
+
+            tr.append(tdFoto, tdNome, tdQtd, tdUnit, tdSub, tdAcao);
 
             tbody.appendChild(tr);
         });
 
 
-        totalEl.textContent = moeda(total);
+        vazio.style.display = itens.length ? 'none' : '';
 
-
-        hidden.value = JSON.stringify(
-            itens.map(
-                ({ produto_id, quantidade }) => ({
-                    produto_id,
-                    quantidade
-                })
-            )
-        );
-
-
-        vazio.style.display =
-            itens.length ? 'none' : '';
-
-
-        finalizar.disabled =
-            itens.length === 0;
+        sincronizar();
     }
 
 
-    document
-        .getElementById('v-add')
-        .addEventListener('click', () => {
+    function sincronizar() {
 
-            const opt =
-                select.selectedOptions[0];
+        hidden.value = JSON.stringify(
+            itens.map(({ produto_id, quantidade }) => ({ produto_id, quantidade }))
+        );
 
-            if (!opt) return;
-
-
-            const quantidade =
-                parseInt(qtdInput.value, 10);
-
-            const estoque =
-                parseInt(opt.dataset.estoque, 10);
-
-            const id = opt.value;
+        atualizarTotais();
+    }
 
 
-            const existente = itens.find(
-                item => item.produto_id === id
-            );
+    [descInput, recebido].forEach(el => el.addEventListener('input', atualizarTotais));
+
+    [descTipo, forma].forEach(el => el.addEventListener('change', atualizarTotais));
 
 
-            const jaNoCarrinho =
-                existente
-                    ? existente.quantidade
-                    : 0;
+    form.addEventListener('submit', ev => {
 
+        if (finalizar.disabled) { ev.preventDefault(); return; }
 
-            if (!quantidade || quantidade < 1) {
-
-                return alert(
-                    'Informe uma quantidade válida.'
-                );
-            }
-
-
-            if (jaNoCarrinho + quantidade > estoque) {
-
-                return alert(
-                    'Estoque insuficiente. Disponível: ' +
-                    estoque
-                );
-            }
-
-
-            if (existente) {
-
-                existente.quantidade += quantidade;
-
-            } else {
-
-                itens.push({
-
-                    produto_id: id,
-
-                    nome: opt.dataset.nome,
-
-                    preco: parseFloat(
-                        opt.dataset.preco
-                    ),
-
-                    quantidade
-                });
-            }
-
-
-            qtdInput.value = 1;
-
-            renderizar();
-        });
+        finalizar.disabled = true; // evita venda em dobro com clique duplo
+    });
 
 
     renderizar();
 
 })();
-
