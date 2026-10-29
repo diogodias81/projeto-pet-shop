@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       flash('Produto excluído.');
     } else {
 
-      Produto::salvar($_POST);
+      Produto::salvar($_POST, $_FILES['foto'] ?? null);
 
       flash('Produto salvo.');
     }
@@ -57,7 +57,7 @@ $produtos = Produto::listar(
       <?= $editando ? 'Editar produto' : 'Novo produto' ?>
     </h2>
 
-    <form method="post" class="linha">
+    <form method="post" class="linha" enctype="multipart/form-data">
 
       <?= csrf_campo() ?>
 
@@ -65,6 +65,20 @@ $produtos = Produto::listar(
         type="hidden"
         name="id"
         value="<?= $editando['id'] ?? '' ?>">
+
+      <label>
+        Código de barras
+
+        <input
+          name="codigo_barras"
+          inputmode="numeric"
+          pattern="\d{4,14}"
+          maxlength="14"
+          title="De 4 a 14 números"
+          placeholder="Leia ou digite"
+          data-sem-enter
+          value="<?= e($editando['codigo_barras'] ?? '') ?>">
+      </label>
 
       <label>
         Nome
@@ -100,7 +114,17 @@ $produtos = Produto::listar(
       </label>
 
       <label>
-        Preço (R$)
+        Preço de custo (R$)
+
+        <input
+          name="preco_custo"
+          inputmode="decimal"
+          placeholder="0,00"
+          value="<?= $editando && $editando['preco_custo'] > 0 ? number_format($editando['preco_custo'], 2, ',', '') : '' ?>">
+      </label>
+
+      <label>
+        Preço de venda (R$)
 
         <input
           name="preco"
@@ -121,6 +145,24 @@ $produtos = Produto::listar(
             value="0">
         </label>
 
+        <label>
+          Lote
+
+          <input
+            name="lote"
+            maxlength="40"
+            placeholder="Opcional">
+        </label>
+
+        <label>
+          Validade
+
+          <input
+            name="validade"
+            type="date"
+            min="<?= date('Y-m-d') ?>">
+        </label>
+
       <?php endif; ?>
 
       <label>
@@ -132,6 +174,24 @@ $produtos = Produto::listar(
           min="0"
           value="<?= $editando['estoque_minimo'] ?? 5 ?>">
       </label>
+
+      <label>
+        Foto <?= !empty($editando['foto']) ? '(enviar outra substitui)' : '' ?>
+
+        <input
+          name="foto"
+          type="file"
+          accept="image/jpeg,image/png,image/webp">
+      </label>
+
+      <?php if (!empty($editando['foto'])): ?>
+
+        <img
+          class="foto"
+          src="<?= e(Produto::urlFoto($editando['foto'])) ?>"
+          alt="Foto atual de <?= e($editando['nome']) ?>">
+
+      <?php endif; ?>
 
       <button class="btn">
         <?= $editando ? 'Salvar alterações' : 'Cadastrar produto' ?>
@@ -170,7 +230,8 @@ $produtos = Produto::listar(
         type="search"
         name="q"
         value="<?= e($busca) ?>"
-        placeholder="Nome do produto">
+        placeholder="Nome ou código de barras"
+        autofocus>
     </label>
 
     <label>
@@ -216,9 +277,20 @@ $produtos = Produto::listar(
       <thead>
 
         <tr>
+          <th></th>
           <th>Produto</th>
           <th>Categoria</th>
+
+          <?php if ($gerencia): ?>
+            <th class="num">Custo</th>
+          <?php endif; ?>
+
           <th class="num">Preço</th>
+
+          <?php if ($gerencia): ?>
+            <th class="num">Margem</th>
+          <?php endif; ?>
+
           <th class="num">Estoque</th>
 
           <?php if ($gerencia): ?>
@@ -240,16 +312,56 @@ $produtos = Produto::listar(
           <tr>
 
             <td>
+
+              <?php if ($p['foto']): ?>
+
+                <img
+                  class="foto"
+                  src="<?= e(Produto::urlFoto($p['foto'])) ?>"
+                  alt=""
+                  loading="lazy">
+
+              <?php else: ?>
+
+                <span class="foto foto-vazia" aria-hidden="true"></span>
+
+              <?php endif; ?>
+
+            </td>
+
+            <td>
               <?= e($p['nome']) ?>
+
+              <?php if ($p['codigo_barras']): ?>
+                <small class="codigo"><?= e($p['codigo_barras']) ?></small>
+              <?php endif; ?>
             </td>
 
             <td>
               <?= e($p['categoria'] ?? '—') ?>
             </td>
 
+            <?php if ($gerencia): ?>
+
+              <td class="num">
+                <?= $p['preco_custo'] > 0 ? moeda($p['preco_custo']) : '—' ?>
+              </td>
+
+            <?php endif; ?>
+
             <td class="num">
               <?= moeda($p['preco']) ?>
             </td>
+
+            <?php if ($gerencia): ?>
+
+              <?php $margem = Produto::margem($p); ?>
+
+              <td class="num <?= $margem !== null && $margem < 0 ? 'negativo' : '' ?>">
+                <?= $margem === null ? '—' : number_format($margem, 1, ',', '.') . '%' ?>
+              </td>
+
+            <?php endif; ?>
 
             <td class="num">
 
@@ -257,6 +369,10 @@ $produtos = Produto::listar(
                 class="selo <?= $baixo ? 'selo-alerta' : 'selo-ok' ?>">
                 <?= $p['estoque'] ?>
               </span>
+
+              <?php if ($p['estoque'] > $p['vendavel']): ?>
+                <small class="selo selo-erro" title="Unidades vencidas"><?= $p['estoque'] - $p['vendavel'] ?> venc.</small>
+              <?php endif; ?>
 
             </td>
 

@@ -158,7 +158,80 @@ class Database
 
                 preco_unit REAL NOT NULL
             );
+
+
+            CREATE TABLE IF NOT EXISTS lotes (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                produto_id INTEGER NOT NULL
+                    REFERENCES produtos(id),
+
+                codigo TEXT NOT NULL,
+
+                validade TEXT,
+
+                quantidade INTEGER NOT NULL
+                    CHECK (quantidade >= 0),
+
+                criado_em TEXT NOT NULL
+                    DEFAULT (
+                        datetime('now', 'localtime')
+                    )
+            );
         ");
+
+
+        // Colunas da Etapa 1. Bancos antigos recebem as colunas
+        // e o estoque que já existia vira um lote "INICIAL" sem validade.
+
+        $novas = [
+            'produtos' => [
+                'codigo_barras' => 'TEXT',
+                'foto' => 'TEXT',
+                'preco_custo' => 'REAL NOT NULL DEFAULT 0',
+            ],
+            'entradas_estoque' => [
+                'lote_id' => 'INTEGER REFERENCES lotes(id)',
+            ],
+            'venda_itens' => [
+                'custo_unit' => 'REAL NOT NULL DEFAULT 0',
+            ],
+        ];
+
+        foreach ($novas as $tabela => $colunas) {
+
+            $existentes = array_column(
+                $pdo->query("PRAGMA table_info($tabela)")->fetchAll(),
+                'name'
+            );
+
+            foreach ($colunas as $coluna => $tipo) {
+
+                if (!in_array($coluna, $existentes, true)) {
+
+                    $pdo->exec("ALTER TABLE $tabela ADD COLUMN $coluna $tipo");
+
+                    if ($coluna === 'codigo_barras') {
+
+                        $pdo->exec("
+                            INSERT INTO lotes (produto_id, codigo, quantidade)
+                            SELECT id, 'INICIAL', estoque
+                            FROM produtos
+                            WHERE estoque > 0
+                        ");
+                    }
+                }
+            }
+        }
+
+        $pdo->exec('
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_produtos_codigo_barras
+                ON produtos (codigo_barras);
+
+            CREATE INDEX IF NOT EXISTS idx_lotes_produto
+                ON lotes (produto_id, validade);
+        ');
 
 
         // Insere os dados iniciais apenas

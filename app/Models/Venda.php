@@ -17,9 +17,9 @@ class Venda {
                 $qtd = (int)($it['quantidade'] ?? 0);
                 $p = Produto::buscar((int)($it['produto_id'] ?? 0));
                 if (!$p || $qtd < 1) throw new DomainException('Item inválido na venda.');
-                if ($p['estoque'] < $qtd) throw new DomainException("Estoque insuficiente para {$p['nome']} (disponível: {$p['estoque']}).");
-                $pdo->prepare('INSERT INTO venda_itens (venda_id,produto_id,quantidade,preco_unit) VALUES (?,?,?,?)')->execute([$vendaId, $p['id'], $qtd, $p['preco']]);
-                $pdo->prepare('UPDATE produtos SET estoque = estoque - ? WHERE id = ?')->execute([$qtd, $p['id']]);
+                if ($p['vendavel'] < $qtd) throw new DomainException("Estoque insuficiente para {$p['nome']} (disponível para venda: {$p['vendavel']}" . ($p['estoque'] > $p['vendavel'] ? ', o restante está vencido' : '') . ').');
+                $pdo->prepare('INSERT INTO venda_itens (venda_id,produto_id,quantidade,preco_unit,custo_unit) VALUES (?,?,?,?,?)')->execute([$vendaId, $p['id'], $qtd, $p['preco'], $p['preco_custo']]);
+                Estoque::baixarVenda((int)$p['id'], $qtd);
                 $total += $qtd * $p['preco'];
                 if ($p['estoque'] - $qtd <= $p['estoque_minimo']) {
                     $alertas[] = "{$p['nome']} atingiu o estoque mínimo (restam " . ($p['estoque'] - $qtd) . ").";

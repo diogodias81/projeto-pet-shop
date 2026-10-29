@@ -11,6 +11,45 @@ document.querySelectorAll('form[data-confirmar]').forEach(form => {
     });
 
 
+// Leitor de código de barras: o leitor USB "digita" o código e aperta Enter.
+// <input data-sem-enter> não envia o formulário com esse Enter.
+// <input data-seleciona="id-do-select"> escolhe no select a opção com o mesmo data-codigo.
+
+document.querySelectorAll('input[data-sem-enter]').forEach(input => {
+
+    input.addEventListener('keydown', ev => {
+
+        if (ev.key !== 'Enter') return;
+
+        ev.preventDefault();
+
+        const select = document.getElementById(input.dataset.seleciona || '');
+
+        if (!select) return;
+
+
+        const codigo = input.value.trim();
+
+        const opt = [...select.options].find(
+            o => codigo && o.dataset.codigo === codigo
+        );
+
+
+        if (!opt) {
+
+            return alert('Nenhum produto com o código ' + codigo + '.');
+        }
+
+
+        select.value = opt.value;
+
+        input.value = '';
+
+        input.form.querySelector('[name="quantidade"]')?.focus();
+    });
+});
+
+
 // Tela de vendas
 
 (function () {

@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $disponiveis = array_filter(
   Produto::listar(),
-  fn($p) => $p['estoque'] > 0
+  fn($p) => $p['vendavel'] > 0
 );
 
 $historico = Venda::listar(
@@ -80,11 +80,11 @@ $historico = Venda::listar(
               value="<?= $p['id'] ?>"
               data-nome="<?= e($p['nome']) ?>"
               data-preco="<?= $p['preco'] ?>"
-              data-estoque="<?= $p['estoque'] ?>">
+              data-estoque="<?= $p['vendavel'] ?>">
               <?= e($p['nome']) ?>
               —
               <?= moeda($p['preco']) ?>
-              (estoque: <?= $p['estoque'] ?>)
+              (estoque: <?= $p['vendavel'] ?>)
             </option>
 
           <?php endforeach; ?>

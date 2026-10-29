@@ -42,6 +42,14 @@ th { color: var(--suave); font-weight: 600; }
 .selo { display: inline-block; min-width: 2rem; text-align: center; padding: .05rem .5rem; border-radius: 99px; font-size: .85rem; font-weight: 600; }
 .selo-ok { background: var(--ok-fundo); color: var(--ok); }
 .selo-alerta { background: var(--alerta-fundo); color: var(--alerta); }
+.selo-erro { background: var(--erro-fundo); color: var(--erro); }
+.selo-neutro { background: #e6eef0; color: var(--suave); }
+.negativo { color: var(--erro); }
+
+/* Produtos: foto e código de barras */
+.foto { display: block; width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid var(--borda); background: var(--fundo); }
+.codigo { display: block; color: var(--suave); font-size: .8rem; font-variant-numeric: tabular-nums; }
+input[type="file"] { min-width: 0; max-width: 16rem; }
 
 .linha { display: flex; flex-wrap: wrap; gap: .75rem; align-items: flex-end; margin-bottom: .75rem; }
 label { display: flex; flex-direction: column; gap: .25rem; font-size: .9rem; color: var(--suave); }
