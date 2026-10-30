@@ -6,10 +6,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   csrf_validar();
 
-  $u = Usuario::autenticar(
-    $_POST['email'] ?? '',
-    $_POST['senha'] ?? ''
-  );
+  try {
+
+    $u = Usuario::autenticar(
+      $_POST['email'] ?? '',
+      $_POST['senha'] ?? '',
+      $_SERVER['REMOTE_ADDR'] ?? ''
+    );
+
+    $erro = 'E-mail ou senha incorretos.';
+  } catch (DomainException $ex) {
+
+    $u = null;
+    $erro = $ex->getMessage();
+  }
 
   if ($u) {
 
@@ -23,8 +33,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     redirect('inicio');
   }
-
-  $erro = 'E-mail ou senha incorretos.';
 }
 
 ?>
@@ -75,6 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <input
         type="email"
         name="email"
+        value="<?= e($_POST['email'] ?? '') ?>"
         required
         autofocus>
     </label>

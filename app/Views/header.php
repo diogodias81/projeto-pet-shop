@@ -16,6 +16,12 @@ $rotas = require BASE_PATH . '/config/routes.php';
         name="viewport"
         content="width=device-width, initial-scale=1">
 
+    <?php $rotulo = $rotas[$_GET['page'] ?? ''][0] ?? null; ?>
+
+    <title>
+        <?= e($rotulo ? "$rotulo · " : '') ?><?= e(config('app_nome')) ?>
+    </title>
+
     <link
         rel="stylesheet"
         href="assets/css/style.css">
@@ -42,6 +48,9 @@ $rotas = require BASE_PATH . '/config/routes.php';
                     href="index.php?page=<?= $chave ?>"
                     class="<?= ($_GET['page'] ?? '') === $chave ? 'ativo' : '' ?>">
                     <?= e($rotulo) ?>
+                    <?php if ($chave === 'estoque' && temPerfil(['admin', 'estoque']) && ($nAlertas = Estoque::contarAlertas())): ?>
+                        <span class="aviso-menu" title="Alertas de validade e estoque baixo"><?= $nAlertas ?></span>
+                    <?php endif; ?>
                 </a>
 
             <?php endforeach; ?>
@@ -54,9 +63,10 @@ $rotas = require BASE_PATH . '/config/routes.php';
 
             ·
 
-            <a href="index.php?page=logout">
-                Sair
-            </a>
+            <form method="post" action="index.php?page=logout" class="form-sair">
+                <?= csrf_campo() ?>
+                <button class="link-sair">Sair</button>
+            </form>
 
         </div>
 

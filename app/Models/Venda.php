@@ -13,6 +13,7 @@ class Venda {
         // junta linhas repetidas do mesmo produto para conferir o estoque de uma vez
         $qtds = [];
         foreach ($itens as $it) {
+            if (!is_numeric($it['produto_id'] ?? null) || !is_numeric($it['quantidade'] ?? null)) throw new DomainException('Item inválido na venda.');
             $id = (int)($it['produto_id'] ?? 0); $q = (int)($it['quantidade'] ?? 0);
             if ($id < 1 || $q < 1) throw new DomainException('Item inválido na venda.');
             $qtds[$id] = ($qtds[$id] ?? 0) + $q;
@@ -21,7 +22,7 @@ class Venda {
         $forma = $pag['forma'] ?? '';
         if (!isset(self::FORMAS[$forma])) throw new DomainException('Escolha a forma de pagamento.');
         $pdo = Database::pdo();
-        $pdo->beginTransaction();
+        $pdo->exec('BEGIN IMMEDIATE'); // trava a escrita já no início: duas vendas não leem o mesmo estoque
         try {
             $pdo->prepare('INSERT INTO vendas (usuario_id, forma_pagamento) VALUES (?,?)')->execute([$usuarioId, $forma]);
             $vendaId = (int)$pdo->lastInsertId();
@@ -32,7 +33,7 @@ class Venda {
                 if ($p['vendavel'] < $qtd) throw new DomainException("Estoque insuficiente para {$p['nome']} (disponível para venda: {$p['vendavel']}" . ($p['estoque'] > $p['vendavel'] ? ', o restante está vencido' : '') . ').');
                 $pdo->prepare('INSERT INTO venda_itens (venda_id,produto_id,quantidade,preco_unit,custo_unit) VALUES (?,?,?,?,?)')->execute([$vendaId, $p['id'], $qtd, $p['preco'], $p['preco_custo']]);
                 $itemId = (int)$pdo->lastInsertId();
-                foreach (Estoque::baixarVenda((int)$p['id'], $qtd) as $loteId => $q) {
+                foreach (Estoque::baixarVenda((int)$p['id'], $qtd, $vendaId) as $loteId => $q) {
                     $pdo->prepare('INSERT INTO venda_item_lotes (venda_item_id,lote_id,quantidade) VALUES (?,?,?)')->execute([$itemId, $loteId, $q]);
                 }
                 $subtotal += $qtd * $p['preco'];
@@ -46,9 +47,11 @@ class Venda {
             $recebido = null;
             if ($forma === 'dinheiro') {
                 $recebido = numero($pag['recebido'] ?? '') ?: $total;
+                if ($recebido > 1000000) throw new DomainException('Valor recebido acima do limite de R$ 1.000.000,00.');
                 if ($recebido < $total) throw new DomainException('O valor recebido (' . moeda($recebido) . ') é menor que o total (' . moeda($total) . ').');
             }
             $pdo->prepare('UPDATE vendas SET subtotal = ?, desconto = ?, total = ?, valor_recebido = ? WHERE id = ?')->execute([$subtotal, $desconto, $total, $recebido, $vendaId]);
+            Auditoria::registrar('venda', "Venda #$vendaId: " . moeda($total) . ' em ' . self::FORMAS[$forma] . ($desconto > 0 ? ', desconto de ' . moeda($desconto) : ''));
             $pdo->commit();
             return ['id' => $vendaId, 'total' => $total, 'alertas' => $alertas];
         } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
@@ -59,7 +62,7 @@ class Venda {
         $v = numero($pag['desconto'] ?? 0);
         if ($v < 0) throw new DomainException('O desconto não pode ser negativo.');
         $desconto = round(($pag['desconto_tipo'] ?? 'valor') === 'percentual' ? $subtotal * $v / 100 : $v, 2);
-        if ($desconto > $subtotal) throw new DomainException('O desconto não pode ser maior que o subtotal.');
+        if ($desconto >= $subtotal) throw new DomainException('O desconto deve ser menor que o subtotal: a venda não pode ficar em R$ 0,00.');
         if ($desconto > round($subtotal * $max, 2)) {
             throw new DomainException('Desconto acima do permitido para o seu perfil: máximo de ' . round($max * 100) . '% (' . moeda($subtotal * $max) . '). Peça a um administrador.');
         }
@@ -101,29 +104,39 @@ class Venda {
         return $st->fetchAll();
     }
 
-    /** Admin altera qualquer venda; vendedor só as próprias, no mesmo dia. Venda cancelada não muda mais. */
-    public static function podeAlterar(array $v, array $usuario): bool {
-        if ($v['status'] === 'cancelada') return false;
-        if ($usuario['perfil'] === 'admin') return true;
-        return $usuario['perfil'] === 'vendedor' && (int)$v['usuario_id'] === (int)$usuario['id'] && substr($v['criado_em'], 0, 10) === date('Y-m-d');
+    /** Lucro bruto da venda (de buscar()): valor líquido menos o custo das unidades que não foram devolvidas */
+    public static function lucro(array $v): float {
+        if ($v['status'] === 'cancelada') return 0.0;
+        $custo = array_sum(array_map(fn($it) => ($it['quantidade'] - $it['quantidade_devolvida']) * $it['custo_unit'], $v['itens']));
+        return round($v['total'] - $v['valor_devolvido'] - $custo, 2);
     }
 
-    /** Cancela a venda inteira: o que ainda não foi devolvido volta aos lotes. O registro é mantido. */
+    /** Só o administrador cancela ou devolve. Venda cancelada não muda mais. */
+    public static function podeAlterar(array $v, array $usuario): bool {
+        if ($v['status'] === 'cancelada') return false;
+        return $usuario['perfil'] === 'admin';
+    }
+
+    /** Cancela a venda inteira (só o administrador): o que ainda não foi devolvido volta aos lotes. O registro é mantido. */
     public static function cancelar(int $id, array $usuario, string $motivo): void {
         $motivo = trim($motivo);
         if ($motivo === '') throw new DomainException('Informe o motivo do cancelamento.');
-        $v = self::buscar($id);
-        if (!$v) throw new DomainException('Venda não encontrada.');
-        if (!self::podeAlterar($v, $usuario)) throw new DomainException('Você não pode cancelar esta venda.');
+        if ($usuario['perfil'] !== 'admin') throw new DomainException('Só o administrador pode cancelar vendas.');
         $pdo = Database::pdo();
-        $pdo->beginTransaction();
+        // lê e altera dentro da mesma transação de escrita: dois cancelamentos simultâneos não devolvem o estoque em dobro
+        $pdo->exec('BEGIN IMMEDIATE');
         try {
+            $v = self::buscar($id);
+            if (!$v) throw new DomainException('Venda não encontrada.');
+            if (!self::podeAlterar($v, $usuario)) throw new DomainException('Você não pode cancelar esta venda.');
+            $st = $pdo->prepare("UPDATE vendas SET status='cancelada', cancelado_em=datetime('now','localtime'), cancelado_por=?, motivo_cancelamento=? WHERE id=? AND status='concluida'");
+            $st->execute([$usuario['id'], $motivo, $id]);
+            if ($st->rowCount() !== 1) throw new DomainException('Esta venda já foi cancelada.');
             foreach ($v['itens'] as $it) {
                 $resta = $it['quantidade'] - $it['quantidade_devolvida'];
-                if ($resta > 0) Estoque::devolverItem((int)$it['id'], (int)$it['produto_id'], $resta);
+                if ($resta > 0) Estoque::devolverItem((int)$it['id'], (int)$it['produto_id'], $resta, 'cancelamento', $motivo);
             }
-            $pdo->prepare("UPDATE vendas SET status='cancelada', cancelado_em=datetime('now','localtime'), cancelado_por=?, motivo_cancelamento=? WHERE id=?")
-                ->execute([$usuario['id'], $motivo, $id]);
+            Auditoria::registrar('venda_cancelada', "Venda #$id de " . moeda($v['total']) . " cancelada. Motivo: $motivo", $usuario);
             $pdo->commit();
         } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
     }
@@ -136,13 +149,14 @@ class Venda {
     public static function devolver(int $id, array $usuario, array $qtds, string $motivo): float {
         $motivo = trim($motivo);
         if ($motivo === '') throw new DomainException('Informe o motivo da devolução.');
-        $v = self::buscar($id);
-        if (!$v) throw new DomainException('Venda não encontrada.');
-        if (!self::podeAlterar($v, $usuario)) throw new DomainException('Você não pode registrar devolução nesta venda.');
-        $fator = $v['subtotal'] > 0 ? $v['total'] / $v['subtotal'] : 1;
         $pdo = Database::pdo();
-        $pdo->beginTransaction();
+        // lê e altera dentro da mesma transação de escrita (ver cancelar)
+        $pdo->exec('BEGIN IMMEDIATE');
         try {
+            $v = self::buscar($id);
+            if (!$v) throw new DomainException('Venda não encontrada.');
+            if (!self::podeAlterar($v, $usuario)) throw new DomainException('Você não pode registrar devolução nesta venda.');
+            $fator = $v['subtotal'] > 0 ? $v['total'] / $v['subtotal'] : 1;
             $soma = 0.0; $unidades = 0;
             foreach ($v['itens'] as $it) {
                 $q = (int)($qtds[$it['id']] ?? 0);
@@ -150,9 +164,11 @@ class Venda {
                 $unidades += $q;
                 $resta = $it['quantidade'] - $it['quantidade_devolvida'];
                 if ($q < 0 || $q > $resta) throw new DomainException("Quantidade inválida para {$it['nome']}: só restam $resta para devolver.");
+                $st = $pdo->prepare('UPDATE venda_itens SET quantidade_devolvida = quantidade_devolvida + ? WHERE id = ? AND quantidade_devolvida + ? <= quantidade');
+                $st->execute([$q, $it['id'], $q]);
+                if ($st->rowCount() !== 1) throw new DomainException("Quantidade inválida para {$it['nome']}: só restam $resta para devolver.");
                 $valor = round($q * $it['preco_unit'] * $fator, 2);
-                Estoque::devolverItem((int)$it['id'], (int)$it['produto_id'], $q);
-                $pdo->prepare('UPDATE venda_itens SET quantidade_devolvida = quantidade_devolvida + ? WHERE id = ?')->execute([$q, $it['id']]);
+                Estoque::devolverItem((int)$it['id'], (int)$it['produto_id'], $q, 'devolucao', $motivo);
                 $pdo->prepare('INSERT INTO devolucoes (venda_id,venda_item_id,quantidade,valor,motivo,usuario_id) VALUES (?,?,?,?,?,?)')->execute([$id, $it['id'], $q, $valor, $motivo, $usuario['id']]);
                 $soma += $valor;
             }
@@ -160,6 +176,7 @@ class Venda {
             // devolução de tudo: zera exatamente, sem sobra de centavos por arredondamento
             $pdo->prepare('UPDATE vendas SET valor_devolvido = CASE WHEN (SELECT SUM(quantidade - quantidade_devolvida) FROM venda_itens WHERE venda_id = ?) = 0 THEN total ELSE MIN(total, valor_devolvido + ?) END WHERE id = ?')
                 ->execute([$id, $soma, $id]);
+            Auditoria::registrar('devolucao', "Venda #$id: $unidades unidade(s) devolvida(s), " . moeda($soma) . " ao cliente. Motivo: $motivo", $usuario);
             $pdo->commit();
             return $soma;
         } catch (Throwable $e) { $pdo->rollBack(); throw $e; }

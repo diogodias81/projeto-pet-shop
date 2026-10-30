@@ -22,10 +22,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   } catch (DomainException $ex) {
 
     flash($ex->getMessage(), 'erro');
+
+    // devolve o que foi digitado ao formulário (a foto o navegador não deixa repor)
+    if (($_POST['acao'] ?? '') !== 'excluir') {
+      $_SESSION['form_produto'] = $_POST;
+      redirect('produtos', (int) ($_POST['id'] ?? 0) ? ['editar' => (int) $_POST['id']] : []);
+    }
   }
 
   redirect('produtos');
 }
+
+$antigo = $_SESSION['form_produto'] ?? [];
+unset($_SESSION['form_produto']);
 
 $editando = null;
 
@@ -77,7 +86,7 @@ $produtos = Produto::listar(
           title="De 4 a 14 números"
           placeholder="Leia ou digite"
           data-sem-enter
-          value="<?= e($editando['codigo_barras'] ?? '') ?>">
+          value="<?= e($antigo['codigo_barras'] ?? $editando['codigo_barras'] ?? '') ?>">
       </label>
 
       <label>
@@ -87,7 +96,7 @@ $produtos = Produto::listar(
           name="nome"
           required
           maxlength="120"
-          value="<?= e($editando['nome'] ?? '') ?>">
+          value="<?= e($antigo['nome'] ?? $editando['nome'] ?? '') ?>">
       </label>
 
       <label>
@@ -103,7 +112,7 @@ $produtos = Produto::listar(
 
             <option
               value="<?= $c['id'] ?>"
-              <?= ($editando['categoria_id'] ?? 0) == $c['id'] ? 'selected' : '' ?>>
+              <?= ($antigo['categoria_id'] ?? $editando['categoria_id'] ?? 0) == $c['id'] ? 'selected' : '' ?>>
               <?= e($c['nome']) ?>
             </option>
 
@@ -120,7 +129,7 @@ $produtos = Produto::listar(
           name="preco_custo"
           inputmode="decimal"
           placeholder="0,00"
-          value="<?= $editando && $editando['preco_custo'] > 0 ? number_format($editando['preco_custo'], 2, ',', '') : '' ?>">
+          value="<?= e($antigo['preco_custo'] ?? ($editando && $editando['preco_custo'] > 0 ? number_format($editando['preco_custo'], 2, ',', '') : '')) ?>">
       </label>
 
       <label>
@@ -130,7 +139,7 @@ $produtos = Produto::listar(
           name="preco"
           required
           inputmode="decimal"
-          value="<?= $editando ? number_format($editando['preco'], 2, ',', '') : '' ?>">
+          value="<?= e($antigo['preco'] ?? ($editando ? number_format($editando['preco'], 2, ',', '') : '')) ?>">
       </label>
 
       <?php if (!$editando): ?>
@@ -142,7 +151,7 @@ $produtos = Produto::listar(
             name="estoque"
             type="number"
             min="0"
-            value="0">
+            value="<?= e($antigo['estoque'] ?? '0') ?>">
         </label>
 
         <label>
@@ -151,7 +160,8 @@ $produtos = Produto::listar(
           <input
             name="lote"
             maxlength="40"
-            placeholder="Opcional">
+            placeholder="Opcional"
+            value="<?= e($antigo['lote'] ?? '') ?>">
         </label>
 
         <label>
@@ -160,7 +170,8 @@ $produtos = Produto::listar(
           <input
             name="validade"
             type="date"
-            min="<?= date('Y-m-d') ?>">
+            min="<?= date('Y-m-d') ?>"
+            value="<?= e($antigo['validade'] ?? '') ?>">
         </label>
 
       <?php endif; ?>
@@ -172,7 +183,7 @@ $produtos = Produto::listar(
           name="estoque_minimo"
           type="number"
           min="0"
-          value="<?= $editando['estoque_minimo'] ?? 5 ?>">
+          value="<?= e($antigo['estoque_minimo'] ?? $editando['estoque_minimo'] ?? 5) ?>">
       </label>
 
       <label>
@@ -288,7 +299,7 @@ $produtos = Produto::listar(
           <th class="num">Preço</th>
 
           <?php if ($gerencia): ?>
-            <th class="num">Margem</th>
+            <th class="num">Lucro por unidade</th>
           <?php endif; ?>
 
           <th class="num">Estoque</th>
@@ -358,7 +369,12 @@ $produtos = Produto::listar(
               <?php $margem = Produto::margem($p); ?>
 
               <td class="num <?= $margem !== null && $margem < 0 ? 'negativo' : '' ?>">
-                <?= $margem === null ? '—' : number_format($margem, 1, ',', '.') . '%' ?>
+                <?php if ($margem === null): ?>
+                  —
+                <?php else: ?>
+                  <?= moeda($p['preco'] - $p['preco_custo']) ?> · <?= number_format($margem, 1, ',', '.') ?>% de margem
+                  <br><small class="codigo"><?= number_format(($p['preco'] - $p['preco_custo']) / $p['preco_custo'] * 100, 1, ',', '.') ?>% sobre o custo</small>
+                <?php endif; ?>
               </td>
 
             <?php endif; ?>

@@ -127,11 +127,12 @@ function csrf_campo(): string
 
 function csrf_validar(): void
 {
+    $token = $_POST['csrf'] ?? '';
+
     if (
-        !hash_equals(
-            $_SESSION['csrf'] ?? '',
-            $_POST['csrf'] ?? ''
-        )
+        empty($_SESSION['csrf']) ||
+        !is_string($token) ||
+        !hash_equals($_SESSION['csrf'], $token)
     ) {
 
         http_response_code(400);
@@ -164,9 +165,7 @@ function exigirPerfil(array $perfis): void
 {
     if (!temPerfil($perfis)) {
 
-        http_response_code(403);
-
-        exit('Acesso negado.');
+        paginaErro(403, 'Acesso negado: seu perfil não pode abrir esta tela.');
     }
 }
 
@@ -178,4 +177,45 @@ function podeGerirEstoque(): bool
         'admin',
         'estoque'
     ]);
+}
+
+/** Erro dentro do layout (menu + link de volta) para usuário logado */
+function paginaErro(int $codigo, string $msg): never
+{
+    http_response_code($codigo);
+
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+
+    require BASE_PATH . '/app/Views/header.php';
+
+    echo '<section class="painel"><p>' . e($msg) . '</p><p><a href="index.php">Voltar ao início</a></p></section>';
+
+    require BASE_PATH . '/app/Views/footer.php';
+
+    exit;
+}
+
+
+/** Baixa uma planilha CSV (separador ";" e BOM para o Excel em português abrir com acentos) */
+function exportarCsv(string $arquivo, array $cabecalho, array $linhas): never
+{
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="' . preg_replace('/[^\w.-]/', '_', $arquivo) . '"');
+
+    $saida = fopen('php://output', 'w');
+    fwrite($saida, "\xEF\xBB\xBF");
+    fputcsv($saida, $cabecalho, ';', '"', '');
+
+    foreach ($linhas as $linha) {
+        // texto que começa com = + - @ viraria fórmula no Excel (injeção de CSV)
+        fputcsv($saida, array_map(fn($v) => is_string($v) && preg_match('/^[=+\-@\t\r]/', $v) && !is_numeric(strtr($v, ',', '.')) ? "'" . $v : $v, $linha), ';', '"', '');
+    }
+
+    exit;
 }

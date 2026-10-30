@@ -1,0 +1,8 @@
+.git
+.claude
+.playwright-mcp
+storage
+public/uploads
+# ** = em qualquer pasta, não só na raiz
+**/*.jar
+**/*.sqlite

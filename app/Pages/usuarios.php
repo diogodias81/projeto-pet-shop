@@ -11,6 +11,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       );
 
       flash('Usuário excluído.');
+    } elseif (($_POST['acao'] ?? '') === 'redefinir') {
+
+      Usuario::redefinirSenha(
+        (int) $_POST['id'],
+        $_POST['senha'] ?? ''
+      );
+
+      flash('Senha redefinida. O usuário deverá trocá-la no próximo acesso.');
     } else {
 
       Usuario::criar($_POST);
@@ -62,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         type="password"
         name="senha"
         minlength="6"
+        maxlength="1024"
         required>
     </label>
 
@@ -125,6 +134,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </td>
 
           <td class="acoes">
+
+            <form
+              method="post"
+              data-confirmar="Redefinir a senha de <?= e($u['nome']) ?>?">
+
+              <?= csrf_campo() ?>
+
+              <input
+                type="hidden"
+                name="acao"
+                value="redefinir">
+
+              <input
+                type="hidden"
+                name="id"
+                value="<?= $u['id'] ?>">
+
+              <input
+                type="password"
+                name="senha"
+                placeholder="Senha provisória"
+                aria-label="Senha provisória para <?= e($u['nome']) ?>"
+                minlength="6"
+                maxlength="1024"
+                autocomplete="new-password"
+                required>
+
+              <button class="btn btn-claro btn-pequeno">
+                Redefinir senha
+              </button>
+
+            </form>
 
             <form
               method="post"

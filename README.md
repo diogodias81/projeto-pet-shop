@@ -52,20 +52,37 @@ docker compose up -d
 
 ## Usuários iniciais
 
-Todos os usuários possuem a senha:
+Na primeira execução (banco vazio) é criado só o administrador `admin@petshop.com`. A senha inicial é:
 
-```text
-senha123
+* a da variável de ambiente `ADMIN_SENHA`, se definida (ex.: `ADMIN_SENHA='minha-senha' docker compose up -d --build`); ou
+* uma senha aleatória, mostrada **uma única vez** no log do servidor:
+
+```bash
+# Docker: rode logo após o primeiro "docker compose up" (a linha aparece quando o banco é criado, no primeiro acesso à página)
+docker compose logs php | grep "senha inicial"
 ```
 
-> Recomenda-se alterar as senhas após o primeiro acesso.
+Sem Docker (`php -S`), a linha aparece no próprio terminal onde o servidor está rodando:
+
+```bash
+php -S 127.0.0.1:8000 -t public
+# ... PetShop: senha inicial do admin@petshop.com = 1a2b3c4d5e6f7a8b (troca obrigatória no primeiro acesso)
+```
+
+Se a senha se perdeu antes do primeiro acesso, pare o sistema, apague `storage/petshop.sqlite` (só se ainda não há dados) e suba de novo, ou defina `ADMIN_SENHA`.
+
+No primeiro acesso o sistema obriga a troca dessa senha. Os demais usuários são criados pelo administrador na tela **Usuários**, onde ele também pode **redefinir a senha** de quem esqueceu (o usuário troca a senha provisória no próximo acesso).
+
+Em desenvolvimento (`APP_DEBUG=1`) também são criadas contas de demonstração com a senha `senha123` (troca obrigatória no primeiro acesso). Nunca use `APP_DEBUG=1` em produção.
 
 | E-mail                                                  | Perfil              | Acessa                            |
 | ------------------------------------------------------- | ------------------- | --------------------------------- |
 | [admin@petshop.com](mailto:admin@petshop.com)           | Administrador       | Tudo, inclusive usuários          |
-| [vendedor@petshop.com](mailto:vendedor@petshop.com)     | Vendedor            | Vendas; consulta produtos/estoque |
-| [estoque@petshop.com](mailto:estoque@petshop.com)       | Responsável estoque | Produtos, categorias e estoque    |
-| [financeiro@petshop.com](mailto:financeiro@petshop.com) | Financeiro          | Dashboard e relatórios            |
+| [vendedor@petshop.com](mailto:vendedor@petshop.com)     | Vendedor (demo)     | Vendas; consulta produtos/estoque |
+| [estoque@petshop.com](mailto:estoque@petshop.com)       | Responsável estoque (demo) | Produtos, categorias e estoque |
+| [financeiro@petshop.com](mailto:financeiro@petshop.com) | Financeiro (demo)   | Dashboard e relatórios            |
+
+O sistema fica acessível só nesta máquina (`127.0.0.1:8000`). Para usar em rede, coloque um proxy com HTTPS na frente.
 
 ## Estrutura do projeto
 

@@ -43,6 +43,12 @@ return [
         ['admin', 'estoque']
     ],
 
+    // Despesas da loja
+    'despesas' => [
+        'Despesas',
+        ['admin', 'financeiro']
+    ],
+
     // Relatórios
     'relatorios' => [
         'Relatórios',
@@ -52,6 +58,12 @@ return [
     // Usuários
     'usuarios' => [
         'Usuários',
+        ['admin']
+    ],
+
+    // Registro de operações importantes
+    'auditoria' => [
+        'Auditoria',
         ['admin']
     ],
 

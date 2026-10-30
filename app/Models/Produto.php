@@ -35,6 +35,8 @@ class Produto {
         if ($codigo !== null && !preg_match('/^\d{4,14}$/', $codigo)) throw new DomainException('O código de barras deve ter de 4 a 14 números.');
         if ($preco <= 0)  throw new DomainException('Informe um preço de venda válido, ex.: 143,99');
         if ($custo < 0)   throw new DomainException('O preço de custo não pode ser negativo.');
+        // também barra INF (número de centenas de dígitos)
+        if ($preco > 1000000 || $custo > 1000000) throw new DomainException('Preço acima do limite de R$ 1.000.000,00.');
         if ($min < 0)     throw new DomainException('O estoque mínimo não pode ser negativo.');
         $pdo = Database::pdo();
         if ($codigo !== null) {
@@ -46,14 +48,23 @@ class Produto {
         $pdo->beginTransaction();
         try {
             if ($id) {
-                $antiga = $arquivo ? (self::buscar($id)['foto'] ?? null) : null;
+                $antes = self::buscar($id);
+                if (!$antes) throw new DomainException('Produto não encontrado.');
+                $antiga = $arquivo ? $antes['foto'] : null;
                 $pdo->prepare('UPDATE produtos SET nome=?, codigo_barras=?, categoria_id=?, preco=?, preco_custo=?, estoque_minimo=?, foto=COALESCE(?, foto) WHERE id=?')
                     ->execute([$nome, $codigo, $cat, $preco, $custo, $min, $arquivo, $id]);
+                if (round($antes['preco'], 2) != round($preco, 2) || round($antes['preco_custo'], 2) != round($custo, 2)) {
+                    Auditoria::registrar('preco_alterado', "$nome (#$id): venda " . moeda($antes['preco']) . ' → ' . moeda($preco) . ', custo ' . moeda($antes['preco_custo']) . ' → ' . moeda($custo));
+                } else {
+                    Auditoria::registrar('produto_alterado', "$nome (#$id)");
+                }
             } else {
                 $inicial = max(0, (int)($d['estoque'] ?? 0));
                 $pdo->prepare('INSERT INTO produtos (nome,codigo_barras,categoria_id,preco,preco_custo,estoque,estoque_minimo,foto) VALUES (?,?,?,?,?,0,?,?)')
                     ->execute([$nome, $codigo, $cat, $preco, $custo, $min, $arquivo]);
-                if ($inicial > 0) Estoque::entrada((int)$pdo->lastInsertId(), $inicial, '', $d['lote'] ?? '', $d['validade'] ?? '');
+                $novo = (int)$pdo->lastInsertId();
+                Auditoria::registrar('produto_criado', "$nome (#$novo): venda " . moeda($preco) . ', custo ' . moeda($custo));
+                if ($inicial > 0) Estoque::entrada($novo, $inicial, '', $d['lote'] ?? '', $d['validade'] ?? '');
             }
             $pdo->commit();
         } catch (Throwable $e) {
@@ -65,7 +76,10 @@ class Produto {
     }
     /** Exclusão lógica: preserva o histórico de vendas */
     public static function excluir(int $id): void {
+        $p = self::buscar($id);
+        if (!$p) throw new DomainException('Produto não encontrado.');
         Database::pdo()->prepare('UPDATE produtos SET ativo = 0 WHERE id = ?')->execute([$id]);
+        Auditoria::registrar('produto_excluido', "{$p['nome']} (#$id), estoque de {$p['estoque']} unidade(s)");
     }
     /** Produtos com estoque igual ou abaixo do mínimo */
     public static function baixoEstoque(): array {
@@ -88,9 +102,23 @@ class Produto {
         if ($f['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name'])) throw new DomainException('Não foi possível enviar a foto.');
         $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][(new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name'])] ?? null;
         if (!$ext) throw new DomainException('A foto deve ser JPG, PNG ou WEBP.');
+        // um PNG pequeno pode descompactar em gigabytes: confere as dimensões antes de abrir no GD
+        [$largura, $altura] = getimagesize($f['tmp_name']) ?: [0, 0];
+        if ($largura < 1 || $altura < 1 || $largura > 4000 || $altura > 4000) throw new DomainException('A foto deve ter no máximo 4000 x 4000 pixels.');
         if (!is_dir(self::pastaFotos())) mkdir(self::pastaFotos(), 0775, true);
         $nome = bin2hex(random_bytes(12)) . '.' . $ext;
-        if (!move_uploaded_file($f['tmp_name'], self::pastaFotos() . '/' . $nome)) throw new DomainException('Não foi possível salvar a foto.');
+        $destino = self::pastaFotos() . '/' . $nome;
+        // Regrava só os pixels pelo GD: descarta qualquer coisa escondida no arquivo (ex.: PHP dentro de um PNG).
+        // shortcut: sem a extensão GD a foto é gravada como veio; o Dockerfile instala o GD.
+        if (function_exists('imagecreatefromstring')) {
+            $img = @imagecreatefromstring((string)file_get_contents($f['tmp_name']));
+            if (!$img) throw new DomainException('A foto deve ser JPG, PNG ou WEBP.');
+            imagesavealpha($img, true);
+            $ok = match ($ext) { 'jpg' => imagejpeg($img, $destino, 85), 'png' => imagepng($img, $destino), 'webp' => imagewebp($img, $destino, 85) };
+        } else {
+            $ok = move_uploaded_file($f['tmp_name'], $destino);
+        }
+        if (!$ok) throw new DomainException('Não foi possível salvar a foto.');
         return $nome;
     }
 }

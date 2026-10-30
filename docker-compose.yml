@@ -2,6 +2,14 @@ services:
   php:
     build: .
     ports:
-      - "8000:80"
+      # Só esta máquina acessa. Para expor na rede, coloque um proxy com HTTPS (ex.: Caddy/nginx) na frente, não troque por 0.0.0.0.
+      - "127.0.0.1:8000:80"
+    environment:
+      # Repassadas do seu terminal, se definidas (ver README: Usuários iniciais)
+      - ADMIN_SENHA
+      - APP_DEBUG
     volumes:
-      - ./:/var/www/htmls
+      # Só os dados ficam fora da imagem: o banco e as fotos sobrevivem a cada rebuild.
+      # O código vem da imagem (COPY no Dockerfile), então mudou código = rodar com --build.
+      - ./storage:/var/www/html/storage
+      - ./public/uploads:/var/www/html/public/uploads

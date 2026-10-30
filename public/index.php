@@ -14,6 +14,20 @@ $pagina = $_GET['page'] ?? 'inicio';
 
 if ($pagina === 'logout') {
 
+    // Só por POST com CSRF: um link ou imagem de outro site não desloga ninguém.
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        redirect('inicio');
+    }
+
+    csrf_validar();
+
+    $_SESSION = [];
+
+    $c = session_get_cookie_params();
+    unset($c['lifetime']);
+
+    setcookie(session_name(), '', ['expires' => 1] + $c);
+
     session_destroy();
 
     header('Location: index.php?page=login');
@@ -39,6 +53,16 @@ if (!usuario()) {
 }
 
 
+// Senha inicial: nada do sistema abre antes de o usuário escolher a própria senha
+
+if (usuario()['trocar_senha'] ?? 0) {
+
+    require BASE_PATH . '/app/Pages/trocar_senha.php';
+
+    exit;
+}
+
+
 // Página inicial depende do perfil
 
 if ($pagina === 'inicio') {
@@ -58,9 +82,7 @@ if ($pagina === 'inicio') {
 
 if (!isset($rotas[$pagina])) {
 
-    http_response_code(404);
-
-    exit('Página não encontrada.');
+    paginaErro(404, 'Página não encontrada.');
 }
 
 

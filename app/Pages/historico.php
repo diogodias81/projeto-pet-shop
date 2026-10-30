@@ -6,7 +6,7 @@ $soProprias = $eu['perfil'] === 'vendedor';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-  exigirPerfil(['admin', 'vendedor']);
+  exigirPerfil(['admin']);
 
   $id = (int) ($_POST['id'] ?? 0);
 
@@ -45,9 +45,7 @@ if (isset($_GET['ver'])) {
 
   if (!$venda || ($soProprias && (int) $venda['usuario_id'] !== (int) $eu['id'])) {
 
-    http_response_code(404);
-
-    exit('Venda não encontrada.');
+    paginaErro(404, 'Venda não encontrada.');
   }
 
   $podeAlterar = Venda::podeAlterar($venda, $eu);
@@ -95,6 +93,11 @@ if (isset($_GET['ver'])) {
       <?php if ($venda['valor_devolvido'] > 0): ?>
         <dt>Devolvido</dt>
         <dd><?= moeda($venda['valor_devolvido']) ?></dd>
+      <?php endif; ?>
+
+      <?php if (temPerfil(['admin', 'financeiro'])): ?>
+        <dt>Lucro bruto</dt>
+        <dd><?= moeda(Venda::lucro($venda)) ?></dd>
       <?php endif; ?>
 
       <?php if ($venda['status'] === 'cancelada'): ?>
@@ -234,10 +237,12 @@ if (isset($_GET['ver'])) {
 
         </div>
 
-      <?php elseif ($venda['status'] !== 'cancelada' && $soProprias): ?>
+      <?php endif; ?>
+
+      <?php if ($venda['status'] !== 'cancelada' && $soProprias): ?>
 
         <p class="vazio">
-          Só é possível cancelar ou devolver vendas suas feitas hoje. Para outras, peça a um administrador.
+          Cancelamentos e devoluções são feitos só pelo administrador. Se o cliente precisar, chame um administrador.
         </p>
 
       <?php endif; ?>

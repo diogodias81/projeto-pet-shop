@@ -24,6 +24,14 @@ document.querySelectorAll('button[data-confirmar-botao]').forEach(btn => {
 });
 
 
+// <button data-imprimir>: abre a impressão (a CSP não permite onclick no HTML)
+
+document.querySelectorAll('[data-imprimir]').forEach(btn => {
+
+    btn.addEventListener('click', () => window.print());
+});
+
+
 // Leitor de código de barras: o leitor USB "digita" o código e aperta Enter.
 // <input data-sem-enter> não envia o formulário com esse Enter.
 // <input data-seleciona="id-do-select"> escolhe no select a opção com o mesmo data-codigo.
@@ -342,9 +350,9 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
         let problema = '';
 
-        if (desconto > subtotal) {
+        if (subtotal > 0 && desconto >= subtotal) {
 
-            problema = 'O desconto não pode ser maior que o subtotal.';
+            problema = 'O desconto deve ser menor que o subtotal: a venda não pode ficar em R$ 0,00.';
 
         } else if (desconto > centavos(subtotal * descontoMax)) {
 

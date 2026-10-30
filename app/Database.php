@@ -37,7 +37,8 @@ class Database
             );
 
             self::$pdo->exec(
-                'PRAGMA foreign_keys = ON'
+                // busy_timeout abaixo do max_execution_time (30s): senão o PHP mata a requisição antes do "Sistema ocupado"
+                'PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 15000'
             );
         }
 
@@ -225,6 +226,92 @@ class Database
                         datetime('now', 'localtime')
                     )
             );
+
+
+            -- Logins errados recentes (limite de tentativas). Horário em UTC.
+            CREATE TABLE IF NOT EXISTS tentativas_login (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                email TEXT NOT NULL,
+
+                ip TEXT NOT NULL,
+
+                criado_em TEXT NOT NULL
+                    DEFAULT (datetime('now'))
+            );
+
+
+            -- Etapa 3: toda entrada e saída de cada lote (quantidade negativa = saída)
+            CREATE TABLE IF NOT EXISTS movimentacoes_estoque (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                produto_id INTEGER NOT NULL
+                    REFERENCES produtos(id),
+
+                lote_id INTEGER
+                    REFERENCES lotes(id),
+
+                tipo TEXT NOT NULL
+                    CHECK (tipo IN ('entrada', 'venda', 'devolucao', 'cancelamento', 'baixa')),
+
+                quantidade INTEGER NOT NULL,
+
+                venda_id INTEGER
+                    REFERENCES vendas(id),
+
+                usuario_id INTEGER
+                    REFERENCES usuarios(id),
+
+                observacao TEXT,
+
+                criado_em TEXT NOT NULL
+                    DEFAULT (datetime('now', 'localtime'))
+            );
+
+
+            -- Etapa 5: registro de operações importantes. Sem chave estrangeira em usuario_id
+            -- para o histórico continuar existindo depois que o usuário for excluído.
+            CREATE TABLE IF NOT EXISTS auditoria (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                usuario_id INTEGER,
+
+                usuario_nome TEXT,
+
+                acao TEXT NOT NULL,
+
+                detalhes TEXT,
+
+                ip TEXT,
+
+                criado_em TEXT NOT NULL
+                    DEFAULT (datetime('now', 'localtime'))
+            );
+
+
+            -- Etapa 4: despesas da loja (aluguel, energia, salários...)
+            CREATE TABLE IF NOT EXISTS despesas (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                descricao TEXT NOT NULL,
+
+                categoria TEXT NOT NULL,
+
+                valor REAL NOT NULL
+                    CHECK (valor > 0),
+
+                data TEXT NOT NULL,
+
+                usuario_id INTEGER
+                    REFERENCES usuarios(id),
+
+                criado_em TEXT NOT NULL
+                    DEFAULT (datetime('now', 'localtime'))
+            );
         ");
 
 
@@ -258,6 +345,10 @@ class Database
                 'cancelado_por' => 'INTEGER REFERENCES usuarios(id)',
                 'motivo_cancelamento' => 'TEXT',
             ],
+            // 1 = entrou com a senha inicial e precisa trocá-la antes de usar o sistema
+            'usuarios' => [
+                'trocar_senha' => 'INTEGER NOT NULL DEFAULT 0',
+            ],
         ];
 
         foreach ($novas as $tabela => $colunas) {
@@ -277,6 +368,19 @@ class Database
                     if ($coluna === 'subtotal') {
 
                         $pdo->exec('UPDATE vendas SET subtotal = total');
+                    }
+
+                    // Bancos antigos nasceram com a senha padrão senha123: quem ainda a usa troca no próximo acesso.
+                    if ($coluna === 'trocar_senha') {
+
+                        $marcar = $pdo->prepare('UPDATE usuarios SET trocar_senha = 1 WHERE id = ?');
+
+                        foreach ($pdo->query('SELECT id, senha_hash FROM usuarios')->fetchAll() as $u) {
+
+                            if (password_verify('senha123', $u['senha_hash'])) {
+                                $marcar->execute([$u['id']]);
+                            }
+                        }
                     }
 
                     if ($coluna === 'codigo_barras') {
@@ -325,28 +429,43 @@ class Database
             $ins = $pdo->prepare(
                 '
                 INSERT INTO usuarios
-                    (nome, email, senha_hash, perfil)
+                    (nome, email, senha_hash, perfil, trocar_senha)
                 VALUES
-                    (?, ?, ?, ?)
+                    (?, ?, ?, ?, 1)
                 '
             );
 
 
+            // Senha inicial do admin: ADMIN_SENHA ou uma aleatória, mostrada uma única vez no log do servidor.
+            $senhaAdmin = (string) getenv('ADMIN_SENHA');
+
+            if ($senhaAdmin === '') {
+
+                $senhaAdmin = bin2hex(random_bytes(8));
+
+                error_log("PetShop: senha inicial do admin@petshop.com = $senhaAdmin (troca obrigatória no primeiro acesso)");
+            }
+
             $usuarios = [
-                ['Administrador', 'admin'],
-                ['Vendedor', 'vendedor'],
-                ['Estoquista', 'estoque'],
-                ['Financeiro', 'financeiro'],
+                ['Administrador', 'admin', $senhaAdmin],
             ];
 
+            // Contas de demonstração só em desenvolvimento
+            if (config('debug')) {
 
-            foreach ($usuarios as [$nome, $perfil]) {
+                $usuarios[] = ['Vendedor', 'vendedor', 'senha123'];
+                $usuarios[] = ['Estoquista', 'estoque', 'senha123'];
+                $usuarios[] = ['Financeiro', 'financeiro', 'senha123'];
+            }
+
+
+            foreach ($usuarios as [$nome, $perfil, $senha]) {
 
                 $ins->execute([
                     $nome,
                     "$perfil@petshop.com",
                     password_hash(
-                        'senha123',
+                        $senha,
                         PASSWORD_DEFAULT
                     ),
                     $perfil,

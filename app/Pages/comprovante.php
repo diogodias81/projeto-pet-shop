@@ -8,9 +8,7 @@ if (
   (usuario()['perfil'] === 'vendedor' && (int) $venda['usuario_id'] !== (int) usuario()['id'])
 ) {
 
-  http_response_code(404);
-
-  exit('Venda não encontrada.');
+  paginaErro(404, 'Venda não encontrada.');
 }
 
 $loja = config('loja');
@@ -26,7 +24,7 @@ $situacao = Venda::situacao($venda);
   <button
     type="button"
     class="btn"
-    onclick="window.print()">
+    data-imprimir>
     Imprimir / Salvar PDF
   </button>
 

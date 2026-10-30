@@ -8,6 +8,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   try {
 
+    if (($_POST['acao'] ?? '') === 'baixa') {
+
+      Estoque::baixa(
+        (int) ($_POST['lote_id'] ?? 0),
+        (int) ($_POST['quantidade'] ?? 0),
+        $_POST['motivo'] ?? '',
+        $_POST['observacao'] ?? ''
+      );
+
+      flash('Baixa registrada e estoque atualizado.');
+      redirect('estoque');
+    }
+
     Estoque::entrada(
       (int) ($_POST['produto_id'] ?? 0),
       (int) ($_POST['quantidade'] ?? 0),
@@ -122,6 +135,65 @@ $rotuloSituacao = [
 
       <button class="btn">
         Registrar entrada
+      </button>
+
+    </form>
+
+  </section>
+
+<?php endif; ?>
+
+<?php require BASE_PATH . '/app/Views/alertas.php'; ?>
+
+<?php if ($gerencia): ?>
+
+  <section class="painel">
+
+    <h2>Dar baixa (vencido, avaria, perda)</h2>
+
+    <form method="post" class="linha" data-confirmar="Confirmar a baixa? As unidades saem do estoque.">
+
+      <?= csrf_campo() ?>
+
+      <input type="hidden" name="acao" value="baixa">
+
+      <label>
+        Lote
+
+        <select name="lote_id" required>
+          <option value="">Escolha…</option>
+          <?php foreach (Estoque::lotes() as $l): ?>
+            <option value="<?= $l['id'] ?>">
+              <?= e($l['produto']) ?> · lote <?= e($l['codigo']) ?> · <?= $l['quantidade'] ?> un.<?= $l['validade'] ? ' · val. ' . date('d/m/Y', strtotime($l['validade'])) : '' ?><?= Estoque::situacao($l['validade']) === 'vencido' ? ' (VENCIDO)' : '' ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </label>
+
+      <label>
+        Quantidade
+
+        <input name="quantidade" type="number" min="1" required>
+      </label>
+
+      <label>
+        Motivo
+
+        <select name="motivo" required>
+          <?php foreach (Estoque::MOTIVOS_BAIXA as $chave => $rotulo): ?>
+            <option value="<?= $chave ?>"><?= e($rotulo) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </label>
+
+      <label>
+        Observação
+
+        <input name="observacao" maxlength="200" placeholder="Opcional">
+      </label>
+
+      <button class="btn">
+        Dar baixa
       </button>
 
     </form>
@@ -290,60 +362,53 @@ $rotuloSituacao = [
 
   <section class="painel">
 
-    <h2>Últimas entradas</h2>
+    <h2>Movimentações de estoque<?= $busca !== '' ? ' · ' . e($busca) : '' ?></h2>
 
-    <table>
+    <?php $movs = Estoque::movimentacoes($busca); ?>
 
-      <thead>
+    <?php if (!$movs): ?>
 
-        <tr>
-          <th>Data</th>
-          <th>Produto</th>
-          <th class="num">Qtd.</th>
-          <th>Lote</th>
-          <th>Validade</th>
-          <th>Fornecedor</th>
-        </tr>
+      <p class="vazio">Nenhuma movimentação<?= $busca !== '' ? ' para esta busca' : '' ?>.</p>
 
-      </thead>
+    <?php else: ?>
 
-      <tbody>
+      <table>
 
-        <?php foreach (Estoque::historico() as $h): ?>
-
+        <thead>
           <tr>
-
-            <td>
-              <?= dataBr($h['criado_em']) ?>
-            </td>
-
-            <td>
-              <?= e($h['produto']) ?>
-            </td>
-
-            <td class="num">
-              <?= $h['quantidade'] ?>
-            </td>
-
-            <td>
-              <?= e($h['lote'] ?? '—') ?>
-            </td>
-
-            <td>
-              <?= $h['validade'] ? date('d/m/Y', strtotime($h['validade'])) : '—' ?>
-            </td>
-
-            <td>
-              <?= e($h['fornecedor'] ?: '—') ?>
-            </td>
-
+            <th>Data</th>
+            <th>Tipo</th>
+            <th>Produto</th>
+            <th>Lote</th>
+            <th class="num">Qtd.</th>
+            <th>Venda</th>
+            <th>Usuário</th>
+            <th>Observação</th>
           </tr>
+        </thead>
 
-        <?php endforeach; ?>
+        <tbody>
 
-      </tbody>
+          <?php foreach ($movs as $m): ?>
 
-    </table>
+            <tr>
+              <td><?= dataBr($m['criado_em']) ?></td>
+              <td><span class="selo <?= $m['quantidade'] > 0 ? 'selo-ok' : 'selo-neutro' ?>"><?= e(Estoque::TIPOS[$m['tipo']]) ?></span></td>
+              <td><?= e($m['produto']) ?></td>
+              <td><?= e($m['lote'] ?? '—') ?></td>
+              <td class="num"><?= $m['quantidade'] > 0 ? '+' . $m['quantidade'] : $m['quantidade'] ?></td>
+              <td><?= $m['venda_id'] ? '#' . $m['venda_id'] : '—' ?></td>
+              <td><?= e($m['usuario'] ?? '—') ?></td>
+              <td><?= e($m['observacao'] ?? '—') ?></td>
+            </tr>
+
+          <?php endforeach; ?>
+
+        </tbody>
+
+      </table>
+
+    <?php endif; ?>
 
   </section>
 

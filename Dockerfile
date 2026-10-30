@@ -1,11 +1,25 @@
 FROM php:8.4-apache
 
 RUN apt-get update \
-    && apt-get install -y libsqlite3-dev \
-    && docker-php-ext-install pdo_sqlite \
+    && apt-get install -y libsqlite3-dev libpng-dev libjpeg62-turbo-dev libwebp-dev \
+    && docker-php-ext-configure gd --with-jpeg --with-webp \
+    && docker-php-ext-install pdo_sqlite gd \
     && rm -rf /var/lib/apt/lists/*
 
-RUN a2enmod rewrite
+RUN a2enmod rewrite headers
+
+# Pasta de fotos enviadas: nunca executa PHP e não deixa o navegador "adivinhar" o tipo do arquivo
+RUN printf '%s\n' \
+    '<Directory ${APACHE_DOCUMENT_ROOT}/uploads>' \
+    '    php_admin_flag engine off' \
+    '    Options -Indexes -ExecCGI' \
+    '    <FilesMatch "\.(?i:php\d?|phtml|phar|pht)$">' \
+    '        Require all denied' \
+    '    </FilesMatch>' \
+    '    Header set X-Content-Type-Options nosniff' \
+    '</Directory>' \
+    > /etc/apache2/conf-available/uploads.conf \
+    && a2enconf uploads
 
 WORKDIR /var/www/html
 
