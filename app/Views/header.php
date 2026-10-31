@@ -58,7 +58,9 @@ $sair = '<form method="post" action="index.php?page=logout" class="m-0">' . csrf
         content="width=device-width, initial-scale=1, viewport-fit=cover">
 
     <title>
-        <?= e(isset($menu[$atual]) ? "{$menu[$atual]} · " : '') ?><?= e(config('app_nome')) ?>
+        <?php // páginas fora do menu (rótulo null) também ganham nome na aba ?>
+        <?php $tituloAba = $menu[$atual] ?? ['comprovante' => 'Comprovante'][$atual] ?? null; ?>
+        <?= e($tituloAba ? "$tituloAba · " : '') ?><?= e(config('app_nome')) ?>
     </title>
 
     <link rel="stylesheet" href="assets/vendor/bootstrap/bootstrap.min.css">

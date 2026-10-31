@@ -230,7 +230,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
                         <td><?= e($m['lote'] ?? '—') ?></td>
                         <td class="num"><?= $m['quantidade'] > 0 ? '+' . $m['quantidade'] : $m['quantidade'] ?></td>
                         <td><?= e($m['usuario'] ?? '—') ?></td>
-                        <td><?= e($m['observacao'] ?? '—') ?></td>
+                        <td><?= e($m['observacao'] ?: '—') ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -242,7 +242,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
 
 <section class="card card-body mb-3">
 
-    <h2>Próximos do vencimento (hoje) <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('validade') ?>">Exportar planilha</a></h2>
+    <h2>Lotes vencidos ou vencendo em até <?= Estoque::prazos()[0] ?> dias <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('validade') ?>">Exportar planilha</a></h2>
 
     <?php if (!$validade): ?>
 

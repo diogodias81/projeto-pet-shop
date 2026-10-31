@@ -221,7 +221,8 @@ if (isset($_GET['ver'])) {
             <button
               class="btn btn-light"
               name="acao"
-              value="devolver">
+              value="devolver"
+              data-confirmar-botao="Registrar a devolução dos itens marcados? Eles voltam ao estoque e a devolução não pode ser desfeita.">
               Registrar devolução
             </button>
 
@@ -411,7 +412,9 @@ $vendedores = array_filter(
   <?php if (!$vendas): ?>
 
     <p class="vazio">
-      Nenhuma venda encontrada.
+      <?= $filtros['de'] > $filtros['ate']
+        ? 'A data "De" é depois da data "Até": troque as datas para ver o período.'
+        : 'Nenhuma venda encontrada.' ?>
     </p>
 
   <?php else: ?>
@@ -476,6 +479,10 @@ $vendedores = array_filter(
       </tbody>
 
     </table></div>
+
+    <?php if (count($vendas) === 200): ?>
+      <p class="nota">Mostrando as 200 vendas mais recentes. Use os filtros para ver as anteriores.</p>
+    <?php endif; ?>
 
   <?php endif; ?>
 

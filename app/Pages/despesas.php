@@ -137,7 +137,7 @@ $total = array_sum(array_column($despesas, 'valor'));
 
   <?php if (!$despesas): ?>
 
-    <p class="vazio">Nenhuma despesa no período.</p>
+    <p class="vazio"><?= $de > $ate ? 'A data "De" é depois da data "Até": troque as datas para ver o período.' : 'Nenhuma despesa no período.' ?></p>
 
   <?php else: ?>
 

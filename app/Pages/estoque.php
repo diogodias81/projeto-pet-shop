@@ -406,7 +406,7 @@ $rotuloSituacao = [
               <td class="num"><?= $m['quantidade'] > 0 ? '+' . $m['quantidade'] : $m['quantidade'] ?></td>
               <td><?= $m['venda_id'] ? '#' . $m['venda_id'] : '—' ?></td>
               <td><?= e($m['usuario'] ?? '—') ?></td>
-              <td><?= e($m['observacao'] ?? '—') ?></td>
+              <td><?= e($m['observacao'] ?: '—') ?></td>
             </tr>
 
           <?php endforeach; ?>
@@ -414,6 +414,10 @@ $rotuloSituacao = [
         </tbody>
 
       </table></div>
+
+      <?php if (count($movs) === 30): ?>
+        <p class="nota">Mostrando as 30 movimentações mais recentes. Busque pelo produto ou lote para ver as anteriores.</p>
+      <?php endif; ?>
 
     <?php endif; ?>
 

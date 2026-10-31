@@ -83,7 +83,7 @@ h3 { font-size: 1rem; font-weight: 650; margin: 1.25rem 0 .6rem; }
 label { display: flex; flex-direction: column; gap: .3rem; font-size: .88rem; font-weight: 550; color: var(--suave); }
 label small { color: var(--suave); font-size: .8rem; font-weight: 400; }
 input:not([type="checkbox"], [type="radio"], [type="hidden"], [type="file"]), select, textarea { font: inherit; font-size: .95rem; padding: .5rem .75rem; border: 1px solid var(--borda); border-radius: 10px; background: #fff; color: var(--tinta); min-width: 9rem; max-width: 100%; transition: border-color .15s, box-shadow .15s; }
-input[type="file"] { min-width: 0; max-width: 100%; font-size: .85rem; color: var(--suave); }
+input[type="file"] { min-width: min(17rem, 100%); max-width: 100%; font-size: .85rem; color: var(--suave); }
 input[type="file"]::file-selector-button { font: inherit; font-weight: 600; margin-right: .6rem; padding: .45rem .8rem; border: 0; border-radius: 10px; background: #efebe4; color: var(--tinta); cursor: pointer; }
 input[type="search"] { min-width: 15rem; }
 .busca-aviso { margin: .4rem 0 0; color: var(--erro); font-size: .9rem; font-weight: 550; }
@@ -153,7 +153,8 @@ input.qtd { min-width: 0; width: 5rem; text-align: right; }
 
 /* Venda: fechamento */
 .fechamento { display: grid; grid-template-columns: 1fr minmax(15rem, 20rem); gap: .5rem 2rem; align-items: start; margin-top: 1rem; border-top: 1px dashed var(--borda); padding-top: 1rem; }
-.fechamento > .btn { grid-column: 2; margin: 0; }
+.fechamento > .btn, .fechamento > .nota { grid-column: 2; margin: 0; }
+.fechamento > .nota { text-align: center; }
 .linha > .alert { flex-basis: 100%; margin: 0; }
 .fechamento .btn { justify-self: stretch; font-size: 1.05rem; padding: .75rem 1rem; }
 .campo-composto { display: flex; }
@@ -210,7 +211,7 @@ body.login { display: grid; place-items: center; min-height: 100vh; padding: 1re
   .kpi strong { font-size: 1.15rem; }
   .grade { grid-template-columns: 1fr; }
   .fechamento { grid-template-columns: 1fr; }
-  .fechamento > .btn { grid-column: 1; }
+  .fechamento > .btn, .fechamento > .nota { grid-column: 1; }
   input[type="search"] { min-width: 0; }
   /* Tabelas viram cartões: uma linha por item, com o nome da coluna ao lado do valor */
   .table-responsive > .table:not(.comprovante .table) > thead { display: none; }
@@ -222,7 +223,11 @@ body.login { display: grid; place-items: center; min-height: 100vh; padding: 1re
   .table-responsive > .table:not(.comprovante .table) td > :is(input, select, .btn, form) { margin: .15rem 0 .15rem .4rem; }
   .table-responsive > .table:not(.comprovante .table) td:first-child { font-weight: 600; }
   .table-responsive > .table:not(.comprovante .table) tfoot th:empty { display: none; }
-  .hbarra { grid-template-columns: minmax(4.5rem, 7rem) 1fr auto; }
+  /* Celular não tem hover para o title: o nome ganha a linha inteira em vez de ser cortado */
+  .hbarra { grid-template-columns: 1fr auto; gap: .2rem .6rem; }
+  .hbarra > span:first-child { grid-column: 1 / -1; white-space: normal; }
+  /* Metade das datas do gráfico, para não encostarem */
+  .barras small.alterno { visibility: hidden; }
 }
 
 /* Quem pediu menos movimento no aparelho não vê animações */
