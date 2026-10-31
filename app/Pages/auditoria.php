@@ -17,7 +17,7 @@ if (isset($_GET['exportar'])) {
 
 ?>
 
-<section class="painel">
+<section class="card card-body mb-3">
 
   <h2>Registro de operações</h2>
 
@@ -57,9 +57,9 @@ if (isset($_GET['exportar'])) {
       </select>
     </label>
 
-    <button class="btn btn-claro">Filtrar</button>
+    <button class="btn btn-light">Filtrar</button>
 
-    <a class="btn btn-claro" href="index.php?<?= e(http_build_query(['page' => 'auditoria', 'de' => $de, 'ate' => $ate, 'acao' => $acao, 'usuario_id' => $usuarioId ?: '', 'exportar' => 1])) ?>">Exportar planilha</a>
+    <a class="btn btn-light" href="index.php?<?= e(http_build_query(['page' => 'auditoria', 'de' => $de, 'ate' => $ate, 'acao' => $acao, 'usuario_id' => $usuarioId ?: '', 'exportar' => 1])) ?>">Exportar planilha</a>
 
   </form>
 
@@ -69,7 +69,7 @@ if (isset($_GET['exportar'])) {
 
   <?php else: ?>
 
-    <table>
+    <div class="table-responsive"><table class="table table-hover align-middle">
 
       <thead>
         <tr>
@@ -97,7 +97,7 @@ if (isset($_GET['exportar'])) {
 
       </tbody>
 
-    </table>
+    </table></div>
 
     <?php if (count($registros) === 500): ?>
       <p class="nota">Mostrando as 500 operações mais recentes. Use os filtros para ver as anteriores.</p>

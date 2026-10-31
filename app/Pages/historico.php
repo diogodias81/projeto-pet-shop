@@ -60,7 +60,7 @@ if (isset($_GET['ver'])) {
     <a href="index.php?page=historico">← Voltar ao histórico</a>
   </p>
 
-  <section class="painel">
+  <section class="card card-body mb-3">
 
     <h2>
       Venda #<?= $venda['id'] ?>
@@ -114,7 +114,7 @@ if (isset($_GET['ver'])) {
     <div class="linha">
 
       <a
-        class="btn btn-claro"
+        class="btn btn-light"
         href="index.php?page=comprovante&id=<?= $venda['id'] ?>&via=2">
         Emitir 2ª via do comprovante
       </a>
@@ -127,7 +127,7 @@ if (isset($_GET['ver'])) {
 
       <input type="hidden" name="id" value="<?= $venda['id'] ?>">
 
-      <table>
+      <div class="table-responsive"><table class="table table-hover align-middle">
 
         <thead>
 
@@ -200,7 +200,7 @@ if (isset($_GET['ver'])) {
 
         </tbody>
 
-      </table>
+      </table></div>
 
       <?php if ($podeAlterar): ?>
 
@@ -219,7 +219,7 @@ if (isset($_GET['ver'])) {
           <?php if ($restam > 0): ?>
 
             <button
-              class="btn btn-claro"
+              class="btn btn-light"
               name="acao"
               value="devolver">
               Registrar devolução
@@ -228,7 +228,7 @@ if (isset($_GET['ver'])) {
           <?php endif; ?>
 
           <button
-            class="btn btn-perigo"
+            class="btn btn-outline-danger"
             name="acao"
             value="cancelar"
             data-confirmar-botao="Cancelar a venda #<?= $venda['id'] ?> inteira? Os itens voltam ao estoque.">
@@ -253,11 +253,11 @@ if (isset($_GET['ver'])) {
 
   <?php if ($venda['devolucoes']): ?>
 
-    <section class="painel">
+    <section class="card card-body mb-3">
 
       <h2>Devoluções registradas</h2>
 
-      <table>
+      <div class="table-responsive"><table class="table table-hover align-middle">
 
         <thead>
 
@@ -289,7 +289,7 @@ if (isset($_GET['ver'])) {
 
         </tbody>
 
-      </table>
+      </table></div>
 
     </section>
 
@@ -322,7 +322,7 @@ $vendedores = array_filter(
 
 ?>
 
-<section class="painel">
+<section class="card card-body mb-3">
 
   <h2>Histórico de vendas</h2>
 
@@ -402,7 +402,7 @@ $vendedores = array_filter(
       </select>
     </label>
 
-    <button class="btn btn-claro">
+    <button class="btn btn-light">
       Filtrar
     </button>
 
@@ -416,7 +416,7 @@ $vendedores = array_filter(
 
   <?php else: ?>
 
-    <table>
+    <div class="table-responsive"><table class="table table-hover align-middle">
 
       <thead>
 
@@ -462,7 +462,7 @@ $vendedores = array_filter(
             <td class="acoes">
 
               <a
-                class="btn btn-claro btn-pequeno"
+                class="btn btn-light btn-sm"
                 href="index.php?page=historico&ver=<?= $v['id'] ?>">
                 Detalhes
               </a>
@@ -475,7 +475,7 @@ $vendedores = array_filter(
 
       </tbody>
 
-    </table>
+    </table></div>
 
   <?php endif; ?>
 

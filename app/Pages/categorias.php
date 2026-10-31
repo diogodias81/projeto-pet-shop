@@ -27,7 +27,7 @@ $categorias = Categoria::listar();
 
 ?>
 
-<section class="painel">
+<section class="card card-body mb-3">
 
   <form method="post" class="linha">
 
@@ -42,7 +42,7 @@ $categorias = Categoria::listar();
         maxlength="60">
     </label>
 
-    <button class="btn">
+    <button class="btn btn-primary">
       Cadastrar
     </button>
 
@@ -50,9 +50,9 @@ $categorias = Categoria::listar();
 
 </section>
 
-<section class="painel">
+<section class="card card-body mb-3">
 
-  <table>
+  <div class="table-responsive"><table class="table table-hover align-middle">
 
     <thead>
 
@@ -96,7 +96,7 @@ $categorias = Categoria::listar();
                 name="id"
                 value="<?= $c['id'] ?>">
 
-              <button class="btn btn-perigo btn-pequeno">
+              <button class="btn btn-outline-danger btn-sm">
                 Excluir
               </button>
 
@@ -110,6 +110,6 @@ $categorias = Categoria::listar();
 
     </tbody>
 
-  </table>
+  </table></div>
 
 </section>

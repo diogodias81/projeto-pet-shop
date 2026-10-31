@@ -2,6 +2,47 @@
 
 $rotas = require BASE_PATH . '/config/routes.php';
 
+$atual = $_GET['page'] ?? '';
+
+$icones = [
+    'dashboard' => 'speedometer2', 'vendas' => 'cart3', 'historico' => 'receipt',
+    'produtos' => 'box-seam', 'estoque' => 'boxes', 'categorias' => 'tags',
+    'despesas' => 'wallet2', 'relatorios' => 'bar-chart-line', 'usuarios' => 'people',
+    'auditoria' => 'shield-check',
+];
+
+// Itens do menu que este perfil pode ver
+$menu = [];
+
+foreach ($rotas as $chave => [$rotulo, $perfis]) {
+
+    if ($rotulo !== null && temPerfil($perfis)) {
+        $menu[$chave] = $rotulo;
+    }
+}
+
+$nAlertas = isset($menu['estoque']) && temPerfil(['admin', 'estoque']) ? Estoque::contarAlertas() : 0;
+
+$tiposAviso = ['ok' => 'success', 'erro' => 'danger', 'alerta' => 'warning'];
+
+// Um item do menu (lateral, barra inferior e "Mais" usam o mesmo)
+$item = function (string $chave, string $classe) use ($menu, $icones, $atual, $nAlertas): string {
+
+    $ativo = $atual === $chave;
+
+    $selo = $chave === 'estoque' && $nAlertas
+        ? '<span class="badge rounded-pill text-bg-warning" title="Alertas de validade e estoque baixo">' . $nAlertas . '</span>'
+        : '';
+
+    return '<a href="index.php?page=' . $chave . '" class="' . $classe . ($ativo ? ' active' : '') . '"'
+        . ($ativo ? ' aria-current="page"' : '') . '>'
+        . '<i class="bi bi-' . ($icones[$chave] ?? 'circle') . '" aria-hidden="true"></i>'
+        . '<span>' . e($menu[$chave]) . '</span>' . $selo . '</a>';
+};
+
+$sair = '<form method="post" action="index.php?page=logout" class="m-0">' . csrf_campo()
+    . '<button class="btn btn-light w-100"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair</button></form>';
+
 ?>
 
 <!DOCTYPE html>
@@ -14,69 +55,55 @@ $rotas = require BASE_PATH . '/config/routes.php';
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1">
-
-    <?php $rotulo = $rotas[$_GET['page'] ?? ''][0] ?? null; ?>
+        content="width=device-width, initial-scale=1, viewport-fit=cover">
 
     <title>
-        <?= e($rotulo ? "$rotulo · " : '') ?><?= e(config('app_nome')) ?>
+        <?= e(isset($menu[$atual]) ? "{$menu[$atual]} · " : '') ?><?= e(config('app_nome')) ?>
     </title>
 
-    <link
-        rel="stylesheet"
-        href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/vendor/bootstrap/bootstrap.min.css">
+
+    <link rel="stylesheet" href="assets/vendor/bootstrap-icons/bootstrap-icons.min.css">
+
+    <link rel="stylesheet" href="<?= asset('assets/css/style.css') ?>">
 
 </head>
 
 <body>
 
-    <header class="topo">
+    <!-- Computador: menu lateral -->
+    <aside class="lateral d-none d-lg-flex d-print-none">
 
-        <a
-            class="marca"
-            href="index.php">
+        <a class="marca" href="index.php">
+            <span class="marca-icone" aria-hidden="true">🐾</span>
             <?= e(config('app_nome')) ?>
         </a>
 
-        <nav>
-
-            <?php foreach ($rotas as $chave => [$rotulo, $perfis]): ?>
-
-                <?php if ($rotulo === null || !temPerfil($perfis)) continue; ?>
-
-                <a
-                    href="index.php?page=<?= $chave ?>"
-                    class="<?= ($_GET['page'] ?? '') === $chave ? 'ativo' : '' ?>">
-                    <?= e($rotulo) ?>
-                    <?php if ($chave === 'estoque' && temPerfil(['admin', 'estoque']) && ($nAlertas = Estoque::contarAlertas())): ?>
-                        <span class="aviso-menu" title="Alertas de validade e estoque baixo"><?= $nAlertas ?></span>
-                    <?php endif; ?>
-                </a>
-
+        <nav class="nav flex-column" aria-label="Menu principal">
+            <?php foreach (array_keys($menu) as $chave): ?>
+                <?= $item($chave, 'nav-link') ?>
             <?php endforeach; ?>
-
         </nav>
 
-        <div class="usuario">
-
-            <?= e(usuario()['nome']) ?>
-
-            ·
-
-            <form method="post" action="index.php?page=logout" class="form-sair">
-                <?= csrf_campo() ?>
-                <button class="link-sair">Sair</button>
-            </form>
-
+        <div class="lateral-usuario">
+            <div class="small text-body-secondary">Conectado como</div>
+            <strong><?= e(usuario()['nome']) ?></strong>
+            <?= $sair ?>
         </div>
 
+    </aside>
+
+    <!-- Celular: topo com o nome da tela -->
+    <header class="topo-movel d-lg-none d-print-none">
+        <a class="marca" href="index.php"><span class="marca-icone" aria-hidden="true">🐾</span> <?= e(config('app_nome')) ?></a>
+        <span class="text-body-secondary small"><?= e($menu[$atual] ?? '') ?></span>
     </header>
 
-    <main>
+    <main class="conteudo">
 
         <?php foreach (flash() as [$msg, $tipo]): ?>
 
-            <div class="aviso aviso-<?= e($tipo) ?>">
+            <div class="alert alert-<?= $tiposAviso[$tipo] ?? 'info' ?>" role="alert">
                 <?= e($msg) ?>
             </div>
 

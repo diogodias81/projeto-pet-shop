@@ -17,6 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
 
     session_regenerate_id(true);
 
+    flash('Senha alterada com sucesso.');
+
     redirect('inicio');
   } catch (DomainException $ex) {
 
@@ -42,15 +44,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
     Trocar senha · <?= e(config('app_nome')) ?>
   </title>
 
-  <link
-    rel="stylesheet"
-    href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/vendor/bootstrap/bootstrap.min.css">
+
+  <link rel="stylesheet" href="<?= asset('assets/css/style.css') ?>">
 
 </head>
 
 <body class="login">
 
-  <form method="post" action="index.php?page=trocar_senha" class="login-caixa">
+  <form method="post" action="index.php?page=trocar_senha" class="login-caixa card card-body">
 
     <h1>
       Escolha sua senha
@@ -62,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
 
     <?php if ($erro): ?>
 
-      <div class="aviso aviso-erro">
+      <div class="alert alert-danger">
         <?= e($erro) ?>
       </div>
 
@@ -95,12 +97,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
         required>
     </label>
 
-    <button class="btn">
+    <button class="btn btn-primary">
       Salvar e entrar
     </button>
 
     <!-- Envia o formulário de saída abaixo (formulários não podem ficar um dentro do outro) -->
-    <button class="btn btn-claro" form="form-sair">
+    <button class="btn btn-light" form="form-sair">
       Sair
     </button>
 

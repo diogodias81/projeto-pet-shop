@@ -47,6 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   redirect('vendas');
 }
 
+$produtos = Produto::listar();
+
 // Catálogo para a pesquisa rápida no navegador (só o que pode ser vendido)
 $catalogo = array_values(array_map(
   fn($p) => [
@@ -58,14 +60,20 @@ $catalogo = array_values(array_map(
     'foto' => Produto::urlFoto($p['foto']),
   ],
   array_filter(
-    Produto::listar(),
+    $produtos,
     fn($p) => $p['vendavel'] > 0
   )
 ));
 
+// Produtos sem estoque vendável: a busca (por código ou nome) avisa "sem estoque" em vez de "não encontrado"
+$esgotados = array_values(array_map(
+  fn($p) => ['nome' => $p['nome'], 'codigo' => $p['codigo_barras']],
+  array_filter($produtos, fn($p) => $p['vendavel'] <= 0)
+));
+
 ?>
 
-<section class="painel">
+<section class="card card-body mb-3">
 
   <h2>Nova venda</h2>
 
@@ -83,6 +91,8 @@ $catalogo = array_values(array_map(
 
     <script type="application/json" id="v-catalogo"><?= json_encode($catalogo, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?></script>
 
+    <script type="application/json" id="v-esgotados"><?= json_encode($esgotados,JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?></script>
+
     <div class="pesquisa">
 
       <label>
@@ -99,6 +109,8 @@ $catalogo = array_values(array_map(
           aria-controls="v-sugestoes">
       </label>
 
+      <p class="busca-aviso" id="v-busca-aviso" role="alert" hidden></p>
+
       <ul
         id="v-sugestoes"
         class="sugestoes"
@@ -108,7 +120,7 @@ $catalogo = array_values(array_map(
     </div>
 
 
-    <table id="v-tabela">
+    <div class="table-responsive"><table id="v-tabela" class="table align-middle">
 
       <thead>
 
@@ -125,7 +137,7 @@ $catalogo = array_values(array_map(
 
       <tbody></tbody>
 
-    </table>
+    </table></div>
 
 
     <p
@@ -152,6 +164,7 @@ $catalogo = array_values(array_map(
             <input
               name="desconto"
               id="v-desconto"
+              aria-label="Valor do desconto"
               inputmode="decimal"
               placeholder="0,00">
 
@@ -192,6 +205,8 @@ $catalogo = array_values(array_map(
             placeholder="0,00">
         </label>
 
+        <p class="alert alert-danger" id="v-erro" role="alert" hidden></p>
+
       </div>
 
 
@@ -211,10 +226,8 @@ $catalogo = array_values(array_map(
 
       </dl>
 
-      <p class="aviso aviso-erro" id="v-erro" role="alert" hidden></p>
-
       <button
-        class="btn"
+        class="btn btn-primary"
         id="v-finalizar"
         disabled>
         Finalizar venda

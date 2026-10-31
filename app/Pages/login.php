@@ -53,23 +53,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Entrar · <?= e(config('app_nome')) ?>
   </title>
 
-  <link
-    rel="stylesheet"
-    href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/vendor/bootstrap/bootstrap.min.css">
+
+  <link rel="stylesheet" href="<?= asset('assets/css/style.css') ?>">
 
 </head>
 
 <body class="login">
 
-  <form method="post" class="login-caixa">
+  <form method="post" class="login-caixa card card-body">
+
+    <div class="login-marca" aria-hidden="true">🐾</div>
 
     <h1>
       <?= e(config('app_nome')) ?>
     </h1>
 
+    <p class="text-body-secondary mb-0">Entre para começar o dia.</p>
+
     <?php if ($erro): ?>
 
-      <div class="aviso aviso-erro">
+      <div class="alert alert-danger">
         <?= e($erro) ?>
       </div>
 
@@ -97,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         required>
     </label>
 
-    <button class="btn">
+    <button class="btn btn-primary">
       Entrar
     </button>
 

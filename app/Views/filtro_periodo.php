@@ -8,7 +8,7 @@ $atual = $_GET['periodo'] ?? '';
 
     <div class="atalhos">
         <?php foreach (['hoje' => 'Hoje', 'semana' => 'Últimos 7 dias', 'mes' => 'Este mês'] as $chave => $rotulo): ?>
-            <a class="btn <?= $atual === $chave ? '' : 'btn-claro' ?> btn-pequeno" href="index.php?page=<?= e($pagina) ?>&amp;periodo=<?= $chave ?>"><?= $rotulo ?></a>
+            <a class="btn <?= $atual === $chave ? 'btn-primary' : 'btn-light' ?> btn-sm" href="index.php?page=<?= e($pagina) ?>&amp;periodo=<?= $chave ?>"><?= $rotulo ?></a>
         <?php endforeach; ?>
     </div>
 
@@ -22,10 +22,10 @@ $atual = $_GET['periodo'] ?? '';
         <input type="date" name="ate" value="<?= e($ate) ?>">
     </label>
 
-    <button class="btn btn-claro">Filtrar</button>
+    <button class="btn btn-light">Filtrar</button>
 
 </form>
 
 <?php if ($de > $ate): ?>
-    <div class="aviso aviso-erro">A data "De" é depois da data "Até": troque as datas para ver o período.</div>
+    <div class="alert alert-danger">A data "De" é depois da data "Até": troque as datas para ver o período.</div>
 <?php endif; ?>

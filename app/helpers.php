@@ -22,10 +22,17 @@ function e($v): string
 }
 
 
+/** Endereço de um arquivo de public/ com a data de alteração: o navegador baixa de novo quando o arquivo muda */
+function asset(string $caminho): string
+{
+    return $caminho . '?v=' . @filemtime(BASE_PATH . '/public/' . $caminho);
+}
+
+
 function moeda($v): string
 {
-    return 'R$ ' . number_format(
-        (float) $v,
+    return ($v < 0 ? '-' : '') . 'R$ ' . number_format(
+        abs((float) $v),
         2,
         ',',
         '.'
@@ -190,7 +197,7 @@ function paginaErro(int $codigo, string $msg): never
 
     require BASE_PATH . '/app/Views/header.php';
 
-    echo '<section class="painel"><p>' . e($msg) . '</p><p><a href="index.php">Voltar ao início</a></p></section>';
+    echo '<section class="card card-body mb-3"><p>' . e($msg) . '</p><p><a href="index.php">Voltar ao início</a></p></section>';
 
     require BASE_PATH . '/app/Views/footer.php';
 

@@ -57,7 +57,7 @@ $rotuloSituacao = [
 
 <?php if ($gerencia): ?>
 
-  <section class="painel">
+  <section class="card card-body mb-3">
 
     <h2>Registrar entrada</h2>
 
@@ -133,7 +133,7 @@ $rotuloSituacao = [
           maxlength="100">
       </label>
 
-      <button class="btn">
+      <button class="btn btn-primary">
         Registrar entrada
       </button>
 
@@ -147,7 +147,7 @@ $rotuloSituacao = [
 
 <?php if ($gerencia): ?>
 
-  <section class="painel">
+  <section class="card card-body mb-3">
 
     <h2>Dar baixa (vencido, avaria, perda)</h2>
 
@@ -192,7 +192,7 @@ $rotuloSituacao = [
         <input name="observacao" maxlength="200" placeholder="Opcional">
       </label>
 
-      <button class="btn">
+      <button class="btn btn-primary">
         Dar baixa
       </button>
 
@@ -203,7 +203,7 @@ $rotuloSituacao = [
 <?php endif; ?>
 
 
-<section class="painel">
+<section class="card card-body mb-3">
 
   <h2>Posição do estoque</h2>
 
@@ -224,13 +224,13 @@ $rotuloSituacao = [
         placeholder="Nome, código de barras ou lote">
     </label>
 
-    <button class="btn btn-claro">
+    <button class="btn btn-light">
       Buscar
     </button>
 
   </form>
 
-  <table>
+  <div class="table-responsive"><table class="table table-hover align-middle">
 
     <thead>
 
@@ -280,12 +280,12 @@ $rotuloSituacao = [
 
     </tbody>
 
-  </table>
+  </table></div>
 
 </section>
 
 
-<section class="painel">
+<section class="card card-body mb-3">
 
   <h2>Lotes e validade</h2>
 
@@ -297,7 +297,7 @@ $rotuloSituacao = [
 
   <?php else: ?>
 
-    <table>
+    <div class="table-responsive"><table class="table table-hover align-middle">
 
       <thead>
 
@@ -351,7 +351,7 @@ $rotuloSituacao = [
 
       </tbody>
 
-    </table>
+    </table></div>
 
   <?php endif; ?>
 
@@ -360,7 +360,7 @@ $rotuloSituacao = [
 
 <?php if ($gerencia): ?>
 
-  <section class="painel">
+  <section class="card card-body mb-3">
 
     <h2>Movimentações de estoque<?= $busca !== '' ? ' · ' . e($busca) : '' ?></h2>
 
@@ -372,7 +372,7 @@ $rotuloSituacao = [
 
     <?php else: ?>
 
-      <table>
+      <div class="table-responsive"><table class="table table-hover align-middle">
 
         <thead>
           <tr>
@@ -406,7 +406,7 @@ $rotuloSituacao = [
 
         </tbody>
 
-      </table>
+      </table></div>
 
     <?php endif; ?>
 

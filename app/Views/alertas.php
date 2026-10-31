@@ -5,7 +5,7 @@ $alertasBaixo = Produto::baixoEstoque();
 $prazos = Estoque::prazos();
 ?>
 
-<section class="painel" id="alertas">
+<section class="card card-body mb-3" id="alertas">
 
     <h2>Alertas de estoque</h2>
 
@@ -15,21 +15,21 @@ $prazos = Estoque::prazos();
 
     <?php else: ?>
 
-        <div class="cards">
+        <div class="kpis">
             <?php $vencidos = count(array_filter($alertasValidade, fn($l) => $l['dias'] < 0)); ?>
-            <div class="card <?= $vencidos ? 'card-erro' : '' ?>"><span>Lotes vencidos</span><strong><?= $vencidos ?></strong></div>
+            <div class="kpi <?= $vencidos ? 'kpi-erro' : '' ?>"><span>Lotes vencidos</span><strong><?= $vencidos ?></strong></div>
             <?php foreach (array_reverse($prazos) as $p): ?>
                 <?php $n = count(array_filter($alertasValidade, fn($l) => $l['dias'] >= 0 && $l['dias'] <= $p)); ?>
-                <div class="card <?= $n ? 'card-alerta' : '' ?>"><span>Vencem em até <?= $p ?> dias</span><strong><?= $n ?></strong></div>
+                <div class="kpi <?= $n ? 'kpi-alerta' : '' ?>"><span>Vencem em até <?= $p ?> dias</span><strong><?= $n ?></strong></div>
             <?php endforeach; ?>
-            <div class="card <?= $alertasBaixo ? 'card-alerta' : '' ?>"><span>Estoque baixo</span><strong><?= count($alertasBaixo) ?></strong></div>
+            <div class="kpi <?= $alertasBaixo ? 'kpi-alerta' : '' ?>"><span>Estoque baixo</span><strong><?= count($alertasBaixo) ?></strong></div>
         </div>
 
         <?php if ($alertasValidade): ?>
 
             <h3>Validade</h3>
 
-            <table>
+            <div class="table-responsive"><table class="table table-hover align-middle">
                 <thead>
                     <tr>
                         <th>Produto</th>
@@ -58,7 +58,7 @@ $prazos = Estoque::prazos();
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
-            </table>
+            </table></div>
 
         <?php endif; ?>
 
@@ -66,7 +66,7 @@ $prazos = Estoque::prazos();
 
             <h3>Reposição necessária</h3>
 
-            <table>
+            <div class="table-responsive"><table class="table table-hover align-middle">
                 <thead>
                     <tr>
                         <th>Produto</th>
@@ -85,7 +85,7 @@ $prazos = Estoque::prazos();
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
-            </table>
+            </table></div>
 
         <?php endif; ?>
 

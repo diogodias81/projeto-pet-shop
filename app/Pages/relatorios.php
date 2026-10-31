@@ -54,7 +54,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
 
 ?>
 
-<section class="painel">
+<section class="card card-body mb-3">
 
     <h2>
         Relatório gerencial
@@ -64,24 +64,24 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
     <?php require BASE_PATH . '/app/Views/filtro_periodo.php'; ?>
 
     <p class="nao-imprimir">
-        <button type="button" class="btn btn-claro" data-imprimir>Imprimir / Salvar PDF</button>
+        <button type="button" class="btn btn-light" data-imprimir>Imprimir / Salvar PDF</button>
     </p>
 
 </section>
 
-<section class="cards">
-    <div class="card"><span>Faturamento</span><strong><?= moeda($r['faturamento']) ?></strong></div>
-    <div class="card"><span>Vendas realizadas</span><strong><?= $r['vendas'] ?></strong></div>
-    <div class="card"><span>Ticket médio</span><strong><?= moeda($r['ticket']) ?></strong></div>
-    <div class="card"><span>Custo dos produtos vendidos</span><strong><?= moeda($r['custo']) ?></strong></div>
-    <div class="card"><span>Lucro bruto (<?= $pct($r['margem']) ?>)</span><strong><?= moeda($r['lucro']) ?></strong></div>
-    <div class="card"><span>Despesas</span><strong><?= moeda($r['despesas']) ?></strong></div>
-    <div class="card <?= $r['resultado'] < 0 ? 'card-erro' : '' ?>"><span>Resultado estimado</span><strong class="<?= $r['resultado'] < 0 ? 'negativo' : 'positivo' ?>"><?= moeda($r['resultado']) ?></strong></div>
+<section class="kpis">
+    <div class="kpi"><span>Faturamento</span><strong><?= moeda($r['faturamento']) ?></strong></div>
+    <div class="kpi"><span>Vendas realizadas</span><strong><?= $r['vendas'] ?></strong></div>
+    <div class="kpi"><span>Ticket médio</span><strong><?= moeda($r['ticket']) ?></strong></div>
+    <div class="kpi"><span>Custo dos produtos vendidos</span><strong><?= moeda($r['custo']) ?></strong></div>
+    <div class="kpi"><span>Lucro bruto (<?= $pct($r['margem']) ?>)</span><strong><?= moeda($r['lucro']) ?></strong></div>
+    <div class="kpi"><span>Despesas</span><strong><?= moeda($r['despesas']) ?></strong></div>
+    <div class="kpi <?= $r['resultado'] < 0 ? 'kpi-erro' : '' ?>"><span>Resultado estimado</span><strong class="<?= $r['resultado'] < 0 ? 'negativo' : 'positivo' ?>"><?= moeda($r['resultado']) ?></strong></div>
 </section>
 
-<section class="painel">
+<section class="card card-body mb-3">
 
-    <h2>Rentabilidade por produto <a class="btn btn-claro btn-pequeno nao-imprimir" href="<?= $exportar('produtos') ?>">Exportar planilha</a></h2>
+    <h2>Rentabilidade por produto <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('produtos') ?>">Exportar planilha</a></h2>
 
     <?php if (!$produtos): ?>
 
@@ -89,7 +89,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
 
     <?php else: ?>
 
-        <table>
+        <div class="table-responsive"><table class="table table-hover align-middle">
             <thead>
                 <tr>
                     <th>Produto</th>
@@ -114,7 +114,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
                     </tr>
                 <?php endforeach; ?>
             </tbody>
-        </table>
+        </table></div>
 
         <p class="nota">Margem = lucro ÷ preço de venda. Acréscimo sobre o custo = lucro ÷ custo. Ex.: custo R$ 30 e venda R$ 50 dão 40% de margem e 66,7% de acréscimo.</p>
 
@@ -124,14 +124,14 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
 
 <section class="grade">
 
-    <div class="painel">
+    <div class="card card-body mb-3">
         <h2>Mais vendidos (unidades)</h2>
         <?php require BASE_PATH . '/app/Views/grafico_mais_vendidos.php'; ?>
     </div>
 
-    <div class="painel">
+    <div class="card card-body mb-3">
 
-        <h2>Despesas por categoria <a class="btn btn-claro btn-pequeno nao-imprimir" href="<?= $exportar('despesas') ?>">Exportar planilha</a></h2>
+        <h2>Despesas por categoria <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('despesas') ?>">Exportar planilha</a></h2>
 
         <?php if (!$despesasCat): ?>
 
@@ -139,7 +139,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
 
         <?php else: ?>
 
-            <table>
+            <div class="table-responsive"><table class="table table-hover align-middle">
                 <tbody>
                     <?php foreach ($despesasCat as $cat => $valor): ?>
                         <tr>
@@ -154,7 +154,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
                         <th class="num"><?= moeda($r['despesas']) ?></th>
                     </tr>
                 </tfoot>
-            </table>
+            </table></div>
 
         <?php endif; ?>
 
@@ -162,9 +162,9 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
 
 </section>
 
-<section class="painel">
+<section class="card card-body mb-3">
 
-    <h2>Vendas do período <a class="btn btn-claro btn-pequeno nao-imprimir" href="<?= $exportar('vendas') ?>">Exportar planilha</a></h2>
+    <h2>Vendas do período <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('vendas') ?>">Exportar planilha</a></h2>
 
     <?php if (!$vendas): ?>
 
@@ -172,7 +172,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
 
     <?php else: ?>
 
-        <table>
+        <div class="table-responsive"><table class="table table-hover align-middle">
             <thead>
                 <tr>
                     <th>#</th>
@@ -193,15 +193,15 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
                     </tr>
                 <?php endforeach; ?>
             </tbody>
-        </table>
+        </table></div>
 
     <?php endif; ?>
 
 </section>
 
-<section class="painel">
+<section class="card card-body mb-3">
 
-    <h2>Movimentações de estoque <a class="btn btn-claro btn-pequeno nao-imprimir" href="<?= $exportar('movimentacoes') ?>">Exportar planilha</a></h2>
+    <h2>Movimentações de estoque <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('movimentacoes') ?>">Exportar planilha</a></h2>
 
     <?php if (!$movs): ?>
 
@@ -209,7 +209,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
 
     <?php else: ?>
 
-        <table>
+        <div class="table-responsive"><table class="table table-hover align-middle">
             <thead>
                 <tr>
                     <th>Data</th>
@@ -234,15 +234,15 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
                     </tr>
                 <?php endforeach; ?>
             </tbody>
-        </table>
+        </table></div>
 
     <?php endif; ?>
 
 </section>
 
-<section class="painel">
+<section class="card card-body mb-3">
 
-    <h2>Próximos do vencimento (hoje) <a class="btn btn-claro btn-pequeno nao-imprimir" href="<?= $exportar('validade') ?>">Exportar planilha</a></h2>
+    <h2>Próximos do vencimento (hoje) <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('validade') ?>">Exportar planilha</a></h2>
 
     <?php if (!$validade): ?>
 
@@ -250,7 +250,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
 
     <?php else: ?>
 
-        <table>
+        <div class="table-responsive"><table class="table table-hover align-middle">
             <thead>
                 <tr>
                     <th>Produto</th>
@@ -271,7 +271,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
                     </tr>
                 <?php endforeach; ?>
             </tbody>
-        </table>
+        </table></div>
 
     <?php endif; ?>
 

@@ -60,7 +60,7 @@ $produtos = Produto::listar(
 
 <?php if ($gerencia): ?>
 
-  <section class="painel">
+  <section class="card card-body mb-3">
 
     <h2>
       <?= $editando ? 'Editar produto' : 'Novo produto' ?>
@@ -204,14 +204,14 @@ $produtos = Produto::listar(
 
       <?php endif; ?>
 
-      <button class="btn">
+      <button class="btn btn-primary">
         <?= $editando ? 'Salvar alterações' : 'Cadastrar produto' ?>
       </button>
 
       <?php if ($editando): ?>
 
         <a
-          class="btn btn-claro"
+          class="btn btn-light"
           href="index.php?page=produtos">
           Cancelar
         </a>
@@ -225,7 +225,7 @@ $produtos = Produto::listar(
 <?php endif; ?>
 
 
-<section class="painel">
+<section class="card card-body mb-3">
 
   <form method="get" class="linha">
 
@@ -241,8 +241,7 @@ $produtos = Produto::listar(
         type="search"
         name="q"
         value="<?= e($busca) ?>"
-        placeholder="Nome ou código de barras"
-        autofocus>
+        placeholder="Nome ou código de barras">
     </label>
 
     <label>
@@ -268,7 +267,7 @@ $produtos = Produto::listar(
 
     </label>
 
-    <button class="btn btn-claro">
+    <button class="btn btn-light">
       Filtrar
     </button>
 
@@ -283,7 +282,7 @@ $produtos = Produto::listar(
 
   <?php else: ?>
 
-    <table>
+    <div class="table-responsive"><table class="table table-hover align-middle">
 
       <thead>
 
@@ -397,7 +396,7 @@ $produtos = Produto::listar(
               <td class="acoes">
 
                 <a
-                  class="btn btn-claro btn-pequeno"
+                  class="btn btn-light btn-sm"
                   href="index.php?page=produtos&editar=<?= $p['id'] ?>">
                   Editar
                 </a>
@@ -418,7 +417,7 @@ $produtos = Produto::listar(
                     name="id"
                     value="<?= $p['id'] ?>">
 
-                  <button class="btn btn-perigo btn-pequeno">
+                  <button class="btn btn-outline-danger btn-sm">
                     Excluir
                   </button>
 
@@ -434,7 +433,7 @@ $produtos = Produto::listar(
 
       </tbody>
 
-    </table>
+    </table></div>
 
   <?php endif; ?>
 

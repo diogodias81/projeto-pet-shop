@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 ?>
 
-<section class="painel">
+<section class="card card-body mb-3">
 
   <h2>Novo usuário</h2>
 
@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     </label>
 
-    <button class="btn">
+    <button class="btn btn-primary">
       Criar usuário
     </button>
 
@@ -100,9 +100,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </section>
 
 
-<section class="painel">
+<section class="card card-body mb-3">
 
-  <table>
+  <div class="table-responsive"><table class="table table-hover align-middle">
 
     <thead>
 
@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 autocomplete="new-password"
                 required>
 
-              <button class="btn btn-claro btn-pequeno">
+              <button class="btn btn-light btn-sm">
                 Redefinir senha
               </button>
 
@@ -183,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 name="id"
                 value="<?= $u['id'] ?>">
 
-              <button class="btn btn-perigo btn-pequeno">
+              <button class="btn btn-outline-danger btn-sm">
                 Excluir
               </button>
 
@@ -197,6 +197,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     </tbody>
 
-  </table>
+  </table></div>
 
 </section>

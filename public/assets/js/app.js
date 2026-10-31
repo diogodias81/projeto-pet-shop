@@ -32,6 +32,34 @@ document.querySelectorAll('[data-imprimir]').forEach(btn => {
 });
 
 
+// Celular: cada célula recebe o nome da coluna (data-label), que o CSS mostra quando a tabela vira cartões
+
+function rotularTabela(tabela) {
+
+    const nomes = [...tabela.querySelectorAll('thead th')].map(th => th.textContent.trim());
+
+    tabela.querySelectorAll('tbody tr').forEach(tr => {
+
+        [...tr.children].forEach((td, i) => td.setAttribute('data-label', nomes[i] || ''));
+    });
+}
+
+document.querySelectorAll('.table-responsive table').forEach(rotularTabela);
+
+
+// Gaveta "Mais": se a tela virar tamanho de computador com ela aberta, fecha (senão o fundo escuro fica travado)
+
+const menuMais = document.getElementById('menu-mais');
+
+if (menuMais && window.bootstrap) {
+
+    matchMedia('(min-width: 992px)').addEventListener('change', ev => {
+
+        if (ev.matches) bootstrap.Offcanvas.getInstance(menuMais)?.hide();
+    });
+}
+
+
 // Leitor de código de barras: o leitor USB "digita" o código e aperta Enter.
 // <input data-sem-enter> não envia o formulário com esse Enter.
 // <input data-seleciona="id-do-select"> escolhe no select a opção com o mesmo data-codigo.
@@ -84,6 +112,12 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
     const catalogo = JSON.parse(
         document.getElementById('v-catalogo').textContent
     );
+
+    const esgotados = JSON.parse(
+        document.getElementById('v-esgotados').textContent
+    );
+
+    const avisoBusca = document.getElementById('v-busca-aviso');
 
     const busca = document.getElementById('v-busca');
 
@@ -180,14 +214,17 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
     }
 
 
-    function encontrar(texto) {
+    // Minúsculas e sem acento: "racao" acha "Ração"
+    const normalizar = s => s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
-        const t = texto.trim().toLowerCase();
+    function encontrar(texto, lista = catalogo) {
+
+        const t = normalizar(texto);
 
         if (!t) return [];
 
-        return catalogo
-            .filter(p => p.codigo === t || p.nome.toLowerCase().includes(t))
+        return lista
+            .filter(p => p.codigo === texto.trim() || normalizar(p.nome).includes(t))
             .slice(0, 8);
     }
 
@@ -217,7 +254,11 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
                 li.className = 'sugestao-vazia';
 
-                li.textContent = 'Nenhum produto disponível encontrado.';
+                const esgotado = encontrar(busca.value, esgotados)[0];
+
+                li.textContent = esgotado
+                    ? esgotado.nome + ' está sem estoque disponível para venda.'
+                    : 'Nenhum produto disponível encontrado.';
 
                 sugestoes.appendChild(li);
             }
@@ -282,7 +323,7 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
     }
 
 
-    busca.addEventListener('input', mostrarSugestoes);
+    busca.addEventListener('input', () => { avisoBusca.hidden = true; mostrarSugestoes(); });
 
     busca.addEventListener('blur', () => setTimeout(() => {
 
@@ -326,7 +367,13 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
         } else {
 
-            alert('Nenhum produto disponível com "' + texto + '".');
+            const esgotado = encontrar(texto, esgotados)[0];
+
+            avisoBusca.textContent = esgotado
+                ? esgotado.nome + ' está sem estoque disponível para venda.'
+                : 'Nenhum produto encontrado com "' + texto + '".';
+
+            avisoBusca.hidden = false;
 
             busca.select();
         }
@@ -492,7 +539,7 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
             btn.type = 'button';
 
-            btn.className = 'btn btn-perigo btn-pequeno';
+            btn.className = 'btn btn-outline-danger btn-sm';
 
             btn.textContent = 'Remover';
 
@@ -511,6 +558,8 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
             tbody.appendChild(tr);
         });
 
+
+        rotularTabela(tbody.closest('table'));
 
         vazio.style.display = itens.length ? 'none' : '';
 

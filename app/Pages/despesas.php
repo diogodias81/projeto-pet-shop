@@ -40,7 +40,7 @@ $total = array_sum(array_column($despesas, 'valor'));
 
 ?>
 
-<section class="painel">
+<section class="card card-body mb-3">
 
   <h2>Registrar despesa</h2>
 
@@ -91,7 +91,7 @@ $total = array_sum(array_column($despesas, 'valor'));
         value="<?= e($antigo['data'] ?? date('Y-m-d')) ?>">
     </label>
 
-    <button class="btn">
+    <button class="btn btn-primary">
       Registrar despesa
     </button>
 
@@ -99,7 +99,7 @@ $total = array_sum(array_column($despesas, 'valor'));
 
 </section>
 
-<section class="painel">
+<section class="card card-body mb-3">
 
   <h2>Despesas do período</h2>
 
@@ -128,7 +128,7 @@ $total = array_sum(array_column($despesas, 'valor'));
       </select>
     </label>
 
-    <button class="btn btn-claro">
+    <button class="btn btn-light">
       Filtrar
     </button>
 
@@ -140,7 +140,7 @@ $total = array_sum(array_column($despesas, 'valor'));
 
   <?php else: ?>
 
-    <table>
+    <div class="table-responsive"><table class="table table-hover align-middle">
 
       <thead>
         <tr>
@@ -168,7 +168,7 @@ $total = array_sum(array_column($despesas, 'valor'));
                 <?= csrf_campo() ?>
                 <input type="hidden" name="acao" value="excluir">
                 <input type="hidden" name="id" value="<?= $d['id'] ?>">
-                <button class="btn btn-perigo btn-pequeno">Excluir</button>
+                <button class="btn btn-outline-danger btn-sm">Excluir</button>
               </form>
             </td>
           </tr>
@@ -185,7 +185,7 @@ $total = array_sum(array_column($despesas, 'valor'));
         </tr>
       </tfoot>
 
-    </table>
+    </table></div>
 
   <?php endif; ?>
 

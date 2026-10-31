@@ -23,7 +23,7 @@ $situacao = Venda::situacao($venda);
 
   <button
     type="button"
-    class="btn"
+    class="btn btn-primary"
     data-imprimir>
     Imprimir / Salvar PDF
   </button>
@@ -31,7 +31,7 @@ $situacao = Venda::situacao($venda);
   <?php if (temPerfil(['admin', 'vendedor'])): ?>
 
     <a
-      class="btn btn-claro"
+      class="btn btn-light"
       href="index.php?page=vendas">
       Nova venda
     </a>
@@ -39,7 +39,7 @@ $situacao = Venda::situacao($venda);
   <?php endif; ?>
 
   <a
-    class="btn btn-claro"
+    class="btn btn-light"
     href="index.php?page=historico&ver=<?= $venda['id'] ?>">
     Detalhes da venda
   </a>
@@ -92,7 +92,7 @@ $situacao = Venda::situacao($venda);
 
   </dl>
 
-  <table>
+  <div class="table-responsive"><table class="table table-hover align-middle">
 
     <thead>
 
@@ -133,7 +133,7 @@ $situacao = Venda::situacao($venda);
 
     </tbody>
 
-  </table>
+  </table></div>
 
   <dl class="comprovante-totais">
 
