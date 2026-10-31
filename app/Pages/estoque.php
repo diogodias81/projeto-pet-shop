@@ -29,7 +29,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $_POST['validade'] ?? ''
     );
 
-    flash('Entrada registrada e estoque atualizado.');
+    // Diz o que entrou, para o estoquista conferir se lançou no produto certo
+    $p = Produto::buscar((int) $_POST['produto_id']);
+    flash('Entrada registrada: ' . (int) $_POST['quantidade'] . ' un. de ' . $p['nome'] . ' (estoque atual: ' . $p['estoque'] . ').');
   } catch (DomainException $ex) {
 
     flash($ex->getMessage(), 'erro');
@@ -80,6 +82,9 @@ $rotuloSituacao = [
         Produto
 
         <select name="produto_id" id="entrada-produto" required>
+
+          <!-- Sem padrão: lançar no produto errado não tem como desfazer pela tela -->
+          <option value="">Escolha…</option>
 
           <?php foreach ($todos as $p): ?>
 

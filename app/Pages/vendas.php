@@ -42,10 +42,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $ex->getMessage(),
       'erro'
     );
+
+    // devolve o carrinho: o cliente está no caixa, não dá para passar tudo de novo
+    $_SESSION['form_venda'] = array_intersect_key(
+      $_POST,
+      array_flip(['itens', 'desconto_tipo', 'desconto', 'forma', 'recebido'])
+    );
   }
 
   redirect('vendas');
 }
+
+$antigo = $_SESSION['form_venda'] ?? [];
+unset($_SESSION['form_venda']);
 
 $produtos = Produto::listar();
 
@@ -87,7 +96,8 @@ $esgotados = array_values(array_map(
     <input
       type="hidden"
       name="itens"
-      id="venda-itens">
+      id="venda-itens"
+      value="<?= e($antigo['itens'] ?? '') ?>">
 
     <script type="application/json" id="v-catalogo"><?= json_encode($catalogo, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) ?></script>
 
@@ -158,7 +168,7 @@ $esgotados = array_values(array_map(
 
             <select name="desconto_tipo" id="v-desc-tipo" aria-label="Tipo de desconto">
               <option value="valor">R$</option>
-              <option value="percentual">%</option>
+              <option value="percentual" <?= ($antigo['desconto_tipo'] ?? '') === 'percentual' ? 'selected' : '' ?>>%</option>
             </select>
 
             <input
@@ -166,7 +176,8 @@ $esgotados = array_values(array_map(
               id="v-desconto"
               aria-label="Valor do desconto"
               inputmode="decimal"
-              placeholder="0,00">
+              placeholder="0,00"
+              value="<?= e($antigo['desconto'] ?? '') ?>">
 
           </span>
 
@@ -185,7 +196,7 @@ $esgotados = array_values(array_map(
 
             <?php foreach (Venda::FORMAS as $valor => $rotulo): ?>
 
-              <option value="<?= $valor ?>">
+              <option value="<?= $valor ?>" <?= ($antigo['forma'] ?? '') === $valor ? 'selected' : '' ?>>
                 <?= e($rotulo) ?>
               </option>
 
@@ -202,7 +213,8 @@ $esgotados = array_values(array_map(
             name="recebido"
             id="v-recebido"
             inputmode="decimal"
-            placeholder="0,00">
+            placeholder="0,00"
+            value="<?= e($antigo['recebido'] ?? '') ?>">
         </label>
 
         <p class="alert alert-danger" id="v-erro" role="alert" hidden></p>

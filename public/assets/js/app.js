@@ -165,9 +165,11 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
     // "1.234,56", "12,5" ou "12.5" → número
     const numero = texto => {
 
-        let v = String(texto).replace(/[^\d,.]/g, '');
+        // mantém o "-" para a tela recusar o mesmo que o servidor recusa
+        let v = String(texto).replace(/[^\d,.\-]/g, '');
 
         if (v.includes(',')) v = v.replace(/\./g, '').replace(',', '.');
+        else if (/^-?[1-9]\d{0,2}(\.\d{3})+$/.test(v)) v = v.replace(/\./g, ''); // "1.250" é milhar
 
         return parseFloat(v) || 0;
     };
@@ -350,7 +352,7 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
         if (ev.key !== 'Enter') return;
 
 
-        // Enter do leitor ou do teclado: código exato adiciona direto; senão, o primeiro da lista
+        // Enter do leitor ou do teclado: adiciona direto só o código exato, o nome exato ou um resultado único
         ev.preventDefault();
 
         const texto = busca.value.trim();
@@ -358,14 +360,25 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
         if (!texto) return;
 
 
-        const exato = catalogo.find(p => p.codigo === texto);
+        const achados = encontrar(texto);
 
-        const produto = exato || encontrar(texto)[0];
+        const produto = catalogo.find(p => p.codigo === texto)
+            || achados.find(p => normalizar(p.nome) === normalizar(texto))
+            || (achados.length === 1 ? achados[0] : null);
 
 
         if (produto) {
 
             adicionar(produto);
+
+        } else if (achados.length > 1) {
+
+            // "ra" acha "Ração" e "Bolinha de Borracha": quem escolhe é o caixa
+            mostrarSugestoes();
+
+            avisoBusca.textContent = achados.length + ' produtos com "' + texto + '": escolha na lista (seta ↓ e Enter).';
+
+            avisoBusca.hidden = false;
 
         } else {
 
@@ -405,6 +418,10 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
         if (semNumero(descInput)) {
 
             problema = 'Desconto inválido: digite só números, ex.: 5,00.';
+
+        } else if (v < 0) {
+
+            problema = 'O desconto não pode ser negativo.';
 
         } else if (forma.value === 'dinheiro' && semNumero(recebido)) {
 
@@ -607,6 +624,31 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
         finalizar.disabled = true; // evita venda em dobro com clique duplo
     });
 
+
+    // Venda recusada pelo servidor: o carrinho volta, limitado ao estoque de agora
+    let ajustados = [];
+
+    try {
+
+        JSON.parse(hidden.value || '[]').forEach(({ produto_id, quantidade }) => {
+
+            const produto = catalogo.find(p => p.id === produto_id);
+
+            const qtd = Math.min(parseInt(quantidade, 10) || 0, produto ? produto.estoque : 0);
+
+            if (qtd > 0) itens.push({ produto_id, produto, quantidade: qtd });
+
+            if (qtd < quantidade) ajustados.push(produto ? produto.nome : 'um produto sem estoque');
+        });
+
+    } catch (e) { itens = []; }
+
+    if (ajustados.length) {
+
+        avisoBusca.textContent = 'Ajustado ao estoque disponível: ' + ajustados.join(', ') + '.';
+
+        avisoBusca.hidden = false;
+    }
 
     renderizar();
 

@@ -77,7 +77,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <label>
       Perfil
 
-      <select name="perfil">
+      <select name="perfil" required>
+
+        <!-- Sem padrão: esquecer o campo não pode criar outro administrador -->
+        <option value="">Escolha…</option>
 
         <?php foreach (Usuario::PERFIS as $k => $v): ?>
 

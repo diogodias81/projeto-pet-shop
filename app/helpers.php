@@ -66,6 +66,10 @@ function numero($v): float
             ['', '.'],
             $v
         );
+    } elseif (preg_match('/^-?[1-9]\d{0,2}(\.\d{3})+$/', $v)) {
+
+        // "1.250" sem vírgula é milhar (R$ 1.250,00), não 1,25
+        $v = str_replace('.', '', $v);
     }
 
     return is_numeric($v) ? (float) $v : 0.0;
