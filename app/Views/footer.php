@@ -34,6 +34,7 @@
                 <?php endforeach; ?>
             </nav>
 
+            <?= $minhaSenha ?>
             <?= $sair ?>
 
         </div>

@@ -40,6 +40,8 @@ $item = function (string $chave, string $classe) use ($menu, $icones, $atual, $n
         . '<span>' . e($menu[$chave]) . '</span>' . $selo . '</a>';
 };
 
+$minhaSenha = '<a class="btn btn-light w-100 mb-2" href="index.php?page=minha_senha"><i class="bi bi-key" aria-hidden="true"></i> Minha senha</a>';
+
 $sair = '<form method="post" action="index.php?page=logout" class="m-0">' . csrf_campo()
     . '<button class="btn btn-light w-100"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair</button></form>';
 
@@ -59,7 +61,7 @@ $sair = '<form method="post" action="index.php?page=logout" class="m-0">' . csrf
 
     <title>
         <?php // páginas fora do menu (rótulo null) também ganham nome na aba ?>
-        <?php $tituloAba = $menu[$atual] ?? ['comprovante' => 'Comprovante'][$atual] ?? null; ?>
+        <?php $tituloAba = $menu[$atual] ?? ['comprovante' => 'Comprovante', 'minha_senha' => 'Minha senha'][$atual] ?? null; ?>
         <?= e($tituloAba ? "$tituloAba · " : '') ?><?= e(config('app_nome')) ?>
     </title>
 
@@ -90,6 +92,7 @@ $sair = '<form method="post" action="index.php?page=logout" class="m-0">' . csrf
         <div class="lateral-usuario">
             <div class="small text-body-secondary">Conectado como</div>
             <strong><?= e(usuario()['nome']) ?></strong>
+            <?= $minhaSenha ?>
             <?= $sair ?>
         </div>
 

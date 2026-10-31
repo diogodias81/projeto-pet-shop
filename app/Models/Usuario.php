@@ -71,6 +71,17 @@ class Usuario {
         Database::pdo()->prepare('UPDATE usuarios SET senha_hash = ?, trocar_senha = 0 WHERE id = ?')->execute([password_hash($senha, PASSWORD_DEFAULT), $id]);
         Auditoria::registrar('senha_alterada');
     }
+    /** Tela "Minha senha": pede a atual para ninguém trocar a senha num computador esquecido logado */
+    public static function alterarSenha(int $id, string $atual, string $nova, string $confirmacao): void {
+        $st = Database::pdo()->prepare('SELECT senha_hash FROM usuarios WHERE id = ?');
+        $st->execute([$id]);
+        if (mb_strlen($atual) > 1024 || !password_verify($atual, (string) $st->fetchColumn())) throw new DomainException('A senha atual está incorreta.');
+        self::validarSenha($nova);
+        if ($nova !== $confirmacao) throw new DomainException('A confirmação não confere com a nova senha.');
+        if ($nova === $atual) throw new DomainException('A nova senha deve ser diferente da atual.');
+        Database::pdo()->prepare('UPDATE usuarios SET senha_hash = ? WHERE id = ?')->execute([password_hash($nova, PASSWORD_DEFAULT), $id]);
+        Auditoria::registrar('senha_alterada');
+    }
     /** Admin define uma senha provisória (ex.: o usuário esqueceu a dele); o usuário troca no próximo acesso */
     public static function redefinirSenha(int $id, string $senha): void {
         self::validarSenha($senha);

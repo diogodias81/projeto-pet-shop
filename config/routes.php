@@ -67,4 +67,10 @@ return [
         ['admin']
     ],
 
+    // Cada um troca a própria senha (link junto do "Sair", fora da lista do menu)
+    'minha_senha' => [
+        null,
+        ['admin', 'vendedor', 'estoque', 'financeiro']
+    ],
+
 ];
