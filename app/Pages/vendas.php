@@ -229,9 +229,12 @@ $esgotados = array_values(array_map(
       <button
         class="btn btn-primary"
         id="v-finalizar"
-        disabled>
+        disabled
+        aria-describedby="v-motivo">
         Finalizar venda
       </button>
+
+      <p class="nota" id="v-motivo" aria-live="polite">Adicione um produto para finalizar.</p>
 
     </div>
 

@@ -147,6 +147,14 @@ function csrf_validar(): void
         exit('Requisição inválida. ' .
             'Volte e tente novamente.');
     }
+
+    // Texto fora do UTF-8 quebra o json_encode do catálogo e derruba a tela de vendas
+    array_walk_recursive($_POST, function ($v) {
+        if (is_string($v) && !mb_check_encoding($v, 'UTF-8')) {
+            http_response_code(400);
+            exit('Texto com caracteres inválidos. Volte e tente novamente.');
+        }
+    });
 }
 
 

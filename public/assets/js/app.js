@@ -143,6 +143,8 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
     const erro = document.getElementById('v-erro');
 
+    const motivo = document.getElementById('v-motivo');
+
     const descontoMax = parseFloat(form.dataset.descontoMax);
 
     const $ = id => document.getElementById(id);
@@ -397,7 +399,18 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
         let problema = '';
 
-        if (subtotal > 0 && desconto >= subtotal) {
+        // Texto sem nenhum número (ex.: "abc") viraria 0 em silêncio
+        const semNumero = campo => campo.value.trim() !== '' && !/\d/.test(campo.value);
+
+        if (semNumero(descInput)) {
+
+            problema = 'Desconto inválido: digite só números, ex.: 5,00.';
+
+        } else if (forma.value === 'dinheiro' && semNumero(recebido)) {
+
+            problema = 'Valor recebido inválido: digite só números, ex.: 50,00.';
+
+        } else if (subtotal > 0 && desconto >= subtotal) {
 
             problema = 'O desconto deve ser menor que o subtotal: a venda não pode ficar em R$ 0,00.';
 
@@ -443,6 +456,11 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
         erro.textContent = c.problema;
 
         finalizar.disabled = itens.length === 0 || !!c.problema || !forma.value;
+
+        // Diz por que o botão está desabilitado (o problema, se houver, já aparece em vermelho)
+        motivo.textContent = c.problema ? '' : itens.length === 0 ? 'Adicione um produto para finalizar.' : !forma.value ? 'Escolha a forma de pagamento para finalizar.' : '';
+
+        motivo.hidden = !motivo.textContent;
     }
 
 

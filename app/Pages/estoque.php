@@ -317,6 +317,8 @@ $rotuloSituacao = [
 
           <?php
           [$rotulo, $classe] = $rotuloSituacao[Estoque::situacao($l['validade'])];
+          // Mesmo texto da tela de alertas
+          if (Estoque::diasParaVencer($l['validade']) === 0) [$rotulo, $classe] = ['Vence hoje', 'selo-erro'];
           ?>
 
           <tr>

@@ -88,7 +88,8 @@ $total = array_sum(array_column($despesas, 'valor'));
         name="data"
         type="date"
         required
-        value="<?= e($antigo['data'] ?? date('Y-m-d')) ?>">
+        value="<?= e($antigo['data'] ?? date('Y-m-d')) ?>"
+        max="<?= date('Y-m-d') ?>">
     </label>
 
     <button class="btn btn-primary">

@@ -33,13 +33,18 @@ class Usuario {
                     error_log('Login bloqueado por excesso de tentativas: ' . preg_replace('/[\x00-\x1F\x7F]/', '', "$detalhes ip=$ip"));
                     Auditoria::registrar('login_bloqueado', $detalhes);
                 }
+                // Libera quando a tentativa mais antiga da janela sai dos 15 min
+                $st = $pdo->prepare("SELECT (strftime('%s', MIN(criado_em), '+15 minutes') - strftime('%s', 'now') + 59) / 60 FROM tentativas_login WHERE criado_em > datetime('now', '-15 minutes') AND ip = ?" . ($porIp >= 100 ? '' : ' AND email = ?'));
+                $st->execute($porIp >= 100 ? [$ip] : [$ip, $chave]);
+                $minutos = max(1, (int)$st->fetchColumn());
+
             } else {
                 $pdo->prepare('INSERT INTO tentativas_login (email, ip) VALUES (?, ?)')->execute([$chave, $ip]);
                 $pdo->exec("DELETE FROM tentativas_login WHERE criado_em < datetime('now', '-1 day')");
             }
             $pdo->commit();
         } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
-        if ($bloqueado) throw new DomainException('Muitas tentativas de acesso. Aguarde 15 minutos e tente novamente.');
+        if ($bloqueado) throw new DomainException("Muitas tentativas de acesso. Aguarde $minutos minuto" . ($minutos > 1 ? 's' : '') . ' e tente novamente.');
 
         $st = $pdo->prepare('SELECT * FROM usuarios WHERE lower(email) = ?');
         $st->execute([$chave]);

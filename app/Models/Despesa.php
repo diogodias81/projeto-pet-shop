@@ -13,6 +13,8 @@ class Despesa {
         if ($valor > 10000000) throw new DomainException('Valor acima do limite de R$ 10.000.000,00.');
         $dt = DateTime::createFromFormat('!Y-m-d', $data);
         if (!$dt || $dt->format('Y-m-d') !== $data) throw new DomainException('Informe a data da despesa.');
+        // Despesa futura ficaria fora do período padrão da lista (até hoje) e pareceria perdida
+        if ($data > date('Y-m-d')) throw new DomainException('A data da despesa não pode ser no futuro.');
         Database::pdo()->prepare('INSERT INTO despesas (descricao,categoria,valor,data,usuario_id) VALUES (?,?,?,?,?)')
             ->execute([$descricao, $categoria, round($valor, 2), $data, $usuarioId]);
         Auditoria::registrar('despesa_criada', "$descricao (" . self::CATEGORIAS[$categoria] . "): " . moeda($valor) . ' em ' . date('d/m/Y', strtotime($data)));

@@ -59,7 +59,9 @@ class Venda {
 
     /** Desconto em R$, validado contra o subtotal e o limite de quem vende */
     private static function desconto(float $subtotal, array $pag, float $max): float {
-        $v = numero($pag['desconto'] ?? 0);
+        $bruto = trim((string)($pag['desconto'] ?? ''));
+        if ($bruto !== '' && !preg_match('/\d/', $bruto)) throw new DomainException('Desconto inválido: digite só números, ex.: 5,00.');
+        $v = numero($bruto);
         if ($v < 0) throw new DomainException('O desconto não pode ser negativo.');
         $desconto = round(($pag['desconto_tipo'] ?? 'valor') === 'percentual' ? $subtotal * $v / 100 : $v, 2);
         if ($desconto >= $subtotal) throw new DomainException('O desconto deve ser menor que o subtotal: a venda não pode ficar em R$ 0,00.');

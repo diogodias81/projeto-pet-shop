@@ -167,6 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             </form>
 
+            <?php if ((int) $u['id'] !== (int) usuario()['id']): ?>
             <form
               method="post"
               data-confirmar="Excluir o usuário <?= e($u['nome']) ?>?">
@@ -188,6 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               </button>
 
             </form>
+            <?php endif; ?>
 
           </td>
 
