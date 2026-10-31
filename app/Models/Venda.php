@@ -46,7 +46,9 @@ class Venda {
             $total = round($subtotal - $desconto, 2);
             $recebido = null;
             if ($forma === 'dinheiro') {
-                $recebido = numero($pag['recebido'] ?? '') ?: $total;
+                $bruto = trim((string)($pag['recebido'] ?? ''));
+                if ($bruto !== '' && !preg_match('/\d/', $bruto)) throw new DomainException('Valor recebido inválido: digite só números, ex.: 50,00.');
+                $recebido = numero($bruto) ?: $total;
                 if ($recebido > 1000000) throw new DomainException('Valor recebido acima do limite de R$ 1.000.000,00.');
                 if ($recebido < $total) throw new DomainException('O valor recebido (' . moeda($recebido) . ') é menor que o total (' . moeda($total) . ').');
             }

@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($u) {
 
     session_regenerate_id(true);
+    $_SESSION['csrf'] = bin2hex(random_bytes(16));
 
     $_SESSION['user'] = [
       'id' => (int) $u['id'],

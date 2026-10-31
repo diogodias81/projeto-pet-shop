@@ -89,9 +89,9 @@ $esgotados = array_values(array_map(
       name="itens"
       id="venda-itens">
 
-    <script type="application/json" id="v-catalogo"><?= json_encode($catalogo, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?></script>
+    <script type="application/json" id="v-catalogo"><?= json_encode($catalogo, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) ?></script>
 
-    <script type="application/json" id="v-esgotados"><?= json_encode($esgotados,JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?></script>
+    <script type="application/json" id="v-esgotados"><?= json_encode($esgotados,JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) ?></script>
 
     <div class="pesquisa">
 
