@@ -68,9 +68,9 @@ foreach ([$_GET, $_POST] as $entrada) {
 
 Database::migrar();
 
-// Recarrega o usuário a cada requisição: excluído perde a sessão, perfil alterado vale na hora.
+// Recarrega o usuário a cada requisição: excluído ou desativado perde a sessão, perfil alterado vale na hora.
 if (isset($_SESSION['user'])) {
-    $st = Database::pdo()->prepare('SELECT id, nome, perfil, trocar_senha FROM usuarios WHERE id = ?');
+    $st = Database::pdo()->prepare('SELECT id, nome, perfil, trocar_senha FROM usuarios WHERE id = ? AND ativo = 1');
     $st->execute([$_SESSION['user']['id']]);
 
     if ($u = $st->fetch()) {

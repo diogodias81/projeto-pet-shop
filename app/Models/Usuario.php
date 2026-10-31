@@ -50,6 +50,8 @@ class Usuario {
         $st->execute([$chave]);
         $u = $st->fetch();
         if (password_verify($senha, $u['senha_hash'] ?? self::HASH_FALSO) && $u) {
+            // Só quem sabe a senha descobre que a conta foi desativada
+            if (!$u['ativo']) throw new DomainException('Este usuário foi desativado. Fale com o administrador.');
             $pdo->prepare('DELETE FROM tentativas_login WHERE email = ? AND ip = ?')->execute([$chave, $ip]);
             Auditoria::registrar('login', $u['email'], $u);
             return $u;
@@ -92,7 +94,7 @@ class Usuario {
         Auditoria::registrar('senha_redefinida', "{$alvo['nome']} <{$alvo['email']}>");
     }
     public static function listar(): array {
-        return Database::pdo()->query('SELECT id,nome,email,perfil FROM usuarios ORDER BY nome')->fetchAll();
+        return Database::pdo()->query('SELECT id,nome,email,perfil,ativo FROM usuarios ORDER BY ativo DESC, nome')->fetchAll();
     }
     public static function criar(array $d): void {
         $nome = trim($d['nome'] ?? ''); $email = mb_strtolower(trim($d['email'] ?? ''));
@@ -117,6 +119,15 @@ class Usuario {
         try {
             Database::pdo()->prepare('DELETE FROM usuarios WHERE id = ?')->execute([$id]);
             Auditoria::registrar('usuario_excluido', "{$alvo['nome']} <{$alvo['email']}>");
-        } catch (PDOException $e) { throw new DomainException('Usuário possui vendas ou movimentações de estoque registradas e não pode ser excluído.'); }
+        } catch (PDOException $e) { throw new DomainException('Usuário possui vendas ou movimentações de estoque registradas e não pode ser excluído. Use "Desativar" para bloquear o acesso.'); }
+    }
+    /** Funcionário que saiu: perde o acesso na hora, mas continua no histórico de vendas e relatórios */
+    public static function definirAtivo(int $id, bool $ativo): void {
+        if ($id === (usuario()['id'] ?? 0)) throw new DomainException('Você não pode desativar seu próprio usuário.');
+        $st = Database::pdo()->prepare('SELECT nome, email FROM usuarios WHERE id = ?');
+        $st->execute([$id]);
+        if (!($alvo = $st->fetch())) throw new DomainException('Usuário não encontrado.');
+        Database::pdo()->prepare('UPDATE usuarios SET ativo = ? WHERE id = ?')->execute([(int) $ativo, $id]);
+        Auditoria::registrar($ativo ? 'usuario_reativado' : 'usuario_desativado', "{$alvo['nome']} <{$alvo['email']}>");
     }
 }

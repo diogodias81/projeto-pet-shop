@@ -11,6 +11,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       );
 
       flash('Usuário excluído.');
+    } elseif (in_array($_POST['acao'] ?? '', ['desativar', 'reativar'], true)) {
+
+      $ativar = $_POST['acao'] === 'reativar';
+
+      Usuario::definirAtivo(
+        (int) $_POST['id'],
+        $ativar
+      );
+
+      flash($ativar ? 'Usuário reativado: já pode entrar no sistema.' : 'Usuário desativado: não consegue mais entrar.');
     } elseif (($_POST['acao'] ?? '') === 'redefinir') {
 
       Usuario::redefinirSenha(
@@ -134,6 +144,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           <td>
             <?= e(Usuario::PERFIS[$u['perfil']]) ?>
+            <?php if (!$u['ativo']): ?>
+              <span class="selo selo-neutro">Desativado</span>
+            <?php endif; ?>
           </td>
 
           <td class="acoes">
@@ -171,6 +184,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
 
             <?php if ((int) $u['id'] !== (int) usuario()['id']): ?>
+            <form
+              method="post"
+              data-confirmar="<?= $u['ativo'] ? 'Desativar' : 'Reativar' ?> o usuário <?= e($u['nome']) ?>?">
+
+              <?= csrf_campo() ?>
+
+              <input
+                type="hidden"
+                name="acao"
+                value="<?= $u['ativo'] ? 'desativar' : 'reativar' ?>">
+
+              <input
+                type="hidden"
+                name="id"
+                value="<?= $u['id'] ?>">
+
+              <button class="btn btn-light btn-sm">
+                <?= $u['ativo'] ? 'Desativar' : 'Reativar' ?>
+              </button>
+
+            </form>
+
             <form
               method="post"
               data-confirmar="Excluir o usuário <?= e($u['nome']) ?>?">

@@ -348,6 +348,8 @@ class Database
             // 1 = entrou com a senha inicial e precisa trocá-la antes de usar o sistema
             'usuarios' => [
                 'trocar_senha' => 'INTEGER NOT NULL DEFAULT 0',
+                // 0 = desativado (funcionário que saiu): não entra, mas o histórico dele fica
+                'ativo' => 'INTEGER NOT NULL DEFAULT 1',
             ],
         ];
 
