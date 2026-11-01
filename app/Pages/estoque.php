@@ -152,7 +152,7 @@ $rotuloSituacao = [
 
 <?php if ($gerencia): ?>
 
-  <section class="card card-body mb-3">
+  <section class="card card-body mb-3"<?= $busca === '' ? ' data-recolher' : '' ?>>
 
     <h2>Dar baixa (vencido, avaria, perda)</h2>
 
@@ -290,7 +290,7 @@ $rotuloSituacao = [
 </section>
 
 
-<section class="card card-body mb-3">
+<section class="card card-body mb-3"<?= $busca === '' ? ' data-recolher' : '' ?>>
 
   <h2>Lotes e validade</h2>
 
@@ -367,7 +367,7 @@ $rotuloSituacao = [
 
 <?php if ($gerencia): ?>
 
-  <section class="card card-body mb-3">
+  <section class="card card-body mb-3"<?= $busca === '' ? ' data-recolher' : '' ?>>
 
     <h2>Movimentações de estoque<?= $busca !== '' ? ' · ' . e($busca) : '' ?></h2>
 

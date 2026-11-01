@@ -50,6 +50,37 @@ document.querySelectorAll('input[type="file"][data-max-bytes]').forEach(input =>
 });
 
 
+// <section data-recolher>: no celular as tabelas longas abrem recolhidas, com "Mostrar" no título
+
+if (matchMedia('(max-width: 640px)').matches) {
+
+    document.querySelectorAll('section[data-recolher]').forEach(secao => {
+
+        const titulo = secao.querySelector('h2');
+
+        if (!titulo) return;
+
+        const botao = document.createElement('button');
+
+        botao.type = 'button';
+
+        botao.className = 'btn btn-light btn-sm recolher';
+
+        const alternar = aberta => {
+            secao.classList.toggle('recolhida', !aberta);
+            botao.textContent = aberta ? 'Ocultar' : 'Mostrar';
+            botao.setAttribute('aria-expanded', String(aberta));
+        };
+
+        botao.addEventListener('click', () => alternar(secao.classList.contains('recolhida')));
+
+        titulo.append(botao);
+
+        alternar(false);
+    });
+}
+
+
 // <button data-imprimir>: abre a impressão (a CSP não permite onclick no HTML)
 
 document.querySelectorAll('[data-imprimir]').forEach(btn => {

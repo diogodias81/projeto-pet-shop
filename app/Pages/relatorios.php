@@ -79,7 +79,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
     <div class="kpi <?= $r['resultado'] < 0 ? 'kpi-erro' : '' ?>"><span>Resultado estimado</span><strong class="<?= $r['resultado'] < 0 ? 'negativo' : 'positivo' ?>"><?= moeda($r['resultado']) ?></strong></div>
 </section>
 
-<section class="card card-body mb-3">
+<section class="card card-body mb-3" data-recolher>
 
     <h2>Rentabilidade por produto <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('produtos') ?>">Exportar planilha</a></h2>
 
@@ -162,7 +162,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
 
 </section>
 
-<section class="card card-body mb-3">
+<section class="card card-body mb-3" data-recolher>
 
     <h2>Vendas do período <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('vendas') ?>">Exportar planilha</a></h2>
 
@@ -199,7 +199,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
 
 </section>
 
-<section class="card card-body mb-3">
+<section class="card card-body mb-3" data-recolher>
 
     <h2>Movimentações de estoque <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('movimentacoes') ?>">Exportar planilha</a></h2>
 
@@ -240,7 +240,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
 
 </section>
 
-<section class="card card-body mb-3">
+<section class="card card-body mb-3" data-recolher>
 
     <h2>Lotes vencidos ou vencendo em até <?= Estoque::prazos()[0] ?> dias <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('validade') ?>">Exportar planilha</a></h2>
 
