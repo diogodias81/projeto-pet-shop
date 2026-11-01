@@ -54,7 +54,7 @@ docker compose up -d
 
 Na primeira execução (banco vazio) é criado só o administrador `admin@petshop.com`. A senha inicial é:
 
-* a da variável de ambiente `ADMIN_SENHA`, se definida (ex.: `ADMIN_SENHA='minha-senha' docker compose up -d --build`); ou
+* a da variável de ambiente `ADMIN_SENHA`, se definida (ex.: `ADMIN_SENHA='minha-senha' docker compose up -d --build`, ou num arquivo `.env` copiado de `.env.example`, que o Docker Compose lê sozinho e que nunca vai para o git); ou
 * uma senha aleatória, mostrada **uma única vez** no log do servidor:
 
 ```bash

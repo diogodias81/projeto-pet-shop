@@ -2,3 +2,4 @@ storage/
 public/uploads/
 *.jar
 .playwright-mcp/
+.env

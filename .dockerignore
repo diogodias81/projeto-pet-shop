@@ -6,3 +6,4 @@ public/uploads
 # ** = em qualquer pasta, não só na raiz
 **/*.jar
 **/*.sqlite
+.env
