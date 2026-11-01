@@ -8,6 +8,10 @@ RUN apt-get update \
 
 RUN a2enmod rewrite headers
 
+# Configuração de produção do PHP: sem ela os avisos de inicialização (ex.: envio acima do post_max_size)
+# aparecem na tela antes do bootstrap desligar display_errors, vazando caminhos e quebrando o redirecionamento
+RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+
 # Pasta de fotos enviadas: nunca executa PHP e não deixa o navegador "adivinhar" o tipo do arquivo
 RUN printf '%s\n' \
     '<Directory ${APACHE_DOCUMENT_ROOT}/uploads>' \

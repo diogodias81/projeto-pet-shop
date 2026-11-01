@@ -222,6 +222,7 @@ if (isset($_GET['ver'])) {
               class="btn btn-light"
               name="acao"
               value="devolver"
+              data-exige-quantidade='input[name^="devolver["]'
               data-confirmar-botao="Registrar a devolução dos itens marcados? Eles voltam ao estoque e a devolução não pode ser desfeita.">
               Registrar devolução
             </button>
@@ -312,7 +313,10 @@ $filtros = [
   'status' => $_GET['status'] ?? '',
 ];
 
-$vendas = Venda::listar($filtros, 200);
+// Busca uma a mais só para saber se existem anteriores (a nota abaixo)
+$vendas = Venda::listar($filtros, 201);
+$haMaisVendas = count($vendas) > 200;
+$vendas = array_slice($vendas, 0, 200);
 
 $produtos = Produto::listar();
 
@@ -368,7 +372,7 @@ $vendedores = array_filter(
 
           <?php foreach ($vendedores as $u): ?>
             <option value="<?= $u['id'] ?>" <?= $filtros['usuario_id'] === (int) $u['id'] ? 'selected' : '' ?>>
-              <?= e($u['nome']) ?>
+              <?= e($u['nome']) ?><?= $u['ativo'] ? '' : ' (desativado)' ?>
             </option>
           <?php endforeach; ?>
 
@@ -412,7 +416,7 @@ $vendedores = array_filter(
   <?php if (!$vendas): ?>
 
     <p class="vazio">
-      <?= $filtros['de'] > $filtros['ate']
+      <?= $filtros['ate'] !== '' && $filtros['de'] > $filtros['ate']
         ? 'A data "De" é depois da data "Até": troque as datas para ver o período.'
         : 'Nenhuma venda encontrada.' ?>
     </p>
@@ -480,7 +484,7 @@ $vendedores = array_filter(
 
     </table></div>
 
-    <?php if (count($vendas) === 200): ?>
+    <?php if ($haMaisVendas): ?>
       <p class="nota">Mostrando as 200 vendas mais recentes. Use os filtros para ver as anteriores.</p>
     <?php endif; ?>
 

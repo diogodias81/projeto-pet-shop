@@ -73,7 +73,7 @@ class Usuario {
         $st->execute([$id]);
         $hash = (string) $st->fetchColumn();
         $st->closeCursor(); // ver autenticar
-        if (password_verify($senha, $hash)) throw new DomainException('A nova senha deve ser diferente da senha inicial.');
+        if (password_verify($senha, $hash)) throw new DomainException('A nova senha deve ser diferente da senha provisória.');
         Database::pdo()->prepare('UPDATE usuarios SET senha_hash = ?, trocar_senha = 0, sessao_versao = sessao_versao + 1 WHERE id = ?')->execute([password_hash($senha, PASSWORD_DEFAULT), $id]);
         self::manterSessaoAtual($id);
         Auditoria::registrar('senha_alterada');

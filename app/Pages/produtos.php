@@ -192,7 +192,8 @@ $produtos = Produto::listar(
         <input
           name="foto"
           type="file"
-          accept="image/jpeg,image/png,image/webp">
+          accept="image/jpeg,image/png,image/webp"
+          data-max-bytes="<?= 2 * 1024 * 1024 ?>">
       </label>
 
       <?php if (!empty($editando['foto'])): ?>

@@ -138,6 +138,12 @@ function csrf_campo(): string
 
 function csrf_validar(): void
 {
+    // Envio maior que o post_max_size do PHP chega com $_POST vazio: avisa em vez da página crua (nada é gravado)
+    if (!$_POST && !$_FILES && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+        flash('O envio ficou grande demais: a foto deve ter no máximo 2 MB.', 'erro');
+        redirect((string) ($_GET['page'] ?? 'inicio'));
+    }
+
     $token = $_POST['csrf'] ?? '';
 
     if (

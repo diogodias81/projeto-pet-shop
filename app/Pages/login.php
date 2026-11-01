@@ -73,6 +73,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <p class="text-body-secondary mb-0">Entre para começar o dia.</p>
 
+    <?php foreach (flash() as [$msg]): ?>
+      <div class="alert alert-warning" role="alert"><?= e($msg) ?></div>
+    <?php endforeach; ?>
+
     <?php if ($erro): ?>
 
       <div class="alert alert-danger">

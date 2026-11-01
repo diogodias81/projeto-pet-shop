@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
     </h1>
 
     <p>
-      Olá, <?= e(usuario()['nome']) ?>. Você entrou com a senha inicial: troque-a para continuar.
+      Olá, <?= e(usuario()['nome']) ?>. Você entrou com uma senha provisória (a inicial ou a definida pelo administrador): escolha a sua para continuar.
     </p>
 
     <?php if ($erro): ?>

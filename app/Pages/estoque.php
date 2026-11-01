@@ -371,7 +371,7 @@ $rotuloSituacao = [
 
     <h2>Movimentações de estoque<?= $busca !== '' ? ' · ' . e($busca) : '' ?></h2>
 
-    <?php $movs = Estoque::movimentacoes($busca); ?>
+    <?php $movs = Estoque::movimentacoes($busca, 31); $haMaisMovs = count($movs) > 30; $movs = array_slice($movs, 0, 30); // uma a mais: só avisa se existem anteriores ?>
 
     <?php if (!$movs): ?>
 
@@ -415,7 +415,7 @@ $rotuloSituacao = [
 
       </table></div>
 
-      <?php if (count($movs) === 30): ?>
+      <?php if ($haMaisMovs): ?>
         <p class="nota">Mostrando as 30 movimentações mais recentes. Busque pelo produto ou lote para ver as anteriores.</p>
       <?php endif; ?>
 

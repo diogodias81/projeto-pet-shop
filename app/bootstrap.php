@@ -81,5 +81,7 @@ if (isset($_SESSION['user'])) {
     } else {
         $_SESSION = ['csrf' => bin2hex(random_bytes(16))];
         session_regenerate_id(true);
+        // Sem isso a pessoa cai no login achando que o sistema travou
+        flash('Sua sessão foi encerrada: a senha foi trocada ou o acesso foi desativado. Entre novamente ou fale com o administrador.', 'alerta');
     }
 }

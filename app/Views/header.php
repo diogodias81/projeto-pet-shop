@@ -40,7 +40,8 @@ $item = function (string $chave, string $classe) use ($menu, $icones, $atual, $n
         . '<span>' . e($menu[$chave]) . '</span>' . $selo . '</a>';
 };
 
-$minhaSenha = '<a class="btn btn-light w-100 mb-2" href="index.php?page=minha_senha"><i class="bi bi-key" aria-hidden="true"></i> Minha senha</a>';
+$minhaSenha = '<a class="btn ' . ($atual === 'minha_senha' ? 'btn-primary' : 'btn-light') . ' w-100 mb-2" href="index.php?page=minha_senha"'
+    . ($atual === 'minha_senha' ? ' aria-current="page"' : '') . '><i class="bi bi-key" aria-hidden="true"></i> Minha senha</a>';
 
 $sair = '<form method="post" action="index.php?page=logout" class="m-0">' . csrf_campo()
     . '<button class="btn btn-light w-100"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair</button></form>';
@@ -75,6 +76,9 @@ $sair = '<form method="post" action="index.php?page=logout" class="m-0">' . csrf
 
 <body>
 
+    <!-- Teclado: pula as 13 paradas do menu direto para a tela -->
+    <a class="visually-hidden-focusable btn btn-primary pular" href="#conteudo">Pular para o conteúdo</a>
+
     <!-- Computador: menu lateral -->
     <aside class="lateral d-none d-lg-flex d-print-none">
 
@@ -101,10 +105,10 @@ $sair = '<form method="post" action="index.php?page=logout" class="m-0">' . csrf
     <!-- Celular: topo com o nome da tela -->
     <header class="topo-movel d-lg-none d-print-none">
         <a class="marca" href="index.php"><span class="marca-icone" aria-hidden="true">🐾</span> <?= e(config('app_nome')) ?></a>
-        <span class="text-body-secondary small"><?= e($menu[$atual] ?? '') ?></span>
+        <span class="text-body-secondary small"><?= e($tituloAba ?? '') ?></span>
     </header>
 
-    <main class="conteudo">
+    <main class="conteudo" id="conteudo" tabindex="-1">
 
         <?php foreach (flash() as [$msg, $tipo]): ?>
 

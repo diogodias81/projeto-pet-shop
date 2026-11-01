@@ -88,6 +88,10 @@ input[type="file"]::file-selector-button { font: inherit; font-weight: 600; marg
 input[type="search"] { min-width: 15rem; }
 .busca-aviso { margin: .4rem 0 0; color: var(--erro); font-size: .9rem; font-weight: 550; }
 input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--primaria); box-shadow: 0 0 0 .2rem var(--bs-focus-ring-color); }
+.pular { position: absolute; top: .5rem; left: .5rem; z-index: 2000; }
+#conteudo:focus { outline: 0; }
+/* Foco do teclado: o anel claro do Bootstrap some nos botões claros (1,2:1); a cor primária dá 5,4:1 no branco */
+:is(a, button, .btn, .nav-link, .sugestao, summary):focus-visible { outline: 3px solid var(--primaria); outline-offset: 2px; box-shadow: none; }
 
 /* Tabelas */
 .table { --bs-table-bg: transparent; --bs-table-hover-bg: rgba(36, 118, 108, .05); margin-bottom: .25rem; font-size: .93rem; }
@@ -130,6 +134,9 @@ td.acoes { text-align: right; white-space: nowrap; }
 .barra-valor { width: 100%; background: linear-gradient(180deg, #5cb3a7, var(--primaria)); border-radius: 6px 6px 2px 2px; min-height: 2px; }
 .barra small { color: var(--suave); white-space: nowrap; font-size: .75rem; }
 .barras small.oculto { visibility: hidden; }
+/* Primeiro e último rótulo encostam na borda do gráfico em vez de vazar para fora */
+.barra:first-child small { align-self: flex-start; }
+.barra:last-child small { align-self: flex-end; }
 .hbarras { display: grid; gap: .5rem; }
 .hbarra { display: grid; grid-template-columns: minmax(6rem, 11rem) 1fr auto; align-items: center; gap: .6rem; font-size: .9rem; }
 .hbarra > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -226,8 +233,9 @@ body.login { display: grid; place-items: center; min-height: 100vh; padding: 1re
   /* Celular não tem hover para o title: o nome ganha a linha inteira em vez de ser cortado */
   .hbarra { grid-template-columns: 1fr auto; gap: .2rem .6rem; }
   .hbarra > span:first-child { grid-column: 1 / -1; white-space: normal; }
-  /* Metade das datas do gráfico, para não encostarem */
-  .barras small.alterno { visibility: hidden; }
+  /* No celular valem só os rótulos calculados para 6 (ver grafico_faturamento.php) */
+  .barras small.sem-celular { visibility: hidden; }
+  .barras small.celular { visibility: visible; }
 }
 
 /* Quem pediu menos movimento no aparelho não vê animações */

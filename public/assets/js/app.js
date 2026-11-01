@@ -17,9 +17,35 @@ document.querySelectorAll('button[data-confirmar-botao]').forEach(btn => {
 
     btn.addEventListener('click', ev => {
 
+        // Devolução: sem nenhuma quantidade marcada não há o que confirmar
+        const qtds = btn.dataset.exigeQuantidade ? [...btn.form.querySelectorAll(btn.dataset.exigeQuantidade)] : [];
+
+        if (qtds.length && !qtds.some(i => parseInt(i.value, 10) > 0)) {
+            qtds[0].setCustomValidity('Informe a quantidade de pelo menos um item para devolver.');
+            qtds[0].reportValidity();
+            qtds.forEach(i => i.addEventListener('input', () => qtds[0].setCustomValidity(''), { once: true }));
+            ev.preventDefault();
+            return;
+        }
+
         if (btn.form?.checkValidity() && !confirm(btn.dataset.confirmarBotao)) {
             ev.preventDefault();
         }
+    });
+});
+
+
+// <input type="file" data-max-bytes="...">: avisa antes de enviar, sem perder o que foi digitado
+
+document.querySelectorAll('input[type="file"][data-max-bytes]').forEach(input => {
+
+    input.addEventListener('change', () => {
+
+        const grande = [...input.files].some(f => f.size > Number(input.dataset.maxBytes));
+
+        input.setCustomValidity(grande ? 'A foto deve ter no máximo ' + Math.round(input.dataset.maxBytes / 1048576) + ' MB.' : '');
+
+        if (grande) input.reportValidity();
     });
 });
 
