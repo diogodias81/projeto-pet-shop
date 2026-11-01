@@ -350,6 +350,8 @@ class Database
                 'trocar_senha' => 'INTEGER NOT NULL DEFAULT 0',
                 // 0 = desativado (funcionário que saiu): não entra, mas o histórico dele fica
                 'ativo' => 'INTEGER NOT NULL DEFAULT 1',
+                // Sobe a cada troca/redefinição de senha: sessões com versão antiga são encerradas
+                'sessao_versao' => 'INTEGER NOT NULL DEFAULT 0',
             ],
         ];
 

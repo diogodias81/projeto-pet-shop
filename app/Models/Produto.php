@@ -44,9 +44,11 @@ class Produto {
             $st->execute([$codigo, $id]);
             if ($outro = $st->fetchColumn()) throw new DomainException("O código de barras $codigo já pertence a \"$outro\".");
         }
-        $arquivo = $foto && $foto['error'] !== UPLOAD_ERR_NO_FILE ? self::guardarFoto($foto) : null;
-        $pdo->beginTransaction();
+        $arquivo = null;
+        $pdo->exec('BEGIN IMMEDIATE'); // lê o produto antes de gravar: ver Estoque::entrada
         try {
+            // foto dentro do try: se a transação falhar, o catch apaga o arquivo salvo
+            $arquivo = $foto && $foto['error'] !== UPLOAD_ERR_NO_FILE ? self::guardarFoto($foto) : null;
             if ($id) {
                 $antes = self::buscar($id);
                 if (!$antes) throw new DomainException('Produto não encontrado.');

@@ -33,7 +33,8 @@ class Estoque {
         }
         $pdo = Database::pdo();
         $propria = !$pdo->inTransaction();
-        if ($propria) $pdo->beginTransaction();
+        // IMMEDIATE: transação comum que lê antes de gravar dá "database is locked" na hora se outro processo grava
+        if ($propria) $pdo->exec('BEGIN IMMEDIATE');
         try {
             $st = $pdo->prepare('SELECT id FROM lotes WHERE produto_id = ? AND codigo = ? AND validade IS ?');
             $st->execute([$produtoId, $lote, $validade]);

@@ -23,7 +23,9 @@ class Despesa {
     public static function excluir(int $id): void {
         $st = Database::pdo()->prepare('SELECT descricao, valor FROM despesas WHERE id = ?');
         $st->execute([$id]);
-        if (!($d = $st->fetch())) throw new DomainException('Despesa não encontrada.');
+        $d = $st->fetch();
+        $st->closeCursor(); // cursor aberto faz a gravação seguinte falhar na hora se outro processo grava (ver bootstrap)
+        if (!$d) throw new DomainException('Despesa não encontrada.');
         Database::pdo()->prepare('DELETE FROM despesas WHERE id = ?')->execute([$id]);
         Auditoria::registrar('despesa_excluida', $d['descricao'] . ': ' . moeda($d['valor']));
     }

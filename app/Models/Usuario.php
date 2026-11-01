@@ -49,6 +49,8 @@ class Usuario {
         $st = $pdo->prepare('SELECT * FROM usuarios WHERE lower(email) = ?');
         $st->execute([$chave]);
         $u = $st->fetch();
+        // Cursor de uma linha fica aberto até o closeCursor; aberto, a gravação seguinte dá "database is locked" na hora se outro processo grava (ver bootstrap)
+        $st->closeCursor();
         if (password_verify($senha, $u['senha_hash'] ?? self::HASH_FALSO) && $u) {
             // Só quem sabe a senha descobre que a conta foi desativada
             if (!$u['ativo']) throw new DomainException('Este usuário foi desativado. Fale com o administrador.');
@@ -69,19 +71,55 @@ class Usuario {
         if ($senha !== $confirmacao) throw new DomainException('A confirmação não confere com a nova senha.');
         $st = Database::pdo()->prepare('SELECT senha_hash FROM usuarios WHERE id = ?');
         $st->execute([$id]);
-        if (password_verify($senha, (string) $st->fetchColumn())) throw new DomainException('A nova senha deve ser diferente da senha inicial.');
-        Database::pdo()->prepare('UPDATE usuarios SET senha_hash = ?, trocar_senha = 0 WHERE id = ?')->execute([password_hash($senha, PASSWORD_DEFAULT), $id]);
+        $hash = (string) $st->fetchColumn();
+        $st->closeCursor(); // ver autenticar
+        if (password_verify($senha, $hash)) throw new DomainException('A nova senha deve ser diferente da senha inicial.');
+        Database::pdo()->prepare('UPDATE usuarios SET senha_hash = ?, trocar_senha = 0, sessao_versao = sessao_versao + 1 WHERE id = ?')->execute([password_hash($senha, PASSWORD_DEFAULT), $id]);
+        self::manterSessaoAtual($id);
         Auditoria::registrar('senha_alterada');
     }
-    /** Tela "Minha senha": pede a atual para ninguém trocar a senha num computador esquecido logado */
+    /** A senha mudou e o bootstrap derruba as sessões com a versão antiga; a sessão de quem fez a troca continua */
+    private static function manterSessaoAtual(int $id): void {
+        if ($id === (usuario()['id'] ?? 0)) $_SESSION['user']['sessao_versao'] = ($_SESSION['user']['sessao_versao'] ?? 0) + 1;
+    }
+    /**
+     * Tela "Minha senha": pede a atual para ninguém trocar a senha num computador esquecido logado.
+     * Bloqueia por 15 minutos após 5 senhas atuais erradas do mesmo usuário (em tentativas_login, chave "MINHA_SENHA:<id>").
+     */
     public static function alterarSenha(int $id, string $atual, string $nova, string $confirmacao): void {
-        $st = Database::pdo()->prepare('SELECT senha_hash FROM usuarios WHERE id = ?');
+        $pdo = Database::pdo();
+        // Maiúsculas de propósito: o login grava o e-mail em minúsculas, então nenhum login cai nesta chave
+        $chave = "MINHA_SENHA:$id";
+        // Conta e registra na mesma transação, igual ao login: requisições em paralelo não passam do limite
+        $pdo->exec('BEGIN IMMEDIATE');
+        try {
+            $st = $pdo->prepare("SELECT COUNT(*), (strftime('%s', MIN(criado_em), '+15 minutes') - strftime('%s', 'now') + 59) / 60 FROM tentativas_login WHERE email = ? AND criado_em > datetime('now', '-15 minutes')");
+            $st->execute([$chave]);
+            [$erros, $minutos] = $st->fetch(PDO::FETCH_NUM);
+            if ($erros < 5) $pdo->prepare('INSERT INTO tentativas_login (email, ip) VALUES (?, ?)')->execute([$chave, $_SERVER['REMOTE_ADDR'] ?? '']);
+            else {
+                // Uma linha por bloqueio a cada 15 min, não uma por requisição bloqueada
+                $st = $pdo->prepare("SELECT 1 FROM auditoria WHERE acao = 'senha_bloqueada' AND usuario_id = ? AND criado_em > datetime('now', 'localtime', '-15 minutes')");
+                $st->execute([$id]);
+                if (!$st->fetchColumn()) Auditoria::registrar('senha_bloqueada', 'Senha atual errada 5 vezes em "Minha senha"');
+            }
+            $pdo->commit();
+        } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+        if ($erros >= 5) {
+            $minutos = max(1, (int) $minutos);
+            throw new DomainException("Muitas tentativas com a senha atual errada. Aguarde $minutos minuto" . ($minutos > 1 ? 's' : '') . ' e tente novamente.');
+        }
+        $st = $pdo->prepare('SELECT senha_hash FROM usuarios WHERE id = ?');
         $st->execute([$id]);
-        if (mb_strlen($atual) > 1024 || !password_verify($atual, (string) $st->fetchColumn())) throw new DomainException('A senha atual está incorreta.');
+        $hash = (string) $st->fetchColumn();
+        $st->closeCursor(); // ver autenticar
+        if (mb_strlen($atual) > 1024 || !password_verify($atual, $hash)) throw new DomainException('A senha atual está incorreta.');
+        $pdo->prepare('DELETE FROM tentativas_login WHERE email = ?')->execute([$chave]);
         self::validarSenha($nova);
         if ($nova !== $confirmacao) throw new DomainException('A confirmação não confere com a nova senha.');
         if ($nova === $atual) throw new DomainException('A nova senha deve ser diferente da atual.');
-        Database::pdo()->prepare('UPDATE usuarios SET senha_hash = ? WHERE id = ?')->execute([password_hash($nova, PASSWORD_DEFAULT), $id]);
+        $pdo->prepare('UPDATE usuarios SET senha_hash = ?, sessao_versao = sessao_versao + 1 WHERE id = ?')->execute([password_hash($nova, PASSWORD_DEFAULT), $id]);
+        self::manterSessaoAtual($id);
         Auditoria::registrar('senha_alterada');
     }
     /** Admin define uma senha provisória (ex.: o usuário esqueceu a dele); o usuário troca no próximo acesso */
@@ -89,8 +127,12 @@ class Usuario {
         self::validarSenha($senha);
         $st = Database::pdo()->prepare('SELECT nome, email FROM usuarios WHERE id = ?');
         $st->execute([$id]);
-        if (!($alvo = $st->fetch())) throw new DomainException('Usuário não encontrado.');
-        Database::pdo()->prepare('UPDATE usuarios SET senha_hash = ?, trocar_senha = 1 WHERE id = ?')->execute([password_hash($senha, PASSWORD_DEFAULT), $id]);
+        $alvo = $st->fetch();
+        $st->closeCursor(); // ver autenticar
+        if (!$alvo) throw new DomainException('Usuário não encontrado.');
+        // Derruba as sessões abertas do usuário: quem roubou uma não chega na tela de trocar a senha provisória
+        Database::pdo()->prepare('UPDATE usuarios SET senha_hash = ?, trocar_senha = 1, sessao_versao = sessao_versao + 1 WHERE id = ?')->execute([password_hash($senha, PASSWORD_DEFAULT), $id]);
+        self::manterSessaoAtual($id);
         Auditoria::registrar('senha_redefinida', "{$alvo['nome']} <{$alvo['email']}>");
     }
     public static function listar(): array {
@@ -115,19 +157,42 @@ class Usuario {
         if ($id === (usuario()['id'] ?? 0)) throw new DomainException('Você não pode excluir seu próprio usuário.');
         $st = Database::pdo()->prepare('SELECT nome, email FROM usuarios WHERE id = ?');
         $st->execute([$id]);
-        if (!($alvo = $st->fetch())) throw new DomainException('Usuário não encontrado.');
+        $alvo = $st->fetch();
+        $st->closeCursor(); // cursor aberto faz o BEGIN IMMEDIATE falhar na hora em vez de esperar (ver bootstrap)
+        if (!$alvo) throw new DomainException('Usuário não encontrado.');
+        $pdo = Database::pdo();
+        $pdo->exec('BEGIN IMMEDIATE');
         try {
-            Database::pdo()->prepare('DELETE FROM usuarios WHERE id = ?')->execute([$id]);
+            self::exigirOutroAdmin($id);
+            $pdo->prepare('DELETE FROM usuarios WHERE id = ?')->execute([$id]);
             Auditoria::registrar('usuario_excluido', "{$alvo['nome']} <{$alvo['email']}>");
-        } catch (PDOException $e) { throw new DomainException('Usuário possui vendas ou movimentações de estoque registradas e não pode ser excluído. Use "Desativar" para bloquear o acesso.'); }
+            $pdo->commit();
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            throw new DomainException('Usuário possui vendas ou movimentações de estoque registradas e não pode ser excluído. Use "Desativar" para bloquear o acesso.');
+        } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+    }
+    /** Chamar dentro de BEGIN IMMEDIATE: dois admins agindo ao mesmo tempo não deixam o sistema sem administrador ativo */
+    private static function exigirOutroAdmin(int $id): void {
+        $st = Database::pdo()->prepare("SELECT (SELECT perfil = 'admin' AND ativo = 1 FROM usuarios WHERE id = ?) AND (SELECT COUNT(*) FROM usuarios WHERE perfil = 'admin' AND ativo = 1) <= 1");
+        $st->execute([$id]);
+        if ($st->fetchColumn()) throw new DomainException('Este é o único administrador ativo: o sistema não pode ficar sem administrador.');
     }
     /** Funcionário que saiu: perde o acesso na hora, mas continua no histórico de vendas e relatórios */
     public static function definirAtivo(int $id, bool $ativo): void {
         if ($id === (usuario()['id'] ?? 0)) throw new DomainException('Você não pode desativar seu próprio usuário.');
         $st = Database::pdo()->prepare('SELECT nome, email FROM usuarios WHERE id = ?');
         $st->execute([$id]);
-        if (!($alvo = $st->fetch())) throw new DomainException('Usuário não encontrado.');
-        Database::pdo()->prepare('UPDATE usuarios SET ativo = ? WHERE id = ?')->execute([(int) $ativo, $id]);
-        Auditoria::registrar($ativo ? 'usuario_reativado' : 'usuario_desativado', "{$alvo['nome']} <{$alvo['email']}>");
+        $alvo = $st->fetch();
+        $st->closeCursor(); // ver excluir
+        if (!$alvo) throw new DomainException('Usuário não encontrado.');
+        $pdo = Database::pdo();
+        $pdo->exec('BEGIN IMMEDIATE');
+        try {
+            if (!$ativo) self::exigirOutroAdmin($id);
+            $pdo->prepare('UPDATE usuarios SET ativo = ? WHERE id = ?')->execute([(int) $ativo, $id]);
+            Auditoria::registrar($ativo ? 'usuario_reativado' : 'usuario_desativado', "{$alvo['nome']} <{$alvo['email']}>");
+            $pdo->commit();
+        } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
     }
 }

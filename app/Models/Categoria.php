@@ -15,12 +15,16 @@ class Categoria {
     public static function excluir(int $id): void {
         $st = Database::pdo()->prepare('SELECT COUNT(*) FROM produtos WHERE categoria_id = ? AND ativo = 1');
         $st->execute([$id]);
-        if ($st->fetchColumn() > 0) throw new DomainException('Existem produtos nesta categoria. Mova-os antes de excluir.');
+        $emUso = $st->fetchColumn();
+        $st->closeCursor(); // cursor aberto faz a gravação seguinte falhar na hora se outro processo grava (ver bootstrap)
+        if ($emUso > 0) throw new DomainException('Existem produtos nesta categoria. Mova-os antes de excluir.');
         // produtos excluídos (ativo=0) continuam na tabela apontando para a categoria e travariam a chave estrangeira
         Database::pdo()->prepare('UPDATE produtos SET categoria_id = NULL WHERE categoria_id = ? AND ativo = 0')->execute([$id]);
         $st = Database::pdo()->prepare('SELECT nome FROM categorias WHERE id = ?');
         $st->execute([$id]);
-        if (!($nome = $st->fetchColumn())) throw new DomainException('Categoria não encontrada.');
+        $nome = $st->fetchColumn();
+        $st->closeCursor();
+        if (!$nome) throw new DomainException('Categoria não encontrada.');
         Database::pdo()->prepare('DELETE FROM categorias WHERE id = ?')->execute([$id]);
         Auditoria::registrar('categoria_excluida', $nome);
     }

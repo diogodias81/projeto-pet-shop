@@ -29,7 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $_SESSION['user'] = [
       'id' => (int) $u['id'],
       'nome' => $u['nome'],
-      'perfil' => $u['perfil']
+      'perfil' => $u['perfil'],
+      'sessao_versao' => (int) $u['sessao_versao']
     ];
 
     redirect('inicio');
