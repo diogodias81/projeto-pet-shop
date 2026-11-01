@@ -4,7 +4,19 @@ $hoje = date('Y-m-d');
 $r = Relatorio::periodo($de, $ate);
 $top = Relatorio::maisVendidos(8, $de, $ate);
 $serie = Relatorio::serie($de, $ate);
+// Backup falhando em silêncio é o pior caso: o admin vê o aviso aqui (o agendamento é scripts/backup.ps1)
+$backup = temPerfil(['admin']) ? Backup::ultimo() : null;
+$diasSemBackup = $backup ? (int) floor((time() - strtotime($backup['quando'])) / 86400) : null;
 ?>
+<?php if (temPerfil(['admin'])): ?>
+    <?php if (!$backup): ?>
+        <div class="alert alert-warning">Nenhum backup foi feito ainda. Veja "Backup" no README para agendar.</div>
+    <?php elseif (!$backup['ok']): ?>
+        <div class="alert alert-danger">O último backup falhou em <?= dataBr($backup['quando']) ?>: <?= e($backup['mensagem']) ?></div>
+    <?php elseif ($diasSemBackup >= 2): ?>
+        <div class="alert alert-warning">O último backup foi há <?= $diasSemBackup ?> dias (<?= dataBr($backup['quando']) ?>). Confira se o computador e o Docker estavam ligados às 22:00.</div>
+    <?php endif; ?>
+<?php endif; ?>
 <section class="kpis">
     <div class="kpi"><span>Faturamento hoje</span><strong><?= moeda(Relatorio::faturamento($hoje, $hoje)) ?></strong></div>
     <div class="kpi"><span>Faturamento nos últimos 7 dias</span><strong><?= moeda(Relatorio::faturamento(date('Y-m-d', strtotime('-6 days')), $hoje)) ?></strong></div>

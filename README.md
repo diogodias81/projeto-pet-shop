@@ -84,6 +84,35 @@ Em desenvolvimento (`APP_DEBUG=1`) também são criadas contas de demonstração
 
 O sistema fica acessível só nesta máquina (`127.0.0.1:8000`). Para usar em rede, coloque um proxy com HTTPS na frente.
 
+## Backup
+
+Todo dia às 22:00 o Agendador de Tarefas do Windows roda `scripts/backup.ps1`, que:
+
+1. faz o backup dentro do container (`scripts/backup.php`): cópia segura do banco com o sistema aberto (`VACUUM INTO`), conferida com `integrity_check`, mais as fotos dos produtos, em `storage/backups/AAAA-MM-DD_HHMM/`;
+2. apaga os backups com mais de 30 dias;
+3. espelha `storage/backups` em `OneDrive\Backups PetShop` (sobe para a nuvem sozinho).
+
+Se o computador estiver desligado às 22:00, a tarefa roda assim que ele ligar. O Docker precisa estar ligado. Cada execução fica em `storage/backups/backup.log`, e o **Dashboard avisa o administrador** se o último backup falhou ou tem mais de 2 dias.
+
+```powershell
+# Criar a tarefa (uma vez, num computador novo)
+$acao = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "C:\caminho\do\projeto-pet-shop\scripts\backup.ps1"'
+Register-ScheduledTask -TaskName 'PetShop Backup' -Action $acao -Trigger (New-ScheduledTaskTrigger -Daily -At 22:00) -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable)
+
+# Fazer um backup agora
+Start-ScheduledTask -TaskName 'PetShop Backup'
+```
+
+### Restaurar um backup
+
+1. Pare o sistema: `docker compose down`
+2. Guarde o banco atual por segurança: renomeie `storage/petshop.sqlite` para `storage/petshop-antes-da-restauracao.sqlite`
+3. Copie o `petshop.sqlite` da pasta do backup escolhido (em `storage/backups` ou no OneDrive) para `storage/petshop.sqlite`
+4. Copie as fotos da pasta `fotos` do backup para `public/uploads/produtos/`
+5. Suba de novo: `docker compose up -d`
+
+Tudo o que foi registrado depois do horário do backup se perde: confira a data no nome da pasta.
+
 ## Estrutura do projeto
 
 ```text
