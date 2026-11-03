@@ -424,6 +424,8 @@ tr.linha-ativa > td { background: var(--primaria-clara) !important; }
 .zona-acao { margin-top: 1.25rem; padding: 1rem 1.1rem; border: 1px solid var(--borda); border-radius: var(--raio); background: var(--fundo); }
 .zona-acao h3 { margin-top: 0; }
 .zona-acao .linha { margin-bottom: 0; }
+.zona-acao .linha > label { flex: 1 1 16rem; }
+.zona-acao .linha > label > input { width: 100%; }
 .zona-acao .nota { margin-top: .6rem; }
 
 /* ---- PDV no celular: barra fixa com o total ---- */
