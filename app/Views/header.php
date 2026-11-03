@@ -73,7 +73,7 @@ $sair = '<form method="post" action="index.php?page=logout" class="m-0">' . csrf
 
     <title>
         <?php // páginas fora do menu (rótulo null) também ganham nome na aba ?>
-        <?php $tituloAba = $menu[$atual] ?? ['comprovante' => 'Comprovante', 'minha_senha' => 'Minha senha'][$atual] ?? null; ?>
+        <?php $tituloAba = $tituloPagina ?? $menu[$atual] ??['comprovante' => 'Comprovante', 'minha_senha' => 'Minha senha'][$atual] ?? null; ?>
         <?= e($tituloAba ? "$tituloAba · " : '') ?><?= e(config('app_nome')) ?>
     </title>
 
@@ -137,8 +137,13 @@ $sair = '<form method="post" action="index.php?page=logout" class="m-0">' . csrf
     <main class="conteudo" id="conteudo" tabindex="-1">
 
         <?php if (!in_array($atual, ['dashboard', 'comprovante'], true) && $tituloAba): // o dashboard tem saudação própria ?>
+            <?php // a página roda antes do layout: pode definir $subtituloTopo (texto) e $acoesTopo (HTML pronto, já escapado) ?>
             <header class="pagina-topo d-print-none">
-                <h1><?= e($tituloAba) ?></h1>
+                <div>
+                    <h1><?= e($tituloAba) ?></h1>
+                    <?php if (!empty($subtituloTopo)): ?><p class="pagina-sub"><?= e($subtituloTopo) ?></p><?php endif; ?>
+                </div>
+                <?php if (!empty($acoesTopo)): ?><div class="pagina-acoes"><?= $acoesTopo ?></div><?php endif; ?>
             </header>
         <?php endif; ?>
 

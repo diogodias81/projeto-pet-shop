@@ -128,6 +128,21 @@ if (menuMais && window.bootstrap) {
 }
 
 
+// <details data-aberto-desktop>: no computador os filtros ficam sempre abertos; no celular, recolhidos
+
+if (matchMedia('(min-width: 641px)').matches) {
+
+    document.querySelectorAll('details[data-aberto-desktop]').forEach(d => { d.open = true; });
+}
+
+
+// Gaveta com formulário (ex.: produto): abre já carregada quando está editando ou voltou com erro
+document.querySelectorAll('.offcanvas[data-abrir]').forEach(el => {
+
+    if (window.bootstrap) bootstrap.Offcanvas.getOrCreateInstance(el).show();
+});
+
+
 // Leitor de código de barras: o leitor USB "digita" o código e aperta Enter.
 // <input data-sem-enter> não envia o formulário com esse Enter.
 // <input data-seleciona="id-do-select"> escolhe no select a opção com o mesmo data-codigo.
@@ -525,6 +540,12 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
         $('v-desc-valor').textContent = c.desconto ? '− ' + moeda(c.desconto) : moeda(0);
 
         $('v-total').textContent = moeda(Math.max(c.total, 0));
+
+        // Barra do celular com o total
+        const nItens = itens.reduce((soma, it) => soma + Number(it.quantidade), 0);
+        $('v-barra').hidden = nItens === 0;
+        $('v-barra-total').textContent = $('v-total').textContent;
+        $('v-barra-itens').textContent = nItens + (nItens === 1 ? ' item' : ' itens');
 
 
         recebidoCampo.hidden = !dinheiro;

@@ -165,7 +165,7 @@ $esgotados = array_values(array_map(
 
   </section>
 
-  <aside class="card card-body pdv-resumo">
+  <aside class="card card-body pdv-resumo" id="pdv-pagamento">
 
       <h2>Pagamento</h2>
 
@@ -259,5 +259,14 @@ $esgotados = array_values(array_map(
       <p class="nota" id="v-motivo" aria-live="polite">Adicione um produto para finalizar.</p>
 
   </aside>
+
+  <!-- Celular: total sempre à vista; leva ao pagamento (app.js mostra quando há itens) -->
+  <a class="pdv-barra d-lg-none d-print-none" href="#pdv-pagamento" id="v-barra" hidden>
+    <span class="pdv-barra-total">
+      <small id="v-barra-itens">0 itens</small>
+      <strong id="v-barra-total">R$ 0,00</strong>
+    </span>
+    <span class="btn btn-primary">Pagamento <i class="bi bi-arrow-down" aria-hidden="true"></i></span>
+  </a>
 
 </form>

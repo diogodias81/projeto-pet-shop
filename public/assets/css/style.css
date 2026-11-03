@@ -160,7 +160,7 @@ section[id] { scroll-margin-top: 5rem; } /* atalho #seção: o título não fica
 [hidden] { display: none !important; }
 
 /* Produto com foto na tabela e nível de estoque */
-.produto-celula { display: flex; align-items: center; gap: .7rem; font-weight: 550; }
+.produto-celula { display: flex; align-items: center; gap: .7rem; font-weight: 550; min-width: 12rem; }
 .produto-celula .foto { width: 38px; height: 38px; flex: none; }
 .foto-vazia { display: grid !important; place-items: center; color: #b8b0a3; font-size: .95rem; }
 .nivel { display: inline-flex; align-items: center; gap: .6rem; font-weight: 600; }
@@ -365,8 +365,80 @@ body.login > form.login-caixa { max-width: 420px; padding: 2rem; background: var
   .login-vitrine { display: none; }
 }
 
+/* ---- Cabeçalho da página: subtítulo e ações ---- */
+.pagina-sub { margin: .25rem 0 0; color: var(--suave); font-size: .9rem; }
+.pagina-acoes { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+/* ---- Gaveta lateral com formulário (produtos) ---- */
+.gaveta { --bs-offcanvas-width: 480px; --bs-offcanvas-bg: var(--painel); border-left: 0 !important; box-shadow: -20px 0 50px rgba(31, 58, 61, .14); }
+.gaveta .offcanvas-header { align-items: flex-start; padding: 1.4rem 1.5rem 1rem; border-bottom: 1px solid var(--borda); }
+.gaveta .offcanvas-title { margin: 0; font-size: 1.2rem; }
+.gaveta .btn-close { flex: none; width: 2.25rem; height: 2.25rem; padding: 0; background-size: .9rem; border-radius: 50%; background-color: var(--neutro-2); }
+.gaveta-form { display: flex; flex-direction: column; gap: 1.25rem; padding: 1.25rem 1.5rem 0; }
+.gaveta-form fieldset { display: grid; gap: .85rem; }
+.gaveta-form legend { margin-bottom: .1rem; font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--suave); }
+.gaveta-form input:not([type="file"]), .gaveta-form select { width: 100%; min-width: 0; }
+.campos-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem; }
+.foto-campo { display: flex; align-items: center; gap: 1rem; padding: .85rem; border: 1px dashed #e0dad0; border-radius: var(--raio); background: var(--fundo); }
+.foto-g { width: 72px !important; height: 72px !important; border-radius: 14px; flex: none; font-size: 1.5rem; }
+.gaveta-rodape { position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: .5rem; margin: auto -1.5rem 0; padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom)); border-top: 1px solid var(--borda); background: var(--painel); }
+@media (max-width: 575.98px) { .gaveta { --bs-offcanvas-width: 100vw; } .campos-2 { grid-template-columns: 1fr; } }
+
+/* Chips de filtro (categorias) */
+.chips { display: flex; gap: .4rem; margin: -.25rem 0 1rem; overflow-x: auto; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; padding: .35rem .85rem; border: 1px solid var(--borda); border-radius: 999px; background: var(--painel); color: var(--suave); font-size: .84rem; font-weight: 600; text-decoration: none; white-space: nowrap; transition: background .15s, color .15s, border-color .15s; }
+.chip:hover { border-color: #d3ccc0; color: var(--tinta); }
+.chip.active { background: var(--tinta); border-color: var(--tinta); color: #fff; }
+
+/* Botões só com ícone nas tabelas */
+.btn-quadrado { width: 2rem; height: 2rem; padding: 0 !important; }
+tr.linha-ativa > td { background: var(--primaria-clara) !important; }
+
+/* ---- Histórico ---- */
+.resumo-lista { display: flex; gap: 1.25rem; color: var(--suave); font-size: .88rem; }
+.resumo-lista strong { color: var(--tinta); font-variant-numeric: tabular-nums; }
+.filtros-caixa > summary { display: none; list-style: none; }
+.filtros-caixa > summary::-webkit-details-marker { display: none; }
+@media (max-width: 640px) {
+  .filtros-caixa > summary { display: flex; width: 100%; margin-bottom: 1rem; }
+  .filtros-caixa[open] > summary { margin-bottom: .6rem; }
+}
+.filtros { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; align-items: end; margin-bottom: 1.25rem; padding: 1rem; border-radius: var(--raio); background: var(--fundo); }
+.filtros input, .filtros select { width: 100%; min-width: 0; }
+.venda-num { font-weight: 700; text-decoration: none; font-variant-numeric: tabular-nums; }
+.pessoa { display: inline-flex; align-items: center; gap: .5rem; white-space: nowrap; }
+.avatar-xs { width: 1.6rem; height: 1.6rem; font-size: .62rem; }
+.icone-suave { color: var(--suave); margin-right: .2rem; }
+.itens-venda { max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--suave); }
+.detalhe-grade { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 1rem; align-items: start; margin-bottom: 1rem; }
+.detalhe-grade > aside { position: sticky; top: 1.5rem; display: grid; gap: 1rem; }
+.detalhe-grade > aside h2 { margin: 0; }
+.detalhes-resumo { max-width: none; gap: .55rem 0; margin: 0; }
+.detalhes-resumo dd { padding-left: 1rem; text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 1199.98px) {
+  .detalhe-grade { grid-template-columns: 1fr; }
+  .detalhe-grade > aside { position: static; order: -1; }
+}
+.detalhes-total { padding-top: 1rem; border-top: 1px solid var(--borda); font-family: var(--fonte-titulo); font-size: 1.25rem; font-weight: 750; color: var(--tinta) !important; }
+.zona-acao { margin-top: 1.25rem; padding: 1rem 1.1rem; border: 1px solid var(--borda); border-radius: var(--raio); background: var(--fundo); }
+.zona-acao h3 { margin-top: 0; }
+.zona-acao .linha { margin-bottom: 0; }
+.zona-acao .nota { margin-top: .6rem; }
+
+/* ---- PDV no celular: barra fixa com o total ---- */
+.pdv-barra { position: fixed; z-index: 1040; left: .75rem; right: .75rem; bottom: calc(var(--barra) + env(safe-area-inset-bottom) + .6rem); display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .6rem .6rem .6rem 1.1rem; border-radius: 18px; background: var(--tinta); color: #fff; text-decoration: none; box-shadow: 0 12px 30px rgba(31, 58, 61, .3); animation: surgir .25s ease-out; }
+.pdv-barra:hover { color: #fff; }
+.pdv-barra-total { display: grid; line-height: 1.15; }
+.pdv-barra-total small { color: rgba(255, 255, 255, .7); font-size: .75rem; }
+.pdv-barra-total strong { font-family: var(--fonte-titulo); font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+.conteudo:has(.pdv-barra:not([hidden])) { padding-bottom: calc(var(--barra) + 6rem + env(safe-area-inset-bottom)); }
+
 /* Tablet e menor */
 @media (max-width: 991.98px) {
+  .detalhe-grade { grid-template-columns: 1fr; }
+  .detalhe-grade > aside { position: static; order: -1; }
+  .pagina-topo { flex-wrap: wrap; }
   .painel-topo { grid-template-columns: 1fr; }
   .resumo-faturamento { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .pdv { grid-template-columns: 1fr; }
@@ -402,6 +474,9 @@ body.login > form.login-caixa { max-width: 420px; padding: 2rem; background: var
   .filtro-datas input { width: 100%; }
   .filtro-datas .btn { flex-basis: 100%; }
   .busca-barra label { max-width: none; }
+  .itens-venda { max-width: none; }
+  .pagina-acoes { width: 100%; }
+  .pagina-acoes .btn { flex: 1; }
   input[type="search"] { min-width: 0; }
   .card .table-responsive { margin-inline: 0; padding-inline: 0; }
   /* Tabelas viram cartões: uma linha por item, com o nome da coluna ao lado do valor */

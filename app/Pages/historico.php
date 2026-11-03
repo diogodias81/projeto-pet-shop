@@ -36,6 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   redirect('historico', ['ver' => $id]);
 }
 
+// Visual comum à lista e ao detalhe
+$seloSituacao = fn(array $v) => match (Venda::situacao($v)) {
+  'Cancelada' => 'selo-erro', 'Devolvida', 'Devolução parcial' => 'selo-alerta', default => 'selo-ok',
+};
+$iconePagamento = ['dinheiro' => 'cash-coin', 'pix' => 'qr-code', 'debito' => 'credit-card', 'credito' => 'credit-card-2-front'];
+$iniciais = fn(?string $nome) => $nome ? mb_strtoupper(implode('', array_map(fn($p) => mb_substr($p, 0, 1), array_slice(preg_split('/\s+/', trim($nome)), 0, 2)))) : '?';
+
 
 // ---- detalhe de uma venda ----
 
@@ -54,204 +61,210 @@ if (isset($_GET['ver'])) {
     fn($it) => $it['quantidade'] - $it['quantidade_devolvida'],
     $venda['itens']
   ));
+
+  $tituloPagina = 'Venda #' . $venda['id'];
+  $subtituloTopo = dataBr($venda['criado_em']) . ' · ' . ($venda['vendedor'] ?? '—');
+  $acoesTopo = '<a class="btn btn-light" href="index.php?page=historico"><i class="bi bi-arrow-left" aria-hidden="true"></i> Histórico</a>'
+    . '<a class="btn btn-light" href="index.php?page=comprovante&amp;id=' . $venda['id'] . '&amp;via=2"><i class="bi bi-printer" aria-hidden="true"></i> 2ª via do comprovante</a>';
 ?>
 
-  <p class="nao-imprimir">
-    <a href="index.php?page=historico">← Voltar ao histórico</a>
-  </p>
+  <div class="detalhe-grade">
 
-  <section class="card card-body mb-3">
+    <section class="card card-body">
 
-    <h2>
-      Venda #<?= $venda['id'] ?>
+      <div class="card-titulo">
+        <h2>Itens</h2>
+        <span class="selo <?= $seloSituacao($venda) ?>"><?= e(Venda::situacao($venda)) ?></span>
+      </div>
 
-      <span class="selo <?= $venda['status'] === 'cancelada' ? 'selo-erro' : ($venda['valor_devolvido'] > 0 ? 'selo-alerta' : 'selo-ok') ?>">
-        <?= e(Venda::situacao($venda)) ?>
-      </span>
-    </h2>
+      <form method="post">
 
-    <dl class="detalhes">
+        <?= csrf_campo() ?>
 
-      <dt>Data</dt>
-      <dd><?= dataBr($venda['criado_em']) ?></dd>
+        <input type="hidden" name="id" value="<?= $venda['id'] ?>">
 
-      <dt>Vendedor</dt>
-      <dd><?= e($venda['vendedor'] ?? '—') ?></dd>
+        <div class="table-responsive"><table class="table table-hover align-middle">
 
-      <dt>Pagamento</dt>
-      <dd><?= e(Venda::FORMAS[$venda['forma_pagamento']] ?? '—') ?></dd>
-
-      <dt>Subtotal</dt>
-      <dd><?= moeda($venda['subtotal']) ?></dd>
-
-      <dt>Desconto</dt>
-      <dd><?= moeda($venda['desconto']) ?></dd>
-
-      <dt>Total</dt>
-      <dd><strong><?= moeda($venda['total']) ?></strong></dd>
-
-      <?php if ($venda['valor_devolvido'] > 0): ?>
-        <dt>Devolvido</dt>
-        <dd><?= moeda($venda['valor_devolvido']) ?></dd>
-      <?php endif; ?>
-
-      <?php if (temPerfil(['admin', 'financeiro'])): ?>
-        <dt>Lucro bruto</dt>
-        <dd><?= moeda(Venda::lucro($venda)) ?></dd>
-      <?php endif; ?>
-
-      <?php if ($venda['status'] === 'cancelada'): ?>
-        <dt>Cancelada</dt>
-        <dd>
-          <?= dataBr($venda['cancelado_em']) ?>
-          por <?= e($venda['cancelado_por_nome'] ?? '—') ?>
-          — <?= e($venda['motivo_cancelamento']) ?>
-        </dd>
-      <?php endif; ?>
-
-    </dl>
-
-    <div class="linha">
-
-      <a
-        class="btn btn-light"
-        href="index.php?page=comprovante&id=<?= $venda['id'] ?>&via=2">
-        Emitir 2ª via do comprovante
-      </a>
-
-    </div>
-
-    <form method="post">
-
-      <?= csrf_campo() ?>
-
-      <input type="hidden" name="id" value="<?= $venda['id'] ?>">
-
-      <div class="table-responsive"><table class="table table-hover align-middle">
-
-        <thead>
-
-          <tr>
-            <th>Produto</th>
-            <th class="num">Vendido</th>
-            <th class="num">Devolvido</th>
-            <th class="num">Unitário</th>
-            <th class="num">Subtotal</th>
-
-            <?php if ($podeAlterar && $restam > 0): ?>
-              <th class="num">Devolver agora</th>
-            <?php endif; ?>
-          </tr>
-
-        </thead>
-
-        <tbody>
-
-          <?php foreach ($venda['itens'] as $it): ?>
-
-            <?php $resta = $it['quantidade'] - $it['quantidade_devolvida']; ?>
+          <thead>
 
             <tr>
-
-              <td>
-                <?= e($it['nome']) ?>
-              </td>
-
-              <td class="num">
-                <?= $it['quantidade'] ?>
-              </td>
-
-              <td class="num">
-                <?= $it['quantidade_devolvida'] ?: '—' ?>
-              </td>
-
-              <td class="num">
-                <?= moeda($it['preco_unit']) ?>
-              </td>
-
-              <td class="num">
-                <?= moeda($it['quantidade'] * $it['preco_unit']) ?>
-              </td>
+              <th>Produto</th>
+              <th class="num">Vendido</th>
+              <th class="num">Devolvido</th>
+              <th class="num">Unitário</th>
+              <th class="num">Subtotal</th>
 
               <?php if ($podeAlterar && $restam > 0): ?>
+                <th class="num">Devolver agora</th>
+              <?php endif; ?>
+            </tr>
+
+          </thead>
+
+          <tbody>
+
+            <?php foreach ($venda['itens'] as $it): ?>
+
+              <?php $resta = $it['quantidade'] - $it['quantidade_devolvida']; ?>
+
+              <tr>
+
+                <td>
+                  <?= e($it['nome']) ?>
+                </td>
 
                 <td class="num">
-
-                  <?php if ($resta > 0): ?>
-
-                    <input
-                      class="qtd"
-                      type="number"
-                      name="devolver[<?= $it['id'] ?>]"
-                      min="0"
-                      max="<?= $resta ?>"
-                      value="0"
-                      aria-label="Quantidade de <?= e($it['nome']) ?> a devolver">
-
-                  <?php endif; ?>
-
+                  <?= $it['quantidade'] ?>
                 </td>
+
+                <td class="num">
+                  <?= $it['quantidade_devolvida'] ?: '—' ?>
+                </td>
+
+                <td class="num">
+                  <?= moeda($it['preco_unit']) ?>
+                </td>
+
+                <td class="num">
+                  <?= moeda($it['quantidade'] * $it['preco_unit']) ?>
+                </td>
+
+                <?php if ($podeAlterar && $restam > 0): ?>
+
+                  <td class="num">
+
+                    <?php if ($resta > 0): ?>
+
+                      <input
+                        class="qtd"
+                        type="number"
+                        name="devolver[<?= $it['id'] ?>]"
+                        min="0"
+                        max="<?= $resta ?>"
+                        value="0"
+                        aria-label="Quantidade de <?= e($it['nome']) ?> a devolver">
+
+                    <?php endif; ?>
+
+                  </td>
+
+                <?php endif; ?>
+
+              </tr>
+
+            <?php endforeach; ?>
+
+          </tbody>
+
+        </table></div>
+
+        <?php if ($podeAlterar): ?>
+
+          <div class="zona-acao">
+
+            <h3>Devolver ou cancelar</h3>
+
+            <div class="linha acoes-venda">
+
+              <label>
+                Motivo
+
+                <input
+                  name="motivo"
+                  required
+                  maxlength="200"
+                  placeholder="Ex.: produto com defeito">
+              </label>
+
+              <?php if ($restam > 0): ?>
+
+                <button
+                  class="btn btn-light"
+                  name="acao"
+                  value="devolver"
+                  data-exige-quantidade='input[name^="devolver["]'
+                  data-confirmar-botao="Registrar a devolução dos itens marcados? Eles voltam ao estoque e a devolução não pode ser desfeita.">
+                  <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Registrar devolução
+                </button>
 
               <?php endif; ?>
 
-            </tr>
+              <button
+                class="btn btn-outline-danger"
+                name="acao"
+                value="cancelar"
+                data-confirmar-botao="Cancelar a venda #<?= $venda['id'] ?> inteira? Os itens voltam ao estoque.">
+                <i class="bi bi-x-circle" aria-hidden="true"></i> Cancelar venda
+              </button>
 
-          <?php endforeach; ?>
+            </div>
 
-        </tbody>
+            <?php if ($restam > 0): ?>
+              <p class="nota"><i class="bi bi-info-circle" aria-hidden="true"></i> Para devolver só alguns itens, preencha "Devolver agora" na tabela acima.</p>
+            <?php endif; ?>
 
-      </table></div>
+          </div>
 
-      <?php if ($podeAlterar): ?>
+        <?php endif; ?>
 
-        <div class="linha acoes-venda">
+        <?php if ($venda['status'] !== 'cancelada' && $soProprias): ?>
 
-          <label>
-            Motivo
+          <p class="nota">
+            <i class="bi bi-info-circle" aria-hidden="true"></i> Cancelamentos e devoluções são feitos só pelo administrador. Se o cliente precisar, chame um administrador.
+          </p>
 
-            <input
-              name="motivo"
-              required
-              maxlength="200"
-              placeholder="Ex.: produto com defeito">
-          </label>
+        <?php endif; ?>
 
-          <?php if ($restam > 0): ?>
+      </form>
 
-            <button
-              class="btn btn-light"
-              name="acao"
-              value="devolver"
-              data-exige-quantidade='input[name^="devolver["]'
-              data-confirmar-botao="Registrar a devolução dos itens marcados? Eles voltam ao estoque e a devolução não pode ser desfeita.">
-              Registrar devolução
-            </button>
+    </section>
 
-          <?php endif; ?>
+    <aside class="card card-body">
 
-          <button
-            class="btn btn-outline-danger"
-            name="acao"
-            value="cancelar"
-            data-confirmar-botao="Cancelar a venda #<?= $venda['id'] ?> inteira? Os itens voltam ao estoque.">
-            Cancelar venda
-          </button>
+      <h2>Resumo</h2>
 
+      <dl class="detalhes detalhes-resumo">
+
+        <dt>Data</dt>
+        <dd><?= dataBr($venda['criado_em']) ?></dd>
+
+        <dt>Vendedor</dt>
+        <dd><?= e($venda['vendedor'] ?? '—') ?></dd>
+
+        <dt>Pagamento</dt>
+        <dd><i class="bi bi-<?= $iconePagamento[$venda['forma_pagamento']] ?? 'wallet2' ?>" aria-hidden="true"></i> <?= e(Venda::FORMAS[$venda['forma_pagamento']] ?? '—') ?></dd>
+
+        <dt>Subtotal</dt>
+        <dd><?= moeda($venda['subtotal']) ?></dd>
+
+        <dt>Desconto</dt>
+        <dd><?= moeda($venda['desconto']) ?></dd>
+
+        <?php if ($venda['valor_devolvido'] > 0): ?>
+          <dt>Devolvido</dt>
+          <dd class="negativo">− <?= moeda($venda['valor_devolvido']) ?></dd>
+        <?php endif; ?>
+
+        <dt class="detalhes-total">Total</dt>
+        <dd class="detalhes-total"><?= moeda($venda['total']) ?></dd>
+
+        <?php if (temPerfil(['admin', 'financeiro'])): ?>
+          <dt>Lucro bruto</dt>
+          <dd class="positivo"><?= moeda(Venda::lucro($venda)) ?></dd>
+        <?php endif; ?>
+
+      </dl>
+
+      <?php if ($venda['status'] === 'cancelada'): ?>
+        <div class="alert alert-danger mb-0">
+          Cancelada em <?= dataBr($venda['cancelado_em']) ?>
+          por <?= e($venda['cancelado_por_nome'] ?? '—') ?>: <?= e($venda['motivo_cancelamento']) ?>
         </div>
-
       <?php endif; ?>
 
-      <?php if ($venda['status'] !== 'cancelada' && $soProprias): ?>
+    </aside>
 
-        <p class="vazio">
-          Cancelamentos e devoluções são feitos só pelo administrador. Se o cliente precisar, chame um administrador.
-        </p>
-
-      <?php endif; ?>
-
-    </form>
-
-  </section>
+  </div>
 
   <?php if ($venda['devolucoes']): ?>
 
@@ -325,15 +338,49 @@ $vendedores = array_filter(
   fn($u) => in_array($u['perfil'], ['admin', 'vendedor'], true)
 );
 
+// Resumo das vendas listadas (canceladas não somam)
+$concluidas = array_filter($vendas, fn($v) => $v['status'] !== 'cancelada');
+$somaLiquido = array_sum(array_column($concluidas, 'liquido'));
+
+$subtituloTopo = $soProprias ? 'Suas vendas' : 'Todas as vendas da loja';
+if (temPerfil(['admin', 'vendedor'])) {
+  $acoesTopo = '<a class="btn btn-primary" href="index.php?page=vendas"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nova venda</a>';
+}
+
+// Abas de situação: mantêm os outros filtros
+$linkStatus = fn(string $s) => 'index.php?' . e(http_build_query(['page' => 'historico', 'status' => $s] + array_diff_key($_GET, ['page' => 1, 'status' => 1])));
+
 ?>
 
 <section class="card card-body mb-3">
 
-  <h2>Histórico de vendas</h2>
+  <div class="card-titulo card-titulo-quebra">
+    <nav class="segmentado" aria-label="Situação">
+      <?php foreach (['' => 'Todas', 'concluida' => 'Concluídas', 'cancelada' => 'Canceladas'] as $valor => $rotulo): ?>
+        <a class="<?= $filtros['status'] === $valor ? 'active' : '' ?>" href="<?= $linkStatus($valor) ?>"<?= $filtros['status'] === $valor ? ' aria-current="true"' : '' ?>><?= $rotulo ?></a>
+      <?php endforeach; ?>
+    </nav>
 
-  <form method="get" class="linha">
+    <?php if ($vendas): ?>
+      <div class="resumo-lista">
+        <span><strong><?= count($vendas) ?></strong> <?= count($vendas) === 1 ? 'venda' : 'vendas' ?></span>
+        <span><strong><?= moeda($somaLiquido) ?></strong> líquido</span>
+      </div>
+    <?php endif; ?>
+  </div>
+
+  <?php // celular: filtros recolhidos, a não ser que algum esteja em uso; computador: sempre abertos (app.js) ?>
+  <?php $filtrando = array_intersect_key($_GET, array_flip(['de', 'ate', 'produto_id', 'usuario_id', 'forma'])) !== []; ?>
+  <details class="filtros-caixa" data-aberto-desktop<?= $filtrando ? ' open' : '' ?>>
+  <summary class="btn btn-light"><i class="bi bi-sliders" aria-hidden="true"></i> Filtros<?= $filtrando ? ' <span class="selo selo-neutro">em uso</span>' : '' ?></summary>
+
+  <form method="get" class="filtros">
 
     <input type="hidden" name="page" value="historico">
+
+    <?php if ($filtros['status'] !== ''): ?>
+      <input type="hidden" name="status" value="<?= e($filtros['status']) ?>">
+    <?php endif; ?>
 
     <label>
       De
@@ -397,33 +444,28 @@ $vendedores = array_filter(
       </select>
     </label>
 
-    <label>
-      Situação
-
-      <select name="status">
-        <option value="">Todas</option>
-        <option value="concluida" <?= $filtros['status'] === 'concluida' ? 'selected' : '' ?>>Concluídas</option>
-        <option value="cancelada" <?= $filtros['status'] === 'cancelada' ? 'selected' : '' ?>>Canceladas</option>
-      </select>
-    </label>
-
     <button class="btn btn-light">
-      Filtrar
+      <i class="bi bi-funnel" aria-hidden="true"></i> Filtrar
     </button>
 
   </form>
+  </details>
 
   <?php if (!$vendas): ?>
 
-    <p class="vazio">
-      <?= $filtros['ate'] !== '' && $filtros['de'] > $filtros['ate']
-        ? 'A data "De" é depois da data "Até": troque as datas para ver o período.'
-        : 'Nenhuma venda encontrada.' ?>
-    </p>
+    <div class="estado-vazio">
+      <span class="estado-vazio-icone"><i class="bi bi-receipt" aria-hidden="true"></i></span>
+      <strong>Nenhuma venda encontrada</strong>
+      <p>
+        <?= $filtros['ate'] !== '' && $filtros['de'] > $filtros['ate']
+          ? 'A data "De" é depois da data "Até": troque as datas para ver o período.'
+          : 'Tente mudar o período ou os filtros.' ?>
+      </p>
+    </div>
 
   <?php else: ?>
 
-    <div class="table-responsive"><table class="table table-hover align-middle">
+    <div class="table-responsive"><table class="table table-hover align-middle tabela-vendas">
 
       <thead>
 
@@ -435,7 +477,7 @@ $vendedores = array_filter(
           <th>Pagamento</th>
           <th>Situação</th>
           <th class="num">Total</th>
-          <th></th>
+          <th><span class="visually-hidden">Ações</span></th>
         </tr>
 
       </thead>
@@ -446,20 +488,28 @@ $vendedores = array_filter(
 
           <tr class="<?= $v['status'] === 'cancelada' ? 'cancelada' : '' ?>">
 
-            <td><?= $v['id'] ?></td>
+            <td><a class="venda-num" href="index.php?page=historico&amp;ver=<?= $v['id'] ?>">#<?= $v['id'] ?></a></td>
 
-            <td><?= dataBr($v['criado_em']) ?></td>
+            <td class="text-nowrap"><?= dataBr($v['criado_em']) ?></td>
 
-            <td><?= e($v['vendedor'] ?? '—') ?></td>
+            <td>
+              <span class="pessoa">
+                <span class="avatar avatar-xs" aria-hidden="true"><?= e($iniciais($v['vendedor'])) ?></span>
+                <?= e($v['vendedor'] ?? '—') ?>
+              </span>
+            </td>
 
-            <td><?= e($v['itens']) ?></td>
+            <td class="itens-venda" title="<?= e($v['itens']) ?>"><?= e($v['itens']) ?></td>
 
-            <td><?= e(Venda::FORMAS[$v['forma_pagamento']] ?? '—') ?></td>
+            <td class="text-nowrap">
+              <i class="bi bi-<?= $iconePagamento[$v['forma_pagamento']] ?? 'wallet2' ?> icone-suave" aria-hidden="true"></i>
+              <?= e(Venda::FORMAS[$v['forma_pagamento']] ?? '—') ?>
+            </td>
 
-            <td><?= e(Venda::situacao($v)) ?></td>
+            <td><span class="selo <?= $seloSituacao($v) ?>"><?= e(Venda::situacao($v)) ?></span></td>
 
             <td class="num">
-              <?= moeda($v['total']) ?>
+              <strong><?= moeda($v['total']) ?></strong>
 
               <?php if ($v['valor_devolvido'] > 0 && $v['status'] !== 'cancelada'): ?>
                 <small class="codigo">líquido <?= moeda($v['liquido']) ?></small>
@@ -470,8 +520,8 @@ $vendedores = array_filter(
 
               <a
                 class="btn btn-light btn-sm"
-                href="index.php?page=historico&ver=<?= $v['id'] ?>">
-                Detalhes
+                href="index.php?page=historico&amp;ver=<?= $v['id'] ?>">
+                Detalhes <i class="bi bi-chevron-right" aria-hidden="true"></i>
               </a>
 
             </td>
