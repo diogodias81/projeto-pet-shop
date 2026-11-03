@@ -52,36 +52,37 @@ if (isset($_GET['exportar'])) {
 
 $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 'relatorios', 'de' => $de, 'ate' => $ate, 'exportar' => $tipo]));
 
+$subtituloTopo = 'Relatório gerencial · ' . date('d/m/Y', strtotime($de)) . ' a ' . date('d/m/Y', strtotime($ate));
+$acoesTopo = '<button type="button" class="btn btn-light" data-imprimir><i class="bi bi-printer" aria-hidden="true"></i> Imprimir / Salvar PDF</button>';
+
 ?>
 
 <section class="card card-body mb-3">
 
-    <h2>
-        Relatório gerencial
-        <span class="so-imprimir">· <?= date('d/m/Y', strtotime($de)) ?> a <?= date('d/m/Y', strtotime($ate)) ?></span>
-    </h2>
+    <div class="card-titulo card-titulo-quebra mb-0">
+        <h2>
+            Período
+            <span class="so-imprimir">· <?= date('d/m/Y', strtotime($de)) ?> a <?= date('d/m/Y', strtotime($ate)) ?></span>
+        </h2>
 
-    <?php require BASE_PATH . '/app/Views/filtro_periodo.php'; ?>
-
-    <p class="nao-imprimir">
-        <button type="button" class="btn btn-light" data-imprimir>Imprimir / Salvar PDF</button>
-    </p>
+        <?php require BASE_PATH . '/app/Views/filtro_periodo.php'; ?>
+    </div>
 
 </section>
 
-<section class="kpis">
-    <div class="kpi"><span>Faturamento</span><strong><?= moeda($r['faturamento']) ?></strong></div>
-    <div class="kpi"><span>Vendas realizadas</span><strong><?= $r['vendas'] ?></strong></div>
-    <div class="kpi"><span>Ticket médio</span><strong><?= moeda($r['ticket']) ?></strong></div>
-    <div class="kpi"><span>Custo dos produtos vendidos</span><strong><?= moeda($r['custo']) ?></strong></div>
-    <div class="kpi"><span>Lucro bruto (<?= $pct($r['margem']) ?>)</span><strong><?= moeda($r['lucro']) ?></strong></div>
-    <div class="kpi"><span>Despesas</span><strong><?= moeda($r['despesas']) ?></strong></div>
-    <div class="kpi <?= $r['resultado'] < 0 ? 'kpi-erro' : '' ?>"><span>Resultado estimado</span><strong class="<?= $r['resultado'] < 0 ? 'negativo' : 'positivo' ?>"><?= moeda($r['resultado']) ?></strong></div>
+<section class="kpis kpis-4">
+    <div class="kpi kpi-principal"><span><i class="bi bi-cash-stack" aria-hidden="true"></i> Faturamento</span><strong><?= moeda($r['faturamento']) ?></strong></div>
+    <div class="kpi"><span><i class="bi bi-bag-check" aria-hidden="true"></i> Vendas realizadas</span><strong><?= $r['vendas'] ?></strong></div>
+    <div class="kpi"><span><i class="bi bi-receipt" aria-hidden="true"></i> Ticket médio</span><strong><?= moeda($r['ticket']) ?></strong></div>
+    <div class="kpi"><span><i class="bi bi-box-seam" aria-hidden="true"></i> Custo dos vendidos</span><strong><?= moeda($r['custo']) ?></strong></div>
+    <div class="kpi"><span><i class="bi bi-graph-up" aria-hidden="true"></i> Lucro bruto</span><strong><?= moeda($r['lucro']) ?></strong><small><?= $pct($r['margem']) ?> de margem</small></div>
+    <div class="kpi"><span><i class="bi bi-wallet2" aria-hidden="true"></i> Despesas</span><strong><?= moeda($r['despesas']) ?></strong></div>
+    <div class="kpi <?= $r['resultado'] < 0 ? 'kpi-erro' : 'kpi-ok' ?>"><span><i class="bi bi-calculator" aria-hidden="true"></i> Resultado estimado</span><strong class="<?= $r['resultado'] < 0 ? 'negativo' : 'positivo' ?>"><?= moeda($r['resultado']) ?></strong></div>
 </section>
 
 <section class="card card-body mb-3" data-recolher>
 
-    <h2>Rentabilidade por produto <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('produtos') ?>">Exportar planilha</a></h2>
+    <h2>Rentabilidade por produto <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('produtos') ?>"><i class="bi bi-download" aria-hidden="true"></i> Exportar CSV</a></h2>
 
     <?php if (!$produtos): ?>
 
@@ -131,7 +132,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
 
     <div class="card card-body mb-3">
 
-        <h2>Despesas por categoria <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('despesas') ?>">Exportar planilha</a></h2>
+        <h2>Despesas por categoria <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('despesas') ?>"><i class="bi bi-download" aria-hidden="true"></i> Exportar CSV</a></h2>
 
         <?php if (!$despesasCat): ?>
 
@@ -139,22 +140,16 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
 
         <?php else: ?>
 
-            <div class="table-responsive"><table class="table table-hover align-middle">
-                <tbody>
-                    <?php foreach ($despesasCat as $cat => $valor): ?>
-                        <tr>
-                            <td><?= e(Despesa::CATEGORIAS[$cat] ?? $cat) ?></td>
-                            <td class="num"><?= moeda($valor) ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <th>Total</th>
-                        <th class="num"><?= moeda($r['despesas']) ?></th>
-                    </tr>
-                </tfoot>
-            </table></div>
+            <div class="hbarras">
+                <?php foreach ($despesasCat as $cat => $valor): ?>
+                    <div class="hbarra">
+                        <span><i class="bi bi-<?= Despesa::ICONES[$cat] ?? 'receipt' ?> icone-suave" aria-hidden="true"></i><?= e(Despesa::CATEGORIAS[$cat] ?? $cat) ?></span>
+                        <span class="hbarra-trilho"><span class="hbarra-valor hbarra-pessego" style="width: <?= round($valor / max(0.01, $r['despesas']) * 100) ?>%"></span></span>
+                        <strong><?= moeda($valor) ?></strong>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <p class="total-linha"><span>Total</span><strong><?= moeda($r['despesas']) ?></strong></p>
 
         <?php endif; ?>
 
@@ -164,7 +159,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
 
 <section class="card card-body mb-3" data-recolher>
 
-    <h2>Vendas do período <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('vendas') ?>">Exportar planilha</a></h2>
+    <h2>Vendas do período <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('vendas') ?>"><i class="bi bi-download" aria-hidden="true"></i> Exportar CSV</a></h2>
 
     <?php if (!$vendas): ?>
 
@@ -185,7 +180,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
             <tbody>
                 <?php foreach ($vendas as $v): ?>
                     <tr>
-                        <td><?= $v['id'] ?></td>
+                        <td><a class="venda-num" href="index.php?page=historico&amp;ver=<?= $v['id'] ?>">#<?= $v['id'] ?></a></td>
                         <td><?= dataBr($v['criado_em']) ?></td>
                         <td><?= e($v['vendedor']) ?></td>
                         <td><?= e(Venda::FORMAS[$v['forma_pagamento']] ?? $v['forma_pagamento']) ?></td>
@@ -201,7 +196,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
 
 <section class="card card-body mb-3" data-recolher>
 
-    <h2>Movimentações de estoque <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('movimentacoes') ?>">Exportar planilha</a></h2>
+    <h2>Movimentações de estoque <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('movimentacoes') ?>"><i class="bi bi-download" aria-hidden="true"></i> Exportar CSV</a></h2>
 
     <?php if (!$movs): ?>
 
@@ -242,7 +237,7 @@ $exportar = fn(string $tipo) => 'index.php?' . e(http_build_query(['page' => 're
 
 <section class="card card-body mb-3" data-recolher>
 
-    <h2>Lotes vencidos ou vencendo em até <?= Estoque::prazos()[0] ?> dias <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('validade') ?>">Exportar planilha</a></h2>
+    <h2>Lotes vencidos ou vencendo em até <?= Estoque::prazos()[0] ?> dias <a class="btn btn-light btn-sm nao-imprimir" href="<?= $exportar('validade') ?>"><i class="bi bi-download" aria-hidden="true"></i> Exportar CSV</a></h2>
 
     <?php if (!$validade): ?>
 

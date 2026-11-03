@@ -19,13 +19,24 @@ $situacao = Venda::situacao($venda);
 
 ?>
 
-<div class="linha nao-imprimir">
+<?php // venda acabou de ser feita (não é 2ª via): tela de sucesso do caixa ?>
+<?php if (!$segundaVia && $venda['status'] === 'concluida' && time() - strtotime($venda['criado_em']) < 600): ?>
+
+  <div class="venda-sucesso nao-imprimir">
+    <span class="venda-sucesso-icone"><i class="bi bi-check-lg" aria-hidden="true"></i></span>
+    <h1>Venda concluída</h1>
+    <p><?= moeda($venda['total']) ?> em <?= e(Venda::FORMAS[$venda['forma_pagamento']] ?? '—') ?><?= $venda['valor_recebido'] !== null && $venda['valor_recebido'] > $venda['total'] ? ' · troco de <strong>' . moeda($venda['valor_recebido'] - $venda['total']) . '</strong>' : '' ?></p>
+  </div>
+
+<?php endif; ?>
+
+<div class="comprovante-acoes nao-imprimir">
 
   <button
     type="button"
     class="btn btn-primary"
     data-imprimir>
-    Imprimir / Salvar PDF
+    <i class="bi bi-printer" aria-hidden="true"></i> Imprimir / Salvar PDF
   </button>
 
   <?php if (temPerfil(['admin', 'vendedor'])): ?>
@@ -33,14 +44,14 @@ $situacao = Venda::situacao($venda);
     <a
       class="btn btn-light"
       href="index.php?page=vendas">
-      Nova venda
+      <i class="bi bi-plus-lg" aria-hidden="true"></i> Nova venda
     </a>
 
   <?php endif; ?>
 
   <a
     class="btn btn-light"
-    href="index.php?page=historico&ver=<?= $venda['id'] ?>">
+    href="index.php?page=historico&amp;ver=<?= $venda['id'] ?>">
     Detalhes da venda
   </a>
 

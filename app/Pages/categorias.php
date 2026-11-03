@@ -25,91 +25,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $categorias = Categoria::listar();
 
+$subtituloTopo = count($categorias) . (count($categorias) === 1 ? ' categoria' : ' categorias') . ' · organize os produtos para filtrar e achar mais rápido';
+
 ?>
 
 <section class="card card-body mb-3">
 
-  <form method="post" class="linha">
+  <form method="post" class="nova-categoria">
 
     <?= csrf_campo() ?>
 
     <label>
-      Nova categoria
+      <span class="visually-hidden">Nova categoria</span>
+      <i class="bi bi-tag" aria-hidden="true"></i>
 
       <input
         name="nome"
         required
-        maxlength="60">
+        maxlength="60"
+        aria-label="Nova categoria"
+        placeholder="Nome da nova categoria (ex.: Rações)">
     </label>
 
     <button class="btn btn-primary">
-      Cadastrar
+      <i class="bi bi-plus-lg" aria-hidden="true"></i> Cadastrar
     </button>
 
   </form>
 
 </section>
 
-<section class="card card-body mb-3">
+<?php if (!$categorias): ?>
 
-  <div class="table-responsive"><table class="table table-hover align-middle">
+  <section class="card card-body">
+    <div class="estado-vazio">
+      <span class="estado-vazio-icone"><i class="bi bi-tags" aria-hidden="true"></i></span>
+      <strong>Nenhuma categoria ainda</strong>
+      <p>Crie categorias como Rações, Petiscos e Higiene para organizar os produtos.</p>
+    </div>
+  </section>
 
-    <thead>
+<?php else: ?>
 
-      <tr>
-        <th>Categoria</th>
-        <th class="num">Produtos</th>
-        <th></th>
-      </tr>
+  <div class="tiles">
 
-    </thead>
+    <?php foreach ($categorias as $c): ?>
 
-    <tbody>
+      <article class="tile">
 
-      <?php foreach ($categorias as $c): ?>
+        <a class="tile-link" href="index.php?page=produtos&amp;cat=<?= $c['id'] ?>">
+          <span class="icone-redondo" aria-hidden="true"><i class="bi bi-tag"></i></span>
+          <span class="tile-texto">
+            <strong><?= e($c['nome']) ?></strong>
+            <small><?= $c['qtd_produtos'] ?> <?= (int) $c['qtd_produtos'] === 1 ? 'produto' : 'produtos' ?></small>
+          </span>
+        </a>
 
-        <tr>
+        <form
+          method="post"
+          data-confirmar="Excluir a categoria <?= e($c['nome']) ?>?">
 
-          <td>
-            <?= e($c['nome']) ?>
-          </td>
+          <?= csrf_campo() ?>
 
-          <td class="num">
-            <?= $c['qtd_produtos'] ?>
-          </td>
+          <input
+            type="hidden"
+            name="acao"
+            value="excluir">
 
-          <td class="acoes">
+          <input
+            type="hidden"
+            name="id"
+            value="<?= $c['id'] ?>">
 
-            <form
-              method="post"
-              data-confirmar="Excluir a categoria <?= e($c['nome']) ?>?">
+          <button class="btn btn-outline-danger btn-sm btn-quadrado" title="Excluir" aria-label="Excluir a categoria <?= e($c['nome']) ?>">
+            <i class="bi bi-trash3" aria-hidden="true"></i>
+          </button>
 
-              <?= csrf_campo() ?>
+        </form>
 
-              <input
-                type="hidden"
-                name="acao"
-                value="excluir">
+      </article>
 
-              <input
-                type="hidden"
-                name="id"
-                value="<?= $c['id'] ?>">
+    <?php endforeach; ?>
 
-              <button class="btn btn-outline-danger btn-sm">
-                Excluir
-              </button>
+  </div>
 
-            </form>
-
-          </td>
-
-        </tr>
-
-      <?php endforeach; ?>
-
-    </tbody>
-
-  </table></div>
-
-</section>
+<?php endif; ?>

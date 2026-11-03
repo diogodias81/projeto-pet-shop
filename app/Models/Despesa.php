@@ -1,6 +1,8 @@
 <?php
 class Despesa {
     const CATEGORIAS = ['aluguel' => 'Aluguel', 'energia' => 'Energia', 'agua' => 'Água', 'salarios' => 'Salários', 'fornecedores' => 'Fornecedores', 'impostos' => 'Impostos e taxas', 'manutencao' => 'Manutenção', 'outras' => 'Outras'];
+    /** Ícone (Bootstrap Icons) de cada categoria, para as telas */
+    const ICONES = ['aluguel' => 'house-door', 'energia' => 'lightning-charge', 'agua' => 'droplet', 'salarios' => 'people', 'fornecedores' => 'truck', 'impostos' => 'bank', 'manutencao' => 'tools', 'outras' => 'three-dots'];
 
     public static function criar(array $d, int $usuarioId): void {
         $descricao = trim($d['descricao'] ?? '');
