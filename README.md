@@ -92,9 +92,11 @@ Todo dia às 22:00 o Agendador de Tarefas do Windows roda `scripts/backup.ps1`, 
 2. apaga os backups com mais de 30 dias, mas sempre mantém os 7 mais novos (mesmo se o relógio do computador estiver errado);
 3. copia `storage/backups` para `OneDrive\Backups PetShop` (sobe para a nuvem sozinho). A cópia só acrescenta: apagar uma pasta em `storage/backups` não apaga a do OneDrive. Lá vale a mesma regra de 30 dias / 7 mais novos.
 
-Se o computador estiver desligado às 22:00, a tarefa roda assim que ele ligar. O Docker precisa estar ligado. Cada execução fica em `storage/backups/backup.log`, e o **Dashboard avisa o administrador** se o último backup falhou (inclusive a cópia para o OneDrive), tem mais de 2 dias ou tem registro ilegível. O motivo da falha fica no `backup.log`.
+Se o computador estiver desligado às 22:00, a tarefa roda assim que ele ligar e espera até 10 minutos o Docker Desktop abrir (deixe-o configurado para abrir com o Windows). Se o sistema estiver parado, a tarefa o sobe (`docker compose up -d`). Cada execução fica em `storage/backups/backup.log`, e o **Dashboard avisa o administrador** (só ele vê esses avisos) se o último backup falhou, se só a cópia para o OneDrive ou a limpeza falharam (o backup local existe), se passou mais de 26 horas sem backup (uma noite perdida aparece na manhã seguinte) ou se o registro está ilegível. O motivo da falha fica no `backup.log`.
 
 > **Atenção: o backup vai para o OneDrive sem criptografia.** O banco tem os dados das vendas, os e-mails dos usuários, a auditoria (com IPs) e as senhas (só o hash bcrypt, não a senha em si). Quem entrar na conta do OneDrive tem acesso a tudo isso. Use senha forte e verificação em duas etapas na conta e não compartilhe a pasta `Backups PetShop`. Cifrar antes de enviar está pendente de decisão (qual ferramenta usar e onde guardar a senha).
+
+Para criar a tarefa, abra o PowerShell e cole os comandos abaixo, **trocando `C:\caminho\do\projeto-pet-shop` pela pasta onde o sistema está** (ex.: `C:\Users\loja\projeto-pet-shop`). Os comandos `docker compose` da restauração, mais abaixo, rodam dentro dessa pasta (`cd C:\caminho\do\projeto-pet-shop` antes).
 
 ```powershell
 # Criar a tarefa (uma vez, num computador novo)

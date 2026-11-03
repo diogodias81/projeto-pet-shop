@@ -6,17 +6,20 @@ $top = Relatorio::maisVendidos(8, $de, $ate);
 $serie = Relatorio::serie($de, $ate);
 // Backup falhando em silêncio é o pior caso: o admin vê o aviso aqui (o agendamento é scripts/backup.ps1)
 $backup = temPerfil(['admin']) ? Backup::ultimo() : null;
-$diasSemBackup = $backup && $backup['quando'] ? (int) floor((time() - strtotime($backup['quando'])) / 86400) : null;
+$horasSemBackup = $backup && $backup['quando'] ? (int) floor((time() - strtotime($backup['quando'])) / 3600) : null;
+$ajuda = 'Se não resolver, chame o técnico: o detalhe fica na pasta do sistema, em storage\backups\backup.log.';
 ?>
 <?php if (temPerfil(['admin'])): ?>
     <?php if (!$backup): ?>
-        <div class="alert alert-warning">Nenhum backup foi feito ainda. Veja "Backup" no README para agendar.</div>
+        <div class="alert alert-warning">Nenhum backup foi feito ainda. Peça ao técnico para agendar o backup diário (instruções no README do sistema, seção "Backup").</div>
     <?php elseif (!$backup['quando']): ?>
-        <div class="alert alert-danger">O registro do último backup está ilegível ou com data inválida. Confira o arquivo storage/backups/backup.log e o relógio do computador.</div>
+        <div class="alert alert-danger">O registro do último backup está ilegível ou com data inválida. Confira se a data e a hora do computador estão certas. <?= e($ajuda) ?></div>
+    <?php elseif (!$backup['ok'] && !empty($backup['aviso'])): ?>
+        <div class="alert alert-warning">O backup de <?= dataBr($backup['quando']) ?> foi feito e está guardado neste computador, mas <?= e($backup['aviso']) ?>. <?= e($ajuda) ?></div>
     <?php elseif (!$backup['ok']): ?>
-        <div class="alert alert-danger">O último backup falhou em <?= dataBr($backup['quando']) ?>. O motivo está no arquivo storage/backups/backup.log.</div>
-    <?php elseif ($diasSemBackup >= 2): ?>
-        <div class="alert alert-warning">O último backup foi há <?= $diasSemBackup ?> dias (<?= dataBr($backup['quando']) ?>). Confira se o computador e o Docker estavam ligados às 22:00.</div>
+        <div class="alert alert-danger">O último backup falhou em <?= dataBr($backup['quando']) ?>. Confira se o Docker Desktop está aberto; o próximo backup roda às 22:00. <?= e($ajuda) ?></div>
+    <?php elseif ($horasSemBackup >= 26): // o backup é diário às 22:00: uma noite perdida já aparece na manhã seguinte ?>
+        <div class="alert alert-warning">O último backup foi em <?= dataBr($backup['quando']) ?> (há <?= $horasSemBackup >= 48 ? intdiv($horasSemBackup, 24) . ' dias' : $horasSemBackup . ' horas' ?>). Confira se o computador e o Docker Desktop ficam ligados às 22:00.</div>
     <?php endif; ?>
 <?php endif; ?>
 <section class="kpis">

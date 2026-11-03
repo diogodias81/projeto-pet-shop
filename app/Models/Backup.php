@@ -15,7 +15,7 @@ class Backup {
         $criada = false;
         try {
             // sem isto o PDO criaria um banco vazio e o "backup" sairia vazio
-            if (!is_file(config('db_path'))) throw new RuntimeException('Banco de dados não encontrado em ' . config('db_path') . '.');
+            if (!is_file(config('db_path'))) throw new RuntimeException('Banco de dados não encontrado (' . basename(config('db_path')) . ').');
             if (!is_dir(self::pasta())) mkdir(self::pasta(), 0775, true);
             // Dois backups ao mesmo tempo esperam a vez (até o fim da limpeza): senão disputam os antigos e os dois avisam falha
             $trava = fopen(self::pasta() . '/.lock', 'c');
@@ -32,7 +32,7 @@ class Backup {
                 $tmp = $destino . '.tmp';
                 $criada = !file_exists($destino) && @mkdir($tmp);
             }
-            if (!$criada) throw new RuntimeException('Não foi possível criar a pasta do backup em ' . self::pasta() . '.');
+            if (!$criada) throw new RuntimeException('Não foi possível criar a pasta do backup em storage/backups.');
             mkdir($tmp . '/fotos');
 
             // VACUUM INTO: cópia consistente mesmo com o sistema aberto (copiar o arquivo no meio de uma venda pode corromper)
@@ -59,18 +59,19 @@ class Backup {
         }
 
         [$apagados, $falhas] = self::apagarAntigos();
-        $msg = 'Backup ok: ' . $vendas . ' vendas, ' . count($fotos) . ' fotos' . ($apagados ? ", $apagados backup(s) antigo(s) apagado(s)" : '');
+        $msg = 'Backup ok em ' . basename($destino) . ': ' . $vendas . ' venda(s), ' . count($fotos) . ' foto(s)' . ($apagados ? ", $apagados backup(s) antigo(s) apagado(s)" : '');
         self::registrar(true, $msg, basename($destino));
         if ($falhas) {
             // O backup é bom (linha OK acima, vale para restaurar), mas o Dashboard precisa avisar: senão o disco enche em silêncio
             $msg = 'Backup feito, mas não foi possível apagar os backups antigos: ' . implode(', ', $falhas) . '.';
-            self::registrar(false, $msg, basename($destino));
+            self::registrar(false, $msg, basename($destino), 'não foi possível apagar os backups antigos');
         }
         return $msg;
     }
 
     /**
      * Último resultado: ['quando' => 'Y-m-d H:i:s', 'ok' => bool, 'mensagem' => ..., 'pasta' => ...] ou null se nunca rodou.
+     * 'aviso' (texto curto) só vem quando o backup local foi feito e uma etapa seguinte falhou (limpeza ou OneDrive).
      * Registro ilegível ou com data inválida/no futuro volta como ['ok' => false, 'quando' => null] (o Dashboard avisa).
      */
     public static function ultimo(): ?array {
@@ -81,6 +82,7 @@ class Backup {
         $d = is_array($b) && is_string($b['quando'] ?? null) ? DateTime::createFromFormat('Y-m-d H:i:s', $b['quando']) : false;
         $quando = $d && $d->format('Y-m-d H:i:s') === $b['quando'] ? $d->getTimestamp() : false;
         if (!$quando || $quando > time() + 300 || !is_bool($b['ok'] ?? null)) return ['ok' => false, 'quando' => null];
+        if (!is_string($b['aviso'] ?? '')) unset($b['aviso']);
         return $b;
     }
 
@@ -129,12 +131,12 @@ class Backup {
         return @rmdir($dir);
     }
 
-    private static function registrar(bool $ok, string $mensagem, string $pasta): void {
+    private static function registrar(bool $ok, string $mensagem, string $pasta, string $aviso = ''): void {
         if (!is_dir(self::pasta())) mkdir(self::pasta(), 0775, true);
         $quando = date('Y-m-d H:i:s');
         // grava em .tmp e renomeia: o Dashboard nunca lê um ultimo.json pela metade
-        file_put_contents(self::pasta() . '/ultimo.json.tmp', json_encode(compact('quando', 'ok', 'mensagem', 'pasta'), JSON_UNESCAPED_UNICODE));
+        file_put_contents(self::pasta() . '/ultimo.json.tmp', json_encode(compact('quando', 'ok', 'mensagem', 'pasta') + ($aviso ? ['aviso' => $aviso] : []), JSON_UNESCAPED_UNICODE));
         rename(self::pasta() . '/ultimo.json.tmp', self::pasta() . '/ultimo.json');
-        file_put_contents(self::pasta() . '/backup.log', "$quando " . ($ok ? 'OK' : 'FALHA') . " $pasta: $mensagem\n", FILE_APPEND);
+        file_put_contents(self::pasta() . '/backup.log', "$quando " . ($ok ? 'OK' : 'FALHA') . ($pasta ? " $pasta" : '') . ": $mensagem\n", FILE_APPEND);
     }
 }
