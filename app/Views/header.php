@@ -147,10 +147,26 @@ $sair = '<form method="post" action="index.php?page=logout" class="m-0">' . csrf
             </header>
         <?php endif; ?>
 
+        <?php // Sucesso vira notificação flutuante que some sozinha (app.js); erro e aviso ficam na página até a pessoa ler ?>
+        <?php $toasts = []; ?>
         <?php foreach (flash() as [$msg, $tipo]): ?>
+
+            <?php if ($tipo === 'ok') { $toasts[] = $msg; continue; } ?>
 
             <div class="alert alert-<?= $tiposAviso[$tipo] ?? 'info' ?>" role="alert">
                 <?= e($msg) ?>
             </div>
 
         <?php endforeach; ?>
+
+        <?php if ($toasts): ?>
+            <div class="toasts d-print-none" role="status" aria-live="polite">
+                <?php foreach ($toasts as $msg): ?>
+                    <div class="toast-aviso">
+                        <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                        <span><?= e($msg) ?></span>
+                        <button type="button" class="toast-fechar" aria-label="Fechar aviso"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>

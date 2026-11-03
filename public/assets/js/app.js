@@ -128,6 +128,23 @@ if (menuMais && window.bootstrap) {
 }
 
 
+// Notificações de sucesso: somem sozinhas em 5 s (pausa com o mouse em cima) ou no X
+
+document.querySelectorAll('.toast-aviso').forEach(toast => {
+
+    const fechar = () => {
+        toast.classList.add('saindo');
+        setTimeout(() => toast.remove(), 250);
+    };
+
+    let tempo = setTimeout(fechar, 5000);
+
+    toast.addEventListener('mouseenter', () => clearTimeout(tempo));
+    toast.addEventListener('mouseleave', () => { tempo = setTimeout(fechar, 2500); });
+    toast.querySelector('.toast-fechar').addEventListener('click', fechar);
+});
+
+
 // <input data-revelar>: botão de olho para mostrar/ocultar a senha
 
 document.querySelectorAll('input[data-revelar]').forEach(input => {
