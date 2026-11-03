@@ -174,6 +174,14 @@ function usuario(): ?array
 }
 
 
+/** Até duas iniciais do nome, para os avatares ("Maria Souza" → "MS") */
+function iniciais(?string $nome): string
+{
+    $partes = array_slice(preg_split('/\s+/', trim((string) $nome), -1, PREG_SPLIT_NO_EMPTY), 0, 2);
+    return $partes ? mb_strtoupper(implode('', array_map(fn($p) => mb_substr($p, 0, 1), $partes))) : '?';
+}
+
+
 
 function temPerfil(array $perfis): bool
 {

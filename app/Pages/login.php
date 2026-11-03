@@ -113,6 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         type="password"
         name="senha"
         autocomplete="current-password"
+        data-revelar
         required>
     </label>
 
@@ -138,6 +139,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </ul>
     </div>
   </aside>
+
+  <script src="<?= asset('assets/js/app.js') ?>"></script>
 
 </body>
 

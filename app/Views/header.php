@@ -48,7 +48,7 @@ $grupos = array_filter(array_map(
 ));
 
 $u = usuario();
-$iniciais = mb_strtoupper(implode('', array_map(fn($p) => mb_substr($p, 0, 1), array_slice(preg_split('/\s+/', trim($u['nome'])), 0, 2))));
+$iniciais = iniciais($u['nome']);
 $perfilNome = Usuario::PERFIS[$u['perfil']] ?? '';
 
 $minhaSenha = '<a class="btn ' . ($atual === 'minha_senha' ? 'btn-primary' : 'btn-light') . ' w-100" href="index.php?page=minha_senha"'

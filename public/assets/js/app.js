@@ -128,6 +128,48 @@ if (menuMais && window.bootstrap) {
 }
 
 
+// <input data-revelar>: botão de olho para mostrar/ocultar a senha
+
+document.querySelectorAll('input[data-revelar]').forEach(input => {
+
+    const caixa = document.createElement('span');
+    caixa.className = 'campo-senha';
+    input.replaceWith(caixa);
+    caixa.appendChild(input);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'revelar';
+    btn.setAttribute('aria-label', 'Mostrar senha');
+    btn.innerHTML = '<i class="bi bi-eye" aria-hidden="true"></i>';
+    caixa.appendChild(btn);
+
+    btn.addEventListener('click', () => {
+        const mostrar = input.type === 'password';
+        input.type = mostrar ? 'text' : 'password';
+        btn.setAttribute('aria-label', mostrar ? 'Ocultar senha' : 'Mostrar senha');
+        btn.innerHTML = '<i class="bi bi-eye' + (mostrar ? '-slash' : '') + '" aria-hidden="true"></i>';
+    });
+});
+
+
+// Menu "⋯" (details.menu-acoes): só um aberto por vez e fecha ao clicar fora ou com Esc
+
+document.addEventListener('click', ev => {
+
+    document.querySelectorAll('details.menu-acoes[open]').forEach(d => {
+        if (!d.contains(ev.target)) d.open = false;
+    });
+});
+
+document.addEventListener('keydown', ev => {
+
+    if (ev.key !== 'Escape') return;
+
+    document.querySelectorAll('details.menu-acoes[open]').forEach(d => { d.open = false; d.querySelector('summary').focus(); });
+});
+
+
 // <details data-aberto-desktop>: no computador os filtros ficam sempre abertos; no celular, recolhidos
 
 if (matchMedia('(min-width: 641px)').matches) {

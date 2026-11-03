@@ -47,6 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="assets/vendor/bootstrap/bootstrap.min.css">
 
+  <link rel="stylesheet" href="assets/vendor/bootstrap-icons/bootstrap-icons.min.css">
+
   <link rel="stylesheet" href="<?= asset('assets/css/style.css') ?>">
 
 </head>
@@ -55,13 +57,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
 
   <form method="post" action="index.php?page=trocar_senha" class="login-caixa card card-body">
 
-    <h1>
-      Escolha sua senha
-    </h1>
+    <div class="login-cabeca mb-0">
+      <span class="marca-icone" aria-hidden="true">🐾</span>
+      <span class="login-nome"><?= e(config('app_nome')) ?></span>
+    </div>
 
-    <p>
-      Olá, <?= e(usuario()['nome']) ?>. Você entrou com uma senha provisória (a inicial ou a definida pelo administrador): escolha a sua para continuar.
-    </p>
+    <span class="icone-redondo icone-grande" aria-hidden="true"><i class="bi bi-key"></i></span>
+
+    <div>
+      <h1>
+        Escolha sua senha
+      </h1>
+
+      <p class="text-body-secondary mb-0">
+        Olá, <?= e(usuario()['nome']) ?>. Você entrou com uma senha provisória (a inicial ou a definida pelo administrador): escolha a sua para continuar.
+      </p>
+    </div>
 
     <?php if ($erro): ?>
 
@@ -82,6 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
         minlength="6"
         maxlength="1024"
         autocomplete="new-password"
+        data-revelar
         required
         autofocus>
     </label>
@@ -95,6 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
         minlength="6"
         maxlength="1024"
         autocomplete="new-password"
+        data-revelar
         required>
     </label>
 
@@ -112,6 +125,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
   <form method="post" action="index.php?page=logout" id="form-sair" hidden>
     <?= csrf_campo() ?>
   </form>
+
+  <script src="<?= asset('assets/js/app.js') ?>"></script>
 
 </body>
 

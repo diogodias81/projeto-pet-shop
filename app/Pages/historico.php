@@ -41,7 +41,6 @@ $seloSituacao = fn(array $v) => match (Venda::situacao($v)) {
   'Cancelada' => 'selo-erro', 'Devolvida', 'Devolução parcial' => 'selo-alerta', default => 'selo-ok',
 };
 $iconePagamento = ['dinheiro' => 'cash-coin', 'pix' => 'qr-code', 'debito' => 'credit-card', 'credito' => 'credit-card-2-front'];
-$iniciais = fn(?string $nome) => $nome ? mb_strtoupper(implode('', array_map(fn($p) => mb_substr($p, 0, 1), array_slice(preg_split('/\s+/', trim($nome)), 0, 2)))) : '?';
 
 
 // ---- detalhe de uma venda ----
@@ -494,7 +493,7 @@ $linkStatus = fn(string $s) => 'index.php?' . e(http_build_query(['page' => 'his
 
             <td>
               <span class="pessoa">
-                <span class="avatar avatar-xs" aria-hidden="true"><?= e($iniciais($v['vendedor'])) ?></span>
+                <span class="avatar avatar-xs" aria-hidden="true"><?= e(iniciais($v['vendedor'])) ?></span>
                 <?= e($v['vendedor'] ?? '—') ?>
               </span>
             </td>

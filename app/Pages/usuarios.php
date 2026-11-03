@@ -46,71 +46,100 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   redirect('usuarios');
 }
 
+$usuarios = Usuario::listar();
+$ativos = count(array_filter($usuarios, fn($u) => $u['ativo']));
+
+// O que cada perfil faz (ajuda a escolher sem criar admin por engano)
+$perfis = [
+  'admin' => ['shield-lock', 'Tudo, inclusive usuários, cancelamentos e auditoria'],
+  'vendedor' => ['cart3', 'Vende, consulta produtos, estoque e as próprias vendas'],
+  'estoque' => ['boxes', 'Cadastra produtos e categorias, dá entrada e baixa'],
+  'financeiro' => ['graph-up', 'Dashboard, despesas, relatórios e histórico'],
+];
+
+$subtituloTopo = $ativos . ($ativos === 1 ? ' usuário ativo' : ' usuários ativos') . (count($usuarios) > $ativos ? ' · ' . (count($usuarios) - $ativos) . ' desativado(s)' : '');
+$acoesTopo = '<button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#gaveta-usuario" aria-controls="gaveta-usuario"><i class="bi bi-person-plus" aria-hidden="true"></i> Novo usuário</button>';
+
 ?>
 
-<section class="card card-body mb-3">
+<div
+  class="offcanvas offcanvas-end gaveta"
+  tabindex="-1"
+  id="gaveta-usuario"
+  aria-labelledby="gaveta-usuario-titulo">
 
-  <h2>Novo usuário</h2>
+  <div class="offcanvas-header">
+    <div>
+      <h2 class="offcanvas-title" id="gaveta-usuario-titulo">Novo usuário</h2>
+      <p class="card-sub">Ele vai trocar a senha no primeiro acesso.</p>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Fechar"></button>
+  </div>
 
-  <form method="post" class="linha">
+  <form method="post" class="offcanvas-body gaveta-form">
 
     <?= csrf_campo() ?>
 
-    <label>
-      Nome
+    <fieldset>
+      <legend>Dados de acesso</legend>
 
-      <input
-        name="nome"
-        required>
-    </label>
+      <label>
+        Nome
 
-    <label>
-      E-mail
+        <input
+          name="nome"
+          required>
+      </label>
 
-      <input
-        type="email"
-        name="email"
-        required>
-    </label>
+      <label>
+        E-mail
 
-    <label>
-      Senha
+        <input
+          type="email"
+          name="email"
+          required>
+      </label>
 
-      <input
-        type="password"
-        name="senha"
-        minlength="6"
-        maxlength="1024"
-        required>
-    </label>
+      <label>
+        Senha provisória
+        <small>Mínimo de 6 caracteres</small>
 
-    <label>
-      Perfil
+        <input
+          type="password"
+          name="senha"
+          minlength="6"
+          maxlength="1024"
+          autocomplete="new-password"
+          required>
+      </label>
+    </fieldset>
 
-      <select name="perfil" required>
+    <fieldset>
+      <legend>Perfil</legend>
 
-        <!-- Sem padrão: esquecer o campo não pode criar outro administrador -->
-        <option value="">Escolha…</option>
-
+      <!-- Sem padrão: esquecer o campo não pode criar outro administrador -->
+      <div class="opcoes-perfil">
         <?php foreach (Usuario::PERFIS as $k => $v): ?>
-
-          <option value="<?= $k ?>">
-            <?= e($v) ?>
-          </option>
-
+          <label class="opcao-perfil">
+            <input type="radio" name="perfil" value="<?= $k ?>" required>
+            <span class="icone-redondo perfil-<?= $k ?>" aria-hidden="true"><i class="bi bi-<?= $perfis[$k][0] ?? 'person' ?>"></i></span>
+            <span class="tile-texto">
+              <strong><?= e($v) ?></strong>
+              <small><?= e($perfis[$k][1] ?? '') ?></small>
+            </span>
+          </label>
         <?php endforeach; ?>
+      </div>
+    </fieldset>
 
-      </select>
-
-    </label>
-
-    <button class="btn btn-primary">
-      Criar usuário
-    </button>
+    <div class="gaveta-rodape">
+      <button type="button" class="btn btn-light" data-bs-dismiss="offcanvas">Cancelar</button>
+      <button class="btn btn-primary">Criar usuário</button>
+    </div>
 
   </form>
 
-</section>
+</div>
 
 
 <section class="card card-body mb-3">
@@ -120,114 +149,139 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <thead>
 
       <tr>
-        <th>Nome</th>
-        <th>E-mail</th>
+        <th>Usuário</th>
         <th>Perfil</th>
-        <th></th>
+        <th>Situação</th>
+        <th><span class="visually-hidden">Ações</span></th>
       </tr>
 
     </thead>
 
     <tbody>
 
-      <?php foreach (Usuario::listar() as $u): ?>
+      <?php foreach ($usuarios as $u): ?>
 
-        <tr>
+        <?php $souEu = (int) $u['id'] === (int) usuario()['id']; ?>
+
+        <tr class="<?= $u['ativo'] ? '' : 'linha-inativa' ?>">
 
           <td>
-            <?= e($u['nome']) ?>
+            <span class="pessoa">
+              <span class="avatar" aria-hidden="true"><?= e(iniciais($u['nome'])) ?></span>
+              <span class="tile-texto">
+                <strong><?= e($u['nome']) ?><?= $souEu ? ' <span class="selo selo-neutro">você</span>' : '' ?></strong>
+                <small><?= e($u['email']) ?></small>
+              </span>
+            </span>
           </td>
 
           <td>
-            <?= e($u['email']) ?>
+            <span class="selo selo-perfil perfil-<?= e($u['perfil']) ?>"><i class="bi bi-<?= $perfis[$u['perfil']][0] ?? 'person' ?>" aria-hidden="true"></i> <?= e(Usuario::PERFIS[$u['perfil']]) ?></span>
           </td>
 
           <td>
-            <?= e(Usuario::PERFIS[$u['perfil']]) ?>
-            <?php if (!$u['ativo']): ?>
-              <span class="selo selo-neutro">Desativado</span>
-            <?php endif; ?>
+            <span class="selo <?= $u['ativo'] ? 'selo-ok' : 'selo-neutro' ?>"><?= $u['ativo'] ? 'Ativo' : 'Desativado' ?></span>
           </td>
 
           <td class="acoes">
 
-            <form
-              method="post"
-              data-confirmar="Redefinir a senha de <?= e($u['nome']) ?>?">
+            <details class="menu-acoes">
 
-              <?= csrf_campo() ?>
+              <summary class="btn btn-light btn-sm btn-quadrado" title="Ações" aria-label="Ações para <?= e($u['nome']) ?>">
+                <i class="bi bi-three-dots" aria-hidden="true"></i>
+              </summary>
 
-              <input
-                type="hidden"
-                name="acao"
-                value="redefinir">
+              <div class="menu-acoes-painel">
 
-              <input
-                type="hidden"
-                name="id"
-                value="<?= $u['id'] ?>">
+                <form
+                  method="post"
+                  class="menu-acoes-senha"
+                  data-confirmar="Redefinir a senha de <?= e($u['nome']) ?>?">
 
-              <input
-                type="password"
-                name="senha"
-                placeholder="Senha provisória"
-                aria-label="Senha provisória para <?= e($u['nome']) ?>"
-                minlength="6"
-                maxlength="1024"
-                autocomplete="new-password"
-                required>
+                  <?= csrf_campo() ?>
 
-              <button class="btn btn-light btn-sm">
-                Redefinir senha
-              </button>
+                  <input
+                    type="hidden"
+                    name="acao"
+                    value="redefinir">
 
-            </form>
+                  <input
+                    type="hidden"
+                    name="id"
+                    value="<?= $u['id'] ?>">
 
-            <?php if ((int) $u['id'] !== (int) usuario()['id']): ?>
-            <form
-              method="post"
-              data-confirmar="<?= $u['ativo'] ? 'Desativar' : 'Reativar' ?> o usuário <?= e($u['nome']) ?>?">
+                  <label>
+                    Nova senha provisória
 
-              <?= csrf_campo() ?>
+                    <input
+                      type="password"
+                      name="senha"
+                      placeholder="Mínimo 6 caracteres"
+                      aria-label="Senha provisória para <?= e($u['nome']) ?>"
+                      minlength="6"
+                      maxlength="1024"
+                      autocomplete="new-password"
+                      required>
+                  </label>
 
-              <input
-                type="hidden"
-                name="acao"
-                value="<?= $u['ativo'] ? 'desativar' : 'reativar' ?>">
+                  <button class="btn btn-light btn-sm">
+                    <i class="bi bi-key" aria-hidden="true"></i> Redefinir senha
+                  </button>
 
-              <input
-                type="hidden"
-                name="id"
-                value="<?= $u['id'] ?>">
+                </form>
 
-              <button class="btn btn-light btn-sm">
-                <?= $u['ativo'] ? 'Desativar' : 'Reativar' ?>
-              </button>
+                <?php if (!$souEu): ?>
 
-            </form>
+                  <form
+                    method="post"
+                    data-confirmar="<?= $u['ativo'] ? 'Desativar' : 'Reativar' ?> o usuário <?= e($u['nome']) ?>?">
 
-            <form
-              method="post"
-              data-confirmar="Excluir o usuário <?= e($u['nome']) ?>?">
+                    <?= csrf_campo() ?>
 
-              <?= csrf_campo() ?>
+                    <input
+                      type="hidden"
+                      name="acao"
+                      value="<?= $u['ativo'] ? 'desativar' : 'reativar' ?>">
 
-              <input
-                type="hidden"
-                name="acao"
-                value="excluir">
+                    <input
+                      type="hidden"
+                      name="id"
+                      value="<?= $u['id'] ?>">
 
-              <input
-                type="hidden"
-                name="id"
-                value="<?= $u['id'] ?>">
+                    <button class="menu-acoes-item">
+                      <i class="bi bi-<?= $u['ativo'] ? 'person-slash' : 'person-check' ?>" aria-hidden="true"></i>
+                      <?= $u['ativo'] ? 'Desativar acesso' : 'Reativar acesso' ?>
+                    </button>
 
-              <button class="btn btn-outline-danger btn-sm">
-                Excluir
-              </button>
+                  </form>
 
-            </form>
-            <?php endif; ?>
+                  <form
+                    method="post"
+                    data-confirmar="Excluir o usuário <?= e($u['nome']) ?>?">
+
+                    <?= csrf_campo() ?>
+
+                    <input
+                      type="hidden"
+                      name="acao"
+                      value="excluir">
+
+                    <input
+                      type="hidden"
+                      name="id"
+                      value="<?= $u['id'] ?>">
+
+                    <button class="menu-acoes-item perigo">
+                      <i class="bi bi-trash3" aria-hidden="true"></i> Excluir usuário
+                    </button>
+
+                  </form>
+
+                <?php endif; ?>
+
+              </div>
+
+            </details>
 
           </td>
 

@@ -24,13 +24,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   redirect('minha_senha');
 }
 
+$subtituloTopo = 'Troque a senha que você usa para entrar no sistema.';
+
 ?>
 
-<section class="card card-body mb-3">
+<section class="card card-body cartao-estreito">
 
-  <h2>Minha senha</h2>
+  <div class="cartao-cabeca">
+    <span class="icone-redondo" aria-hidden="true"><i class="bi bi-shield-lock"></i></span>
+    <div>
+      <h2>Alterar senha</h2>
+      <p class="card-sub">Use pelo menos 6 caracteres. Evite datas e nomes fáceis de adivinhar.</p>
+    </div>
+  </div>
 
-  <form method="post" class="linha">
+  <form method="post" class="form-pilha">
 
     <?= csrf_campo() ?>
 
@@ -42,6 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         name="atual"
         maxlength="1024"
         autocomplete="current-password"
+        data-revelar
         required
         autofocus>
     </label>
@@ -55,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         minlength="6"
         maxlength="1024"
         autocomplete="new-password"
+        data-revelar
         required>
     </label>
 
@@ -67,10 +77,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         minlength="6"
         maxlength="1024"
         autocomplete="new-password"
+        data-revelar
         required>
     </label>
 
-    <button class="btn btn-primary">
+    <button class="btn btn-primary btn-lg">
       Salvar nova senha
     </button>
 
