@@ -1,6 +1,6 @@
 # PetShop Gestão
 
-Sistema de estoque e vendas para pet shop, feito em **PHP + JavaScript + CSS** com banco **SQLite**, rodando no **Docker**.
+Sistema de estoque e vendas para pet shop, feito em **PHP + JavaScript + CSS** com **Bootstrap 5.3.8** e **Bootstrap Icons 1.13.1** (arquivos locais, funciona sem internet), banco **SQLite**, rodando no **Docker**.
 
 Este guia está em etapas, na ordem em que acontecem:
 
@@ -274,7 +274,10 @@ app/
 └── Views/            # Cabeçalho, rodapé, gráficos e alertas comuns
 
 public/
-├── assets/           # CSS, JavaScript e Bootstrap (local)
+├── assets/
+│   ├── css/          # Estilos do sistema (tema por cima do Bootstrap; menu lateral e barra inferior no celular)
+│   ├── js/           # JavaScript das telas
+│   └── vendor/       # Bootstrap 5.3.8 e Bootstrap Icons 1.13.1 (locais, sem CDN)
 ├── uploads/produtos/ # Fotos dos produtos
 └── index.php         # Ponto de entrada
 
