@@ -88,16 +88,18 @@ O sistema fica acessível só nesta máquina (`127.0.0.1:8000`). Para usar em re
 
 Todo dia às 22:00 o Agendador de Tarefas do Windows roda `scripts/backup.ps1`, que:
 
-1. faz o backup dentro do container (`scripts/backup.php`): cópia segura do banco com o sistema aberto (`VACUUM INTO`), conferida com `integrity_check`, mais as fotos dos produtos, em `storage/backups/AAAA-MM-DD_HHMM/`;
-2. apaga os backups com mais de 30 dias;
-3. espelha `storage/backups` em `OneDrive\Backups PetShop` (sobe para a nuvem sozinho).
+1. faz o backup dentro do container (`scripts/backup.php`): cópia segura do banco com o sistema aberto (`VACUUM INTO`), conferida com `integrity_check`, mais as fotos dos produtos, em `storage/backups/AAAA-MM-DD_HHMMSS/` (a pasta só ganha esse nome quando tudo deu certo; se algo falhar, a pasta é apagada; se o backup for interrompido no meio, como num desligamento, a pasta `.tmp` que sobrou é apagada no dia seguinte);
+2. apaga os backups com mais de 30 dias, mas sempre mantém os 7 mais novos (mesmo se o relógio do computador estiver errado);
+3. copia `storage/backups` para `OneDrive\Backups PetShop` (sobe para a nuvem sozinho). A cópia só acrescenta: apagar uma pasta em `storage/backups` não apaga a do OneDrive. Lá vale a mesma regra de 30 dias / 7 mais novos.
 
-Se o computador estiver desligado às 22:00, a tarefa roda assim que ele ligar. O Docker precisa estar ligado. Cada execução fica em `storage/backups/backup.log`, e o **Dashboard avisa o administrador** se o último backup falhou ou tem mais de 2 dias.
+Se o computador estiver desligado às 22:00, a tarefa roda assim que ele ligar. O Docker precisa estar ligado. Cada execução fica em `storage/backups/backup.log`, e o **Dashboard avisa o administrador** se o último backup falhou (inclusive a cópia para o OneDrive), tem mais de 2 dias ou tem registro ilegível. O motivo da falha fica no `backup.log`.
+
+> **Atenção: o backup vai para o OneDrive sem criptografia.** O banco tem os dados das vendas, os e-mails dos usuários, a auditoria (com IPs) e as senhas (só o hash bcrypt, não a senha em si). Quem entrar na conta do OneDrive tem acesso a tudo isso. Use senha forte e verificação em duas etapas na conta e não compartilhe a pasta `Backups PetShop`. Cifrar antes de enviar está pendente de decisão (qual ferramenta usar e onde guardar a senha).
 
 ```powershell
 # Criar a tarefa (uma vez, num computador novo)
 $acao = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "C:\caminho\do\projeto-pet-shop\scripts\backup.ps1"'
-Register-ScheduledTask -TaskName 'PetShop Backup' -Action $acao -Trigger (New-ScheduledTaskTrigger -Daily -At 22:00) -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable)
+Register-ScheduledTask -TaskName 'PetShop Backup' -Action $acao -Trigger (New-ScheduledTaskTrigger -Daily -At 22:00) -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 1))
 
 # Fazer um backup agora
 Start-ScheduledTask -TaskName 'PetShop Backup'
@@ -105,11 +107,13 @@ Start-ScheduledTask -TaskName 'PetShop Backup'
 
 ### Restaurar um backup
 
-1. Pare o sistema: `docker compose down`
-2. Guarde o banco atual por segurança: renomeie `storage/petshop.sqlite` para `storage/petshop-antes-da-restauracao.sqlite`
-3. Copie o `petshop.sqlite` da pasta do backup escolhido (em `storage/backups` ou no OneDrive) para `storage/petshop.sqlite`
-4. Copie as fotos da pasta `fotos` do backup para `public/uploads/produtos/`
-5. Suba de novo: `docker compose up -d`
+1. Escolha o backup: no `storage/backups/backup.log`, a pasta precisa aparecer numa linha `OK` (ex.: `2026-11-02 22:00:05 OK 2026-11-02_220005: Backup ok: ...`). Pasta sem linha `OK` não serve.
+2. Pare o sistema: `docker compose down`
+3. Guarde o banco atual por segurança: renomeie `storage/petshop.sqlite` para `storage/petshop-antes-da-restauracao.sqlite`. Se existir `storage/petshop.sqlite-journal`, apague (é de uma gravação interrompida do banco antigo e estragaria o restaurado).
+4. Copie o `petshop.sqlite` da pasta do backup escolhido (em `storage/backups` ou no OneDrive) para `storage/petshop.sqlite`
+5. Copie as fotos da pasta `fotos` do backup para `public/uploads/produtos/`
+6. Suba de novo: `docker compose up -d`
+7. Entre como administrador e confira em **Usuários**: quem trocou de senha depois do backup volta a entrar com a senha antiga, e usuários desativados depois do backup voltam ativos. Redefina essas senhas e desative de novo quem não deve entrar.
 
 Tudo o que foi registrado depois do horário do backup se perde: confira a data no nome da pasta.
 
