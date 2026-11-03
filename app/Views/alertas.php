@@ -1,8 +1,8 @@
 <?php
 // Painel de alertas de estoque (Dashboard e Estoque): validade por prazo e estoque baixo.
-$alertasValidade = Estoque::alertasValidade();
-$alertasBaixo = Produto::baixoEstoque();
-$prazos = Estoque::prazos();
+$alertasValidade ??= Estoque::alertasValidade(); // o dashboard já buscou
+$alertasBaixo ??= Produto::baixoEstoque();
+$prazos ??= Estoque::prazos();
 ?>
 
 <section class="card card-body mb-3" id="alertas">

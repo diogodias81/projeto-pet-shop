@@ -8,39 +8,129 @@ $serie = Relatorio::serie($de, $ate);
 $backup = temPerfil(['admin']) ? Backup::ultimo() : null;
 $horasSemBackup = $backup && $backup['quando'] ? (int) floor((time() - strtotime($backup['quando'])) / 3600) : null;
 $ajuda = 'Se não resolver, chame o técnico: o detalhe fica na pasta do sistema, em storage\backups\backup.log.';
+
+// Usados aqui no "Para fazer hoje" e reaproveitados por alertas.php
+$alertasValidade = Estoque::alertasValidade();
+$alertasBaixo = Produto::baixoEstoque();
+$prazos = Estoque::prazos();
+
+// Comparação com o período anterior de mesmo tamanho: [valor atual, variação em % ou null quando não há base]
+$comparar = function (string $de, string $ate, string $deAnt, string $ateAnt): array {
+    $atual = Relatorio::faturamento($de, $ate);
+    $antes = Relatorio::faturamento($deAnt, $ateAnt);
+    return [$atual, $antes > 0 ? ($atual - $antes) / $antes * 100 : null];
+};
+$dia = fn(string $rel) => date('Y-m-d', strtotime($rel));
+$diaDoMes = (int) date('j');
+$resumo = [
+    ['Hoje', 'vs. ontem', ...$comparar($hoje, $hoje, $dia('-1 day'), $dia('-1 day'))],
+    ['Últimos 7 dias', 'vs. 7 dias anteriores', ...$comparar($dia('-6 days'), $hoje, $dia('-13 days'), $dia('-7 days'))],
+    // mesmo número de dias do mês passado (1 a N), para não comparar mês parcial com mês inteiro
+    ['Este mês', 'vs. mesmo período do mês passado', ...$comparar(date('Y-m-01'), $hoje, date('Y-m-01', strtotime('first day of last month')),
+        min(date('Y-m-d', strtotime('first day of last month +' . ($diaDoMes - 1) . ' days')), date('Y-m-t', strtotime('first day of last month'))))],
+];
+
+// Pendências: [gravidade, ícone, título, detalhe, link]
+$tarefas = [];
+if (temPerfil(['admin'])) {
+    if (!$backup) {
+        $tarefas[] = ['alerta', 'cloud-slash', 'Nenhum backup feito ainda', 'Peça ao técnico para agendar o backup diário (instruções no README do sistema, seção "Backup").', null];
+    } elseif (!$backup['quando']) {
+        $tarefas[] = ['erro', 'cloud-slash', 'Registro do backup ilegível', 'Confira se a data e a hora do computador estão certas. ' . $ajuda, null];
+    } elseif (!$backup['ok'] && !empty($backup['aviso'])) {
+        $tarefas[] = ['alerta', 'cloud-check', 'Backup salvo só neste computador', 'O backup de ' . dataBr($backup['quando']) . ' foi feito, mas ' . $backup['aviso'] . '. ' . $ajuda, null];
+    } elseif (!$backup['ok']) {
+        $tarefas[] = ['erro', 'cloud-slash', 'O último backup falhou', 'Falhou em ' . dataBr($backup['quando']) . '. Confira se o Docker Desktop está aberto; o próximo roda às 22:00. ' . $ajuda, null];
+    } elseif ($horasSemBackup >= 26) { // o backup é diário às 22:00: uma noite perdida já aparece na manhã seguinte
+        $tarefas[] = ['alerta', 'clock-history', 'Backup atrasado', 'O último foi em ' . dataBr($backup['quando']) . ' (há ' . ($horasSemBackup >= 48 ? intdiv($horasSemBackup, 24) . ' dias' : $horasSemBackup . ' horas') . '). Confira se o computador e o Docker Desktop ficam ligados às 22:00.', null];
+    }
+}
+$vencidos = count(array_filter($alertasValidade, fn($l) => $l['dias'] < 0));
+$vencendo = count(array_filter($alertasValidade, fn($l) => $l['dias'] >= 0 && $l['dias'] <= min($prazos)));
+if ($vencidos) $tarefas[] = ['erro', 'exclamation-octagon', $vencidos . ($vencidos > 1 ? ' lotes vencidos' : ' lote vencido'), 'Retire da prateleira e dê baixa no estoque.', '#alertas'];
+if ($vencendo) $tarefas[] = ['alerta', 'hourglass-split', $vencendo . ($vencendo > 1 ? ' lotes vencem' : ' lote vence') . ' em até ' . min($prazos) . ' dias', 'Priorize na venda ou faça uma promoção.', '#alertas'];
+if ($alertasBaixo) $tarefas[] = ['alerta', 'box-seam', count($alertasBaixo) . (count($alertasBaixo) > 1 ? ' produtos abaixo' : ' produto abaixo') . ' do mínimo', 'Hora de repor com o fornecedor.', '#alertas'];
+
+$hora = (int) date('G');
+$saudacao = $hora < 12 ? 'Bom dia' : ($hora < 18 ? 'Boa tarde' : 'Boa noite');
+$primeiroNome = explode(' ', trim(usuario()['nome']))[0];
+$diasSemana = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+$meses = [1 => 'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+
+$variacao = function (?float $pct): string {
+    if ($pct === null) return '<span class="tendencia">—</span>';
+    $classe = $pct > 0.05 ? 'sobe' : ($pct < -0.05 ? 'desce' : '');
+    $icone = $pct > 0.05 ? 'arrow-up-right' : ($pct < -0.05 ? 'arrow-down-right' : 'dash');
+    return '<span class="tendencia ' . $classe . '"><i class="bi bi-' . $icone . '" aria-hidden="true"></i> ' . number_format(abs($pct), 1, ',', '.') . '%</span>';
+};
 ?>
-<?php if (temPerfil(['admin'])): ?>
-    <?php if (!$backup): ?>
-        <div class="alert alert-warning">Nenhum backup foi feito ainda. Peça ao técnico para agendar o backup diário (instruções no README do sistema, seção "Backup").</div>
-    <?php elseif (!$backup['quando']): ?>
-        <div class="alert alert-danger">O registro do último backup está ilegível ou com data inválida. Confira se a data e a hora do computador estão certas. <?= e($ajuda) ?></div>
-    <?php elseif (!$backup['ok'] && !empty($backup['aviso'])): ?>
-        <div class="alert alert-warning">O backup de <?= dataBr($backup['quando']) ?> foi feito e está guardado neste computador, mas <?= e($backup['aviso']) ?>. <?= e($ajuda) ?></div>
-    <?php elseif (!$backup['ok']): ?>
-        <div class="alert alert-danger">O último backup falhou em <?= dataBr($backup['quando']) ?>. Confira se o Docker Desktop está aberto; o próximo backup roda às 22:00. <?= e($ajuda) ?></div>
-    <?php elseif ($horasSemBackup >= 26): // o backup é diário às 22:00: uma noite perdida já aparece na manhã seguinte ?>
-        <div class="alert alert-warning">O último backup foi em <?= dataBr($backup['quando']) ?> (há <?= $horasSemBackup >= 48 ? intdiv($horasSemBackup, 24) . ' dias' : $horasSemBackup . ' horas' ?>). Confira se o computador e o Docker Desktop ficam ligados às 22:00.</div>
+<header class="saudacao">
+    <div>
+        <p class="saudacao-data"><?= ucfirst($diasSemana[(int) date('w')]) ?>, <?= date('j') ?> de <?= $meses[(int) date('n')] ?></p>
+        <h1><?= $saudacao ?>, <?= e($primeiroNome) ?> 👋</h1>
+        <p class="saudacao-sub">Veja como está a loja e o que precisa da sua atenção.</p>
+    </div>
+    <?php if (temPerfil(['admin', 'vendedor'])): ?>
+        <a class="btn btn-primary btn-lg d-print-none" href="index.php?page=vendas"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nova venda</a>
     <?php endif; ?>
-<?php endif; ?>
-<section class="kpis">
-    <div class="kpi"><span>Faturamento hoje</span><strong><?= moeda(Relatorio::faturamento($hoje, $hoje)) ?></strong></div>
-    <div class="kpi"><span>Faturamento nos últimos 7 dias</span><strong><?= moeda(Relatorio::faturamento(date('Y-m-d', strtotime('-6 days')), $hoje)) ?></strong></div>
-    <div class="kpi"><span>Faturamento no mês</span><strong><?= moeda(Relatorio::faturamento(date('Y-m-01'), $hoje)) ?></strong></div>
-</section>
+</header>
+
+<div class="painel-topo">
+    <section class="card tarefas">
+        <div class="card-titulo">
+            <h2>Para fazer hoje</h2>
+            <?php if ($tarefas): ?><span class="selo selo-neutro"><?= count($tarefas) ?></span><?php endif; ?>
+        </div>
+        <?php if (!$tarefas): ?>
+            <div class="estado-vazio">
+                <span class="estado-vazio-icone"><i class="bi bi-check2-circle" aria-hidden="true"></i></span>
+                <strong>Tudo em dia</strong>
+                <p>Nada vencido, nada acabando e o backup está em ordem.</p>
+            </div>
+        <?php else: ?>
+            <ul class="tarefas-lista">
+                <?php foreach ($tarefas as [$grav, $icone, $titulo, $detalhe, $link]): ?>
+                    <li>
+                        <?= $link ? '<a class="tarefa" href="' . $link . '">' : '<div class="tarefa">' ?>
+                            <span class="tarefa-icone tarefa-<?= $grav ?>"><i class="bi bi-<?= $icone ?>" aria-hidden="true"></i></span>
+                            <span class="tarefa-texto"><strong><?= e($titulo) ?></strong><small><?= e($detalhe) ?></small></span>
+                            <?php if ($link): ?><i class="bi bi-chevron-right tarefa-seta" aria-hidden="true"></i><?php endif; ?>
+                        <?= $link ? '</a>' : '</div>' ?>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    </section>
+
+    <section class="resumo-faturamento" aria-label="Faturamento">
+        <?php foreach ($resumo as $i => [$rotulo, $base, $valor, $pct]): ?>
+            <div class="kpi <?= $i === 0 ? 'kpi-destaque' : '' ?>">
+                <span><?= $rotulo ?></span>
+                <strong><?= moeda($valor) ?></strong>
+                <small><?= $variacao($pct) ?> <?= $base ?></small>
+            </div>
+        <?php endforeach; ?>
+    </section>
+</div>
 
 <section class="card card-body mb-3">
-    <h2>Período: <?= date('d/m/Y', strtotime($de)) ?> a <?= date('d/m/Y', strtotime($ate)) ?></h2>
-    <?php require BASE_PATH . '/app/Views/filtro_periodo.php'; ?>
-
-    <div class="kpis">
-        <div class="kpi"><span>Faturamento</span><strong><?= moeda($r['faturamento']) ?></strong></div>
-        <div class="kpi"><span>Vendas realizadas</span><strong><?= $r['vendas'] ?></strong></div>
-        <div class="kpi"><span>Ticket médio</span><strong><?= moeda($r['ticket']) ?></strong></div>
-        <div class="kpi"><span>Lucro bruto estimado<?= $r['margem'] !== null ? ' (' . number_format($r['margem'], 1, ',', '.') . '% de margem)' : '' ?></span><strong><?= moeda($r['lucro']) ?></strong></div>
-        <div class="kpi"><span>Despesas registradas</span><strong><?= moeda($r['despesas']) ?></strong></div>
-        <div class="kpi <?= $r['resultado'] < 0 ? 'kpi-erro' : '' ?>"><span>Resultado estimado</span><strong class="<?= $r['resultado'] < 0 ? 'negativo' : 'positivo' ?>"><?= moeda($r['resultado']) ?></strong></div>
+    <div class="card-titulo card-titulo-quebra">
+        <div>
+            <h2>Desempenho</h2>
+            <p class="card-sub"><?= date('d/m/Y', strtotime($de)) ?> a <?= date('d/m/Y', strtotime($ate)) ?></p>
+        </div>
+        <?php require BASE_PATH . '/app/Views/filtro_periodo.php'; ?>
     </div>
-    <p class="nota">Lucro bruto = faturamento − custo dos produtos vendidos. Resultado = lucro bruto − despesas. Produtos sem preço de custo cadastrado entram com custo zero.</p>
+
+    <div class="kpis kpis-periodo">
+        <div class="kpi kpi-principal"><span><i class="bi bi-cash-stack" aria-hidden="true"></i> Faturamento</span><strong><?= moeda($r['faturamento']) ?></strong></div>
+        <div class="kpi"><span><i class="bi bi-bag-check" aria-hidden="true"></i> Vendas realizadas</span><strong><?= $r['vendas'] ?></strong></div>
+        <div class="kpi"><span><i class="bi bi-receipt" aria-hidden="true"></i> Ticket médio</span><strong><?= moeda($r['ticket']) ?></strong></div>
+        <div class="kpi"><span><i class="bi bi-graph-up" aria-hidden="true"></i> Lucro bruto estimado</span><strong><?= moeda($r['lucro']) ?></strong><?php if ($r['margem'] !== null): ?><small><?= number_format($r['margem'], 1, ',', '.') ?>% de margem</small><?php endif; ?></div>
+        <div class="kpi"><span><i class="bi bi-wallet2" aria-hidden="true"></i> Despesas registradas</span><strong><?= moeda($r['despesas']) ?></strong></div>
+        <div class="kpi <?= $r['resultado'] < 0 ? 'kpi-erro' : 'kpi-ok' ?>"><span><i class="bi bi-calculator" aria-hidden="true"></i> Resultado estimado</span><strong class="<?= $r['resultado'] < 0 ? 'negativo' : 'positivo' ?>"><?= moeda($r['resultado']) ?></strong></div>
+    </div>
+    <p class="nota"><i class="bi bi-info-circle" aria-hidden="true"></i> Lucro bruto = faturamento − custo dos produtos vendidos. Resultado = lucro bruto − despesas. Produtos sem preço de custo cadastrado entram com custo zero.</p>
 </section>
 
 <section class="grade">

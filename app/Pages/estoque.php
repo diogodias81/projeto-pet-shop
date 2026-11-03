@@ -62,9 +62,9 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
 
 ?>
 
-<nav class="atalhos mb-3 d-print-none" aria-label="Seções do estoque">
+<nav class="abas-secao d-print-none" aria-label="Seções do estoque">
   <?php foreach ($secoes as $id => $rotulo): ?>
-    <a class="btn btn-light btn-sm" href="#<?= $id ?>"><?= $rotulo ?></a>
+    <a href="#<?= $id ?>"><?= $rotulo ?></a>
   <?php endforeach; ?>
 </nav>
 
@@ -223,7 +223,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
 
   <h2>Posição do estoque</h2>
 
-  <form method="get" class="linha">
+  <form method="get" class="busca-barra" role="search">
 
     <input
       type="hidden"
@@ -231,13 +231,15 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
       value="estoque">
 
     <label>
-      Pesquisar
+      <span class="visually-hidden">Pesquisar</span>
+      <i class="bi bi-search" aria-hidden="true"></i>
 
       <input
         type="search"
         name="q"
         value="<?= e($busca) ?>"
-        placeholder="Nome, código de barras ou lote">
+        aria-label="Pesquisar"
+        placeholder="Buscar por nome, código de barras ou lote">
     </label>
 
     <button class="btn btn-light">
@@ -270,11 +272,22 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
         <tr>
 
           <td>
-            <?= e($p['nome']) ?>
+            <span class="produto-celula">
+              <?php if ($url = Produto::urlFoto($p['foto'])): ?>
+                <img class="foto" src="<?= e($url) ?>" alt="" loading="lazy">
+              <?php else: ?>
+                <span class="foto foto-vazia" aria-hidden="true"><i class="bi bi-image"></i></span>
+              <?php endif; ?>
+              <?= e($p['nome']) ?>
+            </span>
           </td>
 
           <td class="num">
-            <?= $p['estoque'] ?>
+            <span class="nivel">
+              <?= $p['estoque'] ?>
+              <?php // barra até 2x o mínimo: cheia = folga confortável ?>
+              <span class="nivel-trilho" aria-hidden="true"><span class="nivel-valor<?= $baixo ? ' baixo' : '' ?>" style="width: <?= min(100, round($p['estoque'] / max(1, $p['estoque_minimo'] * 2) * 100)) ?>%"></span></span>
+            </span>
           </td>
 
           <td class="num">

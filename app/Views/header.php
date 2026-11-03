@@ -40,7 +40,18 @@ $item = function (string $chave, string $classe) use ($menu, $icones, $atual, $n
         . '<span>' . e($menu[$chave]) . '</span>' . $selo . '</a>';
 };
 
-$minhaSenha = '<a class="btn ' . ($atual === 'minha_senha' ? 'btn-primary' : 'btn-light') . ' w-100 mb-2" href="index.php?page=minha_senha"'
+// Menu agrupado por assunto (só entram os grupos com algum item que o perfil vê)
+$grupos = array_filter(array_map(
+    fn($chaves) => array_values(array_filter($chaves, fn($c) => isset($menu[$c]))),
+    ['Operação' => ['dashboard', 'vendas', 'historico'], 'Catálogo' => ['produtos', 'estoque', 'categorias'],
+     'Gestão' => ['despesas', 'relatorios'], 'Administração' => ['usuarios', 'auditoria']]
+));
+
+$u = usuario();
+$iniciais = mb_strtoupper(implode('', array_map(fn($p) => mb_substr($p, 0, 1), array_slice(preg_split('/\s+/', trim($u['nome'])), 0, 2))));
+$perfilNome = Usuario::PERFIS[$u['perfil']] ?? '';
+
+$minhaSenha = '<a class="btn ' . ($atual === 'minha_senha' ? 'btn-primary' : 'btn-light') . ' w-100" href="index.php?page=minha_senha"'
     . ($atual === 'minha_senha' ? ' aria-current="page"' : '') . '><i class="bi bi-key" aria-hidden="true"></i> Minha senha</a>';
 
 $sair = '<form method="post" action="index.php?page=logout" class="m-0">' . csrf_campo()
@@ -88,17 +99,31 @@ $sair = '<form method="post" action="index.php?page=logout" class="m-0">' . csrf
             <?= e(config('app_nome')) ?>
         </a>
 
-        <nav class="nav flex-column" aria-label="Menu principal">
-            <?php foreach (array_keys($menu) as $chave): ?>
-                <?= $item($chave, 'nav-link') ?>
+        <?php if (isset($menu['vendas'])): ?>
+            <a class="btn btn-primary lateral-cta" href="index.php?page=vendas"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nova venda</a>
+        <?php endif; ?>
+
+        <nav class="lateral-nav" aria-label="Menu principal">
+            <?php foreach ($grupos as $titulo => $chaves): ?>
+                <div class="lateral-grupo">
+                    <span class="lateral-titulo"><?= e($titulo) ?></span>
+                    <?php foreach ($chaves as $chave): ?>
+                        <?= $item($chave, 'nav-link') ?>
+                    <?php endforeach; ?>
+                </div>
             <?php endforeach; ?>
         </nav>
 
         <div class="lateral-usuario">
-            <div class="small text-body-secondary">Conectado como</div>
-            <strong><?= e(usuario()['nome']) ?></strong>
-            <?= $minhaSenha ?>
-            <?= $sair ?>
+            <span class="avatar" aria-hidden="true"><?= e($iniciais) ?></span>
+            <div class="lateral-quem">
+                <strong><?= e($u['nome']) ?></strong>
+                <small><?= e($perfilNome) ?></small>
+            </div>
+            <a class="btn-icone<?= $atual === 'minha_senha' ? ' active' : '' ?>" href="index.php?page=minha_senha" title="Minha senha" aria-label="Minha senha"<?= $atual === 'minha_senha' ? ' aria-current="page"' : '' ?>><i class="bi bi-key" aria-hidden="true"></i></a>
+            <form method="post" action="index.php?page=logout" class="m-0"><?= csrf_campo() ?>
+                <button class="btn-icone" title="Sair" aria-label="Sair"><i class="bi bi-box-arrow-right" aria-hidden="true"></i></button>
+            </form>
         </div>
 
     </aside>
@@ -106,10 +131,16 @@ $sair = '<form method="post" action="index.php?page=logout" class="m-0">' . csrf
     <!-- Celular: topo com o nome da tela -->
     <header class="topo-movel d-lg-none d-print-none">
         <a class="marca" href="index.php"><span class="marca-icone" aria-hidden="true">🐾</span> <?= e(config('app_nome')) ?></a>
-        <span class="text-body-secondary small"><?= e($tituloAba ?? '') ?></span>
+        <span class="avatar avatar-sm" title="<?= e($u['nome'] . ' · ' . $perfilNome) ?>" aria-hidden="true"><?= e($iniciais) ?></span>
     </header>
 
     <main class="conteudo" id="conteudo" tabindex="-1">
+
+        <?php if (!in_array($atual, ['dashboard', 'comprovante'], true) && $tituloAba): // o dashboard tem saudação própria ?>
+            <header class="pagina-topo d-print-none">
+                <h1><?= e($tituloAba) ?></h1>
+            </header>
+        <?php endif; ?>
 
         <?php foreach (flash() as [$msg, $tipo]): ?>
 

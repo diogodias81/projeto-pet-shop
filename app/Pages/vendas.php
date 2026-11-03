@@ -82,13 +82,10 @@ $esgotados = array_values(array_map(
 
 ?>
 
-<section class="card card-body mb-3">
-
-  <h2>Nova venda</h2>
-
-  <form
+<form
     method="post"
     id="form-venda"
+    class="pdv"
     data-desconto-max="<?= $descontoMax ?>">
 
     <?= csrf_campo() ?>
@@ -103,14 +100,24 @@ $esgotados = array_values(array_map(
 
     <script type="application/json" id="v-esgotados"><?= json_encode($esgotados,JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) ?></script>
 
+  <section class="card card-body pdv-itens">
+
+    <div class="card-titulo">
+      <h2>Itens da venda</h2>
+      <a class="btn btn-light btn-sm d-print-none" href="index.php?page=historico"><i class="bi bi-clock-history" aria-hidden="true"></i> Histórico</a>
+    </div>
+
     <div class="pesquisa">
 
       <label>
-        Produto
+        <span class="visually-hidden">Produto</span>
+
+        <i class="bi bi-upc-scan pesquisa-icone" aria-hidden="true"></i>
 
         <input
           type="search"
           id="v-busca"
+          aria-label="Produto"
           placeholder="Leia o código de barras ou digite o nome"
           autocomplete="off"
           autofocus
@@ -150,16 +157,19 @@ $esgotados = array_values(array_map(
     </table></div>
 
 
-    <p
-      class="vazio"
-      id="v-vazio">
-      Nenhum item adicionado.
-    </p>
+    <div class="estado-vazio" id="v-vazio">
+      <span class="estado-vazio-icone"><i class="bi bi-cart3" aria-hidden="true"></i></span>
+      <strong>Carrinho vazio</strong>
+      <p>Leia o código de barras ou busque pelo nome para adicionar.</p>
+    </div>
 
+  </section>
 
-    <div class="fechamento">
+  <aside class="card card-body pdv-resumo">
 
-      <div class="linha">
+      <h2>Pagamento</h2>
+
+      <div class="pdv-campos">
 
         <label>
           Desconto
@@ -248,12 +258,6 @@ $esgotados = array_values(array_map(
 
       <p class="nota" id="v-motivo" aria-live="polite">Adicione um produto para finalizar.</p>
 
-    </div>
+  </aside>
 
-  </form>
-
-</section>
-
-<p>
-  <a href="index.php?page=historico">Ver histórico de vendas →</a>
-</p>
+</form>

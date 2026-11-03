@@ -58,21 +58,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="assets/vendor/bootstrap/bootstrap.min.css">
 
+  <link rel="stylesheet" href="assets/vendor/bootstrap-icons/bootstrap-icons.min.css">
+
   <link rel="stylesheet" href="<?= asset('assets/css/style.css') ?>">
 
 </head>
 
 <body class="login">
 
-  <form method="post" class="login-caixa card card-body">
+  <main class="login-lado-form">
 
-    <div class="login-marca" aria-hidden="true">🐾</div>
+  <form method="post" class="login-caixa">
 
-    <h1>
-      <?= e(config('app_nome')) ?>
-    </h1>
+    <div class="login-cabeca">
+      <span class="marca-icone" aria-hidden="true">🐾</span>
+      <span class="login-nome"><?= e(config('app_nome')) ?></span>
+    </div>
 
-    <p class="text-body-secondary mb-0">Entre para começar o dia.</p>
+    <div>
+      <h1>Bem-vindo de volta</h1>
+      <p class="text-body-secondary mb-0">Entre com seu e-mail e senha para começar o dia.</p>
+    </div>
 
     <?php foreach (flash() as [$msg]): ?>
       <div class="alert alert-warning" role="alert"><?= e($msg) ?></div>
@@ -110,11 +116,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         required>
     </label>
 
-    <button class="btn btn-primary">
-      Entrar
+    <button class="btn btn-primary btn-lg">
+      Entrar <i class="bi bi-arrow-right" aria-hidden="true"></i>
     </button>
 
+    <p class="login-rodape">Esqueceu a senha? Peça ao administrador para redefinir.</p>
+
   </form>
+
+  </main>
+
+  <aside class="login-vitrine" aria-hidden="true">
+    <div class="login-vitrine-conteudo">
+      <span class="login-pata">🐾</span>
+      <h2>Sua loja inteira<br>num só lugar.</h2>
+      <p>Vendas, estoque com validade, despesas e resultados — tudo organizado para o dia a dia do pet shop.</p>
+      <ul>
+        <li><i class="bi bi-upc-scan"></i> Caixa rápido com leitor de código de barras</li>
+        <li><i class="bi bi-hourglass-split"></i> Alerta de lotes vencendo e estoque baixo</li>
+        <li><i class="bi bi-graph-up-arrow"></i> Faturamento, lucro e ticket médio na hora</li>
+      </ul>
+    </div>
+  </aside>
 
 </body>
 
