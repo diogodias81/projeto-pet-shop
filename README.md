@@ -260,6 +260,15 @@ php -S 127.0.0.1:8000 -t public
 
 Precisa das extensões `pdo_sqlite` e `gd`. A senha inicial do admin aparece no próprio terminal. Com `APP_DEBUG=1` são criadas contas de demonstração (`vendedor@`, `estoque@` e `financeiro@petshop.com`, senha `senha123`, troca obrigatória); nunca use isso na loja.
 
+### Testes
+
+Antes de subir uma mudança, rode os testes das regras principais (venda pelo lote que vence antes, lote vencido não vendido, limite de desconto do vendedor, cancelamento devolve o estoque). Eles usam um banco temporário, apagado no fim: o banco real nunca é aberto.
+
+```powershell
+docker compose up -d --build
+docker compose exec -T php php scripts/testar.php
+```
+
 ### Estrutura
 
 ```text
@@ -283,7 +292,8 @@ public/
 
 scripts/
 ├── backup.php        # Backup (roda dentro do container)
-└── backup.ps1        # Agendado no Windows: chama o backup.php e cifra para o OneDrive
+├── backup.ps1        # Agendado no Windows: chama o backup.php e cifra para o OneDrive
+└── testar.php        # Testes das regras principais (banco temporário)
 
 storage/
 ├── petshop.sqlite    # Banco de dados (criado sozinho)

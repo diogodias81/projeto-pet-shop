@@ -95,6 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         type="email"
         name="email"
         value="<?= e($_POST['email'] ?? '') ?>"
+        autocomplete="username"
         required
         autofocus>
     </label>
@@ -105,6 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <input
         type="password"
         name="senha"
+        autocomplete="current-password"
         required>
     </label>
 
