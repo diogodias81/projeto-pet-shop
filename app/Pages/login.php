@@ -55,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Entrar · <?= e(config('app_nome')) ?>
   </title>
 
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="assets/vendor/bootstrap/bootstrap.min.css">
 
   <link rel="stylesheet" href="<?= asset('assets/css/style.css') ?>">

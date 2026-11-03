@@ -66,6 +66,7 @@ $sair = '<form method="post" action="index.php?page=logout" class="m-0">' . csrf
         <?= e($tituloAba ? "$tituloAba · " : '') ?><?= e(config('app_nome')) ?>
     </title>
 
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="assets/vendor/bootstrap/bootstrap.min.css">
 
     <link rel="stylesheet" href="assets/vendor/bootstrap-icons/bootstrap-icons.min.css">

@@ -106,6 +106,7 @@ td.acoes { text-align: right; white-space: nowrap; }
 .positivo { color: var(--ok); }
 .linha { display: flex; flex-wrap: wrap; gap: .75rem; align-items: flex-end; margin-bottom: 1rem; }
 .atalhos { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
+section[id] { scroll-margin-top: 4.5rem; } /* atalho #seção: o título não fica atrás da barra fixa do topo no celular */
 .so-imprimir { display: none; }
 [hidden] { display: none !important; }
 

@@ -78,6 +78,17 @@ if (matchMedia('(max-width: 640px)').matches) {
 
         alternar(false);
     });
+
+    // Atalho (#seção) para uma seção recolhida: abre antes de rolar até ela
+    document.querySelectorAll('a[href^="#"]').forEach(link => {
+
+        link.addEventListener('click', () => {
+
+            const alvo = document.getElementById(link.getAttribute('href').slice(1));
+
+            if (alvo && alvo.classList.contains('recolhida')) alvo.querySelector('.recolher')?.click();
+        });
+    });
 }
 
 

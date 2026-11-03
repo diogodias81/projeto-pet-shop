@@ -55,11 +55,22 @@ $rotuloSituacao = [
   'sem' => ['Sem validade', 'selo-neutro'],
 ];
 
+// A página é longa: atalhos para as seções que este perfil vê
+$secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alertas']
+  + ($gerencia ? ['est-baixa' => 'Baixa'] : []) + ['est-posicao' => 'Posição', 'est-lotes' => 'Lotes']
+  + ($gerencia ? ['est-movimentacoes' => 'Movimentações'] : []);
+
 ?>
+
+<nav class="atalhos mb-3 d-print-none" aria-label="Seções do estoque">
+  <?php foreach ($secoes as $id => $rotulo): ?>
+    <a class="btn btn-light btn-sm" href="#<?= $id ?>"><?= $rotulo ?></a>
+  <?php endforeach; ?>
+</nav>
 
 <?php if ($gerencia): ?>
 
-  <section class="card card-body mb-3">
+  <section class="card card-body mb-3" id="est-entrada">
 
     <h2>Registrar entrada</h2>
 
@@ -152,7 +163,7 @@ $rotuloSituacao = [
 
 <?php if ($gerencia): ?>
 
-  <section class="card card-body mb-3"<?= $busca === '' ? ' data-recolher' : '' ?>>
+  <section class="card card-body mb-3" id="est-baixa"<?= $busca === '' ? ' data-recolher' : '' ?>>
 
     <h2>Dar baixa (vencido, avaria, perda)</h2>
 
@@ -208,7 +219,7 @@ $rotuloSituacao = [
 <?php endif; ?>
 
 
-<section class="card card-body mb-3">
+<section class="card card-body mb-3" id="est-posicao">
 
   <h2>Posição do estoque</h2>
 
@@ -290,7 +301,7 @@ $rotuloSituacao = [
 </section>
 
 
-<section class="card card-body mb-3"<?= $busca === '' ? ' data-recolher' : '' ?>>
+<section class="card card-body mb-3" id="est-lotes"<?= $busca === '' ? ' data-recolher' : '' ?>>
 
   <h2>Lotes e validade</h2>
 
@@ -367,7 +378,7 @@ $rotuloSituacao = [
 
 <?php if ($gerencia): ?>
 
-  <section class="card card-body mb-3"<?= $busca === '' ? ' data-recolher' : '' ?>>
+  <section class="card card-body mb-3" id="est-movimentacoes"<?= $busca === '' ? ' data-recolher' : '' ?>>
 
     <h2>Movimentações de estoque<?= $busca !== '' ? ' · ' . e($busca) : '' ?></h2>
 

@@ -13,6 +13,8 @@ $classe = fn(int $i) => trim(($mostrar($i, 12) ? '' : 'oculto') . ' ' . ($mostra
 ?>
 <?php if (!$serie): ?>
     <p class="vazio">Período inválido.</p>
+<?php elseif (!array_filter($serie)): // tudo zero: barras vazias pareciam um gráfico quebrado ?>
+    <p class="vazio">Sem vendas no período.</p>
 <?php else: ?>
     <div class="barras" role="img" aria-label="Faturamento no período">
         <?php foreach ($serie as $rotulo => $total): ?>
