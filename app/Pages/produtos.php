@@ -150,6 +150,7 @@ $linkCat = fn(int $cat) => 'index.php?page=produtos' . ($cat ? '&amp;cat=' . $ca
               title="De 4 a 14 números"
               placeholder="Leia ou digite"
               data-sem-enter
+              data-camera
               value="<?= e($antigo['codigo_barras'] ?? $editando['codigo_barras'] ?? '') ?>">
           </label>
 

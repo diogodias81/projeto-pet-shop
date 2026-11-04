@@ -558,6 +558,23 @@ tr.linha-inativa .pessoa { opacity: .55; }
 .form-pilha input { width: 100%; }
 .icone-grande { width: 3.2rem; height: 3.2rem; font-size: 1.4rem; border-radius: 16px; }
 /* Campo de senha com botão de olho (app.js, input[data-revelar]) */
+/* Leitor pela câmera (app.js, input[data-camera]): botão dentro do campo, à direita */
+.campo-camera { position: relative; display: block; }
+.campo-camera > input { width: 100%; padding-right: 3rem !important; }
+.btn-camera { position: absolute; right: .3rem; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border: 0; border-radius: 10px; background: var(--primaria-clara); color: var(--primaria-esc); font-size: 1.1rem; }
+.btn-camera:hover { background: #d3ebe6; }
+.campo-camera > input[type="search"]::-webkit-search-cancel-button { margin-right: .25rem; }
+/* Tela cheia com o vídeo e a mira */
+.camera-leitor { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; background: #000; }
+.camera-leitor video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.camera-mira { position: relative; width: min(80vw, 22rem); height: min(32vw, 9rem); border: 3px solid rgba(255, 255, 255, .9); border-radius: 16px; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .45); }
+.camera-mira::after { content: ""; position: absolute; left: 6%; right: 6%; top: 50%; height: 2px; background: #ff5b4f; box-shadow: 0 0 8px #ff5b4f; animation: camera-linha 1.6s ease-in-out infinite; }
+@keyframes camera-linha { 0%, 100% { transform: translateY(-2.5rem); } 50% { transform: translateY(2.5rem); } }
+.camera-texto { position: absolute; left: 1rem; right: 1rem; bottom: calc(2.5rem + env(safe-area-inset-bottom)); margin: 0; color: #fff; font-weight: 600; text-align: center; text-shadow: 0 1px 4px rgba(0, 0, 0, .6); }
+.camera-erro .camera-mira { display: none; }
+.camera-erro .camera-texto { position: static; max-width: 22rem; }
+.camera-fechar { position: absolute; top: calc(1rem + env(safe-area-inset-top)); right: 1rem; display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .18); color: #fff; font-size: 1.2rem; backdrop-filter: blur(6px); }
+
 .campo-senha { position: relative; display: block; }
 .campo-senha input { width: 100%; padding-right: 2.75rem !important; }
 .revelar { position: absolute; right: .35rem; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border: 0; border-radius: 8px; background: none; color: var(--suave); }

@@ -261,6 +261,162 @@ document.querySelectorAll('.abas-secao').forEach(nav => {
 });
 
 
+// Bipe de leitura (sem arquivo de som): agudo = achou, grave = não achou. No celular também vibra.
+let audioBipe = null;
+
+function bipe(ok = true) {
+
+    try {
+
+        audioBipe ??= new (window.AudioContext || window.webkitAudioContext)();
+
+        const osc = audioBipe.createOscillator(), vol = audioBipe.createGain();
+
+        osc.frequency.value = ok ? 1250 : 330;
+        vol.gain.value = 0.08;
+
+        osc.connect(vol).connect(audioBipe.destination);
+        osc.start();
+        osc.stop(audioBipe.currentTime + (ok ? 0.09 : 0.25));
+
+    } catch (e) { /* navegador sem áudio: segue sem som */ }
+
+    try { navigator.vibrate?.(ok ? 40 : [60, 60, 60]); } catch (e) { }
+}
+
+
+// Leitor pela CÂMERA (<input data-camera>): botão ao lado do campo, lê o código e age como a pistola
+// (preenche e "aperta Enter"). Usa o leitor nativo do navegador (Chrome/Edge no Android); onde não existe,
+// o botão não aparece e vale a pistola. A câmera só abre em HTTPS ou neste computador (localhost).
+const formatosCamera = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'codabar'];
+
+async function cameraDisponivel() {
+
+    if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia || !window.isSecureContext) return false;
+
+    try { return (await BarcodeDetector.getSupportedFormats()).some(f => formatosCamera.includes(f)); }
+
+    catch (e) { return false; }
+}
+
+function abrirCamera(input) {
+
+    const tela = document.createElement('div');
+    tela.className = 'camera-leitor';
+    tela.setAttribute('role', 'dialog');
+    tela.setAttribute('aria-modal', 'true');
+    tela.setAttribute('aria-label', 'Ler código de barras pela câmera');
+
+    const video = document.createElement('video');
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute('playsinline', '');
+
+    const mira = document.createElement('div');
+    mira.className = 'camera-mira';
+
+    const texto = document.createElement('p');
+    texto.className = 'camera-texto';
+    texto.textContent = 'Aponte para o código de barras';
+
+    const fechar = document.createElement('button');
+    fechar.type = 'button';
+    fechar.className = 'camera-fechar';
+    fechar.setAttribute('aria-label', 'Fechar câmera');
+    fechar.innerHTML = '<i class="bi bi-x-lg" aria-hidden="true"></i>';
+
+    tela.append(video, mira, texto, fechar);
+    document.body.appendChild(tela);
+    fechar.focus();
+
+    let fluxo = null, ativo = true;
+
+    const encerrar = () => {
+
+        ativo = false;
+        fluxo?.getTracks().forEach(t => t.stop());
+        tela.remove();
+        document.removeEventListener('keydown', esc);
+    };
+
+    const esc = ev => { if (ev.key === 'Escape') { encerrar(); input.focus(); } };
+
+    fechar.addEventListener('click', () => { encerrar(); input.focus(); });
+    document.addEventListener('keydown', esc);
+
+    (async () => {
+
+        try {
+
+            fluxo = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+
+            if (!ativo) { fluxo.getTracks().forEach(t => t.stop()); return; }
+
+            video.srcObject = fluxo;
+            await video.play();
+
+            const formatos = (await BarcodeDetector.getSupportedFormats()).filter(f => formatosCamera.includes(f));
+            const leitor = new BarcodeDetector({ formats: formatos });
+
+            // ~6 leituras por segundo: rápido o bastante e não esquenta o celular
+            while (ativo) {
+
+                const achados = video.readyState >= 2 ? await leitor.detect(video).catch(() => []) : [];
+                const codigo = achados.map(a => a.rawValue.trim()).find(v => /^\d{4,14}$/.test(v));
+
+                if (codigo) {
+
+                    encerrar();
+                    input.value = codigo;
+                    input.focus();
+                    // o mesmo caminho da pistola: cada tela já sabe o que fazer com o Enter (e bipa achou/não achou)
+                    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+                    input.dispatchEvent(enter);
+                    if (!enter.bipou) bipe(true); // campo sem busca (ex.: cadastro de produto): bipe de "lido"
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    return;
+                }
+
+                await new Promise(r => setTimeout(r, 160));
+            }
+
+        } catch (e) {
+
+            if (!ativo) return;
+
+            texto.textContent = e && e.name === 'NotAllowedError'
+                ? 'O navegador não liberou a câmera. Toque no cadeado da barra de endereço e permita a câmera.'
+                : 'Não foi possível abrir a câmera neste aparelho.';
+
+            tela.classList.add('camera-erro');
+        }
+    })();
+}
+
+cameraDisponivel().then(ok => {
+
+    if (!ok) return;
+
+    document.querySelectorAll('input[data-camera]').forEach(input => {
+
+        const caixa = document.createElement('span');
+        caixa.className = 'campo-camera';
+        input.replaceWith(caixa);
+        caixa.appendChild(input);
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-camera';
+        btn.title = 'Ler pela câmera';
+        btn.setAttribute('aria-label', 'Ler código de barras pela câmera');
+        btn.innerHTML = '<i class="bi bi-camera" aria-hidden="true"></i>';
+        btn.addEventListener('click', () => abrirCamera(input));
+
+        caixa.appendChild(btn);
+    });
+});
+
+
 // Leitor de código de barras: o leitor USB "digita" o código e aperta Enter.
 // <input data-sem-enter> não envia o formulário com esse Enter.
 // <input data-seleciona="id-do-select"> escolhe no select a opção com o mesmo data-codigo.
@@ -296,7 +452,11 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
             input.after(aviso);
         }
 
+        ev.bipou = true;
+
         if (!opt) {
+
+            bipe(false);
 
             select.value = '';
 
@@ -309,6 +469,8 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
             return;
         }
 
+
+        bipe(true);
 
         aviso.hidden = true;
 
@@ -427,9 +589,15 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
             busca.select();
 
+            bipe(false);
+
             return;
         }
 
+
+        bipe(true);
+
+        avisoBusca.hidden = true; // tira o aviso de uma leitura anterior que não achou
 
         if (existente) {
 
@@ -449,6 +617,39 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
         busca.focus();
     }
+
+
+    // Pistola lendo com o cursor fora da busca (ex.: depois de mexer na quantidade ou no desconto):
+    // a pistola "digita" muito rápido e termina com Enter. Teclas rápidas fora de um campo viram leitura na busca.
+    let lidos = '', ultimaTecla = 0;
+
+    document.addEventListener('keydown', ev => {
+
+        const alvo = ev.target;
+
+        if (alvo === busca || alvo.closest?.('input, textarea, select, [contenteditable], .camera-leitor') || ev.ctrlKey || ev.altKey || ev.metaKey) return;
+
+        const agora = Date.now();
+
+        if (agora - ultimaTecla > 80) lidos = ''; // pausa de gente digitando: começa de novo
+
+        ultimaTecla = agora;
+
+        if (ev.key === 'Enter' && /^\d{4,14}$/.test(lidos)) {
+
+            ev.preventDefault();
+
+            busca.value = lidos;
+            lidos = '';
+
+            busca.focus();
+            busca.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+        } else if (/^\d$/.test(ev.key)) {
+
+            lidos += ev.key;
+        }
+    });
 
 
     // Minúsculas e sem acento: "racao" acha "Ração"
@@ -599,12 +800,15 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
             || achados.find(p => normalizar(p.nome) === normalizar(texto))
             || (achados.length === 1 ? achados[0] : null);
 
+        ev.bipou = true; // adicionar() e o "não achou" abaixo já bipam (ver leitor pela câmera)
 
         if (produto) {
 
             adicionar(produto);
 
         } else if (achados.length > 1) {
+
+            bipe(false);
 
             // "ra" acha "Ração" e "Bolinha de Borracha": quem escolhe é o caixa
             mostrarSugestoes();
@@ -616,6 +820,8 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
         } else {
 
             fecharSugestoes(); // a lista também dizia "nenhum produto": a mensagem aparecia duas vezes
+
+            bipe(false);
 
             const esgotado = encontrar(texto, esgotados)[0];
 

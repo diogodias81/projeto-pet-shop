@@ -95,7 +95,8 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
           inputmode="numeric"
           placeholder="Leia para selecionar"
           data-sem-enter
-          data-seleciona="entrada-produto">
+          data-seleciona="entrada-produto"
+          data-camera>
       </label>
 
       <label>

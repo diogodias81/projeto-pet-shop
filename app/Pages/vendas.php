@@ -118,6 +118,7 @@ $esgotados = array_values(array_map(
         <input
           type="search"
           id="v-busca"
+          data-camera
           aria-label="Produto"
           placeholder="Leia o código de barras ou digite o nome"
           autocomplete="off"

@@ -38,7 +38,8 @@ header_remove('X-Powered-By');
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: same-origin');
-header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+// câmera só para o próprio sistema: leitor de código de barras (app.js, data-camera)
+header('Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=()');
 header("Content-Security-Policy: default-src 'self'; img-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
 
 set_exception_handler(function (Throwable $e): void {
