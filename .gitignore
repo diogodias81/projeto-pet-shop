@@ -3,3 +3,4 @@ public/uploads/
 *.jar
 .playwright-mcp/
 .env
+.claude/settings.local.json
