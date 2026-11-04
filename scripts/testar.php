@@ -64,6 +64,22 @@ try {
     Venda::cancelar($v['id'], $admin, 'teste automático');
     ok($estoque($p) === 8 && $lote('SEM-VALIDADE') === 5, 'cancelar devolve as 2 unidades ao lote de onde saíram');
     ok(recusa(fn() => Venda::cancelar($v['id'], $admin, 'de novo'), 'cancelar'), 'não cancela a mesma venda duas vezes');
+
+    // 5. Valores: formatos da tela aceitos, texto com dígitos soltos recusado (antes "1' OR '1'='1" virava 111)
+    $lidos = array_map('numero', ['12,50', '1.250,00', 'R$ 1.250,00', '12.5', '12', '1.250', '0.500', '', '-5']);
+    ok($lidos === [12.5, 1250.0, 1250.0, 12.5, 12.0, 1250.0, 0.5, 0.0, -5.0], 'numero() lê 12,50 / 1.250,00 / R$ 1.250,00 / 12.5 / 12 / 1.250 / 0.500 / vazio / -5');
+    foreach (["1' OR '1'='1", '12abc', '1e5', '1.250.00', '1,250.00', 'abc', '-', '12 15', '1 00', '1R$2', "1\u{A0}234", "\u{FEFF}12", "12\n", '0,001', '50,001', '0.125', '1.250,005'] as $t) ok(recusa(fn() => numero($t), 'valor válido'), 'numero() recusa ' . json_encode($t));
+    ok(numero(' R$ 12,50 ') === 12.5 && numero("R$\u{A0}1.234,56") === 1234.56 && numero("\t12\u{A0}") === 12.0, 'numero() aceita "R$" e espaços (inclusive NBSP) só nas pontas');
+    ok(recusa(fn() => Produto::salvar(['nome' => 'Milésimo', 'preco' => '0,001']), 'preço de venda válido'), 'preço 0,001 (exibido como R$ 0,00) é recusado');
+    ok(recusa(fn() => Despesa::criar(['descricao' => 'Milésimo', 'categoria' => 'outras', 'valor' => '0,001', 'data' => '2099-01-01'], (int) $admin['id']), 'valor válido'), 'despesa 0,001 é recusada pelo valor (antes da data)');
+    ok(recusa(fn() => Venda::registrar($admin['id'], [['produto_id' => $p, 'quantidade' => 1]], ['forma' => 'dinheiro', 'recebido' => '50,001']), 'Valor recebido inválido'), 'recebido 50,001 é recusado');
+    ok(numero('0,10') === 0.1 && numero('4,35') === 4.35 && numero('0,07') === 0.07, 'numero() aceita centavos (0,10 / 4,35 / 0,07)');
+    ok(recusa(fn() => Produto::salvar(['nome' => 'Injeção', 'preco' => "1' OR '1'='1"]), 'preço de venda válido'), 'produto com preço em texto é recusado');
+
+    // 6. Admin não redefine a própria senha (tem que usar "Minha senha", que pede a atual)
+    $_SESSION['user'] = ['id' => (int) $admin['id']];
+    ok(recusa(fn() => Usuario::redefinirSenha((int) $admin['id'], 'outra123'), 'Minha senha'), 'admin não redefine a própria senha sem a atual');
+    $_SESSION = [];
 } catch (Throwable $e) {
     echo 'ERRO - ' . get_class($e) . ': ' . $e->getMessage() . "\n";
     $falhas++;

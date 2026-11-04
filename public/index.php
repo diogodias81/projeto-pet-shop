@@ -19,6 +19,11 @@ if ($pagina === 'logout') {
         redirect('inicio');
     }
 
+    // Sessão já expirada (o token mudou): não há o que deslogar, vai para o login com o aviso
+    if (!usuario()) {
+        redirect('login');
+    }
+
     csrf_validar();
 
     $_SESSION = [];
@@ -49,6 +54,12 @@ if ($pagina === 'login') {
 
 
 if (!usuario()) {
+
+    // Lembra a tela (só o nome, validado contra as rotas) para voltar a ela depois do login
+    if (is_string($pagina) && isset($rotas[$pagina])) {
+        $_SESSION['voltar'] = $pagina;
+    }
+
     redirect('login');
 }
 

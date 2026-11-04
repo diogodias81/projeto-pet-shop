@@ -15,19 +15,21 @@ $alertasBaixo = Produto::baixoEstoque();
 $prazos = Estoque::prazos();
 
 // Comparação com o período anterior de mesmo tamanho: [valor atual, variação em % ou null quando não há base]
-$comparar = function (string $de, string $ate, string $deAnt, string $ateAnt): array {
+$variacaoPct = fn(float $atual, float $antes): ?float => $antes > 0 ? ($atual - $antes) / $antes * 100 : null;
+$comparar = function (string $de, string $ate, string $deAnt, string $ateAnt) use ($variacaoPct): array {
     $atual = Relatorio::faturamento($de, $ate);
-    $antes = Relatorio::faturamento($deAnt, $ateAnt);
-    return [$atual, $antes > 0 ? ($atual - $antes) / $antes * 100 : null];
+    return [$atual, $variacaoPct($atual, Relatorio::faturamento($deAnt, $ateAnt))];
 };
 $dia = fn(string $rel) => date('Y-m-d', strtotime($rel));
-$diaDoMes = (int) date('j');
+// Mês passado do dia 1 até o mesmo dia de hoje (ou o último dia dele, se for mais curto).
+// Não usar "first day of last month +N days": o PHP aplica o "first day of" por último e ignora o +N.
+$mesPassado = new DateTime('first day of last month');
+$fimMesPassado = (clone $mesPassado)->setDate((int) $mesPassado->format('Y'), (int) $mesPassado->format('n'), min((int) date('j'), (int) $mesPassado->format('t')));
+$faturamentoHoje = Relatorio::faturamento($hoje, $hoje);
 $resumo = [
-    ['Hoje', 'vs. ontem', ...$comparar($hoje, $hoje, $dia('-1 day'), $dia('-1 day'))],
+    ['Hoje', 'vs. ontem até este horário', $faturamentoHoje, $variacaoPct($faturamentoHoje, Relatorio::faturamentoOntemAteAgora())],
     ['Últimos 7 dias', 'vs. 7 dias anteriores', ...$comparar($dia('-6 days'), $hoje, $dia('-13 days'), $dia('-7 days'))],
-    // mesmo número de dias do mês passado (1 a N), para não comparar mês parcial com mês inteiro
-    ['Este mês', 'vs. mesmo período do mês passado', ...$comparar(date('Y-m-01'), $hoje, date('Y-m-01', strtotime('first day of last month')),
-        min(date('Y-m-d', strtotime('first day of last month +' . ($diaDoMes - 1) . ' days')), date('Y-m-t', strtotime('first day of last month'))))],
+    ['Este mês', 'vs. mesmo período do mês passado', ...$comparar(date('Y-m-01'), $hoje, $mesPassado->format('Y-m-d'), $fimMesPassado->format('Y-m-d'))],
 ];
 
 // Pendências: [gravidade, ícone, título, detalhe, link]
@@ -47,9 +49,11 @@ if (temPerfil(['admin'])) {
 }
 $vencidos = count(array_filter($alertasValidade, fn($l) => $l['dias'] < 0));
 $vencendo = count(array_filter($alertasValidade, fn($l) => $l['dias'] >= 0 && $l['dias'] <= min($prazos)));
-if ($vencidos) $tarefas[] = ['erro', 'exclamation-octagon', $vencidos . ($vencidos > 1 ? ' lotes vencidos' : ' lote vencido'), 'Retire da prateleira e dê baixa no estoque.', '#alertas'];
+// Quem não mexe no estoque (financeiro) recebe a orientação de avisar quem mexe
+$gereEstoque = podeGerirEstoque();
+if ($vencidos) $tarefas[] = ['erro', 'exclamation-octagon', $vencidos . ($vencidos > 1 ? ' lotes vencidos' : ' lote vencido'), $gereEstoque ? 'Retire da prateleira e dê baixa no estoque.' : 'Avise o responsável pelo estoque para retirar da prateleira.', '#alertas'];
 if ($vencendo) $tarefas[] = ['alerta', 'hourglass-split', $vencendo . ($vencendo > 1 ? ' lotes vencem' : ' lote vence') . ' em até ' . min($prazos) . ' dias', 'Priorize na venda ou faça uma promoção.', '#alertas'];
-if ($alertasBaixo) $tarefas[] = ['alerta', 'box-seam', count($alertasBaixo) . (count($alertasBaixo) > 1 ? ' produtos abaixo' : ' produto abaixo') . ' do mínimo', 'Hora de repor com o fornecedor.', '#alertas'];
+if ($alertasBaixo) $tarefas[] = ['alerta', 'box-seam', count($alertasBaixo) . (count($alertasBaixo) > 1 ? ' produtos precisam' : ' produto precisa') . ' de reposição', $gereEstoque ? 'Estoque no mínimo ou abaixo: hora de pedir ao fornecedor.' : 'Estoque no mínimo ou abaixo: avise quem faz as compras.', '#alertas'];
 
 $hora = (int) date('G');
 $saudacao = $hora < 12 ? 'Bom dia' : ($hora < 18 ? 'Boa tarde' : 'Boa noite');

@@ -35,10 +35,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   } catch (DomainException $ex) {
 
     flash($ex->getMessage(), 'erro');
+
+    // Erro: o formulário volta com o que foi escolhido (antes o lote e a quantidade se perdiam)
+    $_SESSION['form_estoque'] = array_intersect_key($_POST, array_flip(['acao', 'produto_id', 'quantidade', 'lote', 'validade', 'fornecedor', 'lote_id', 'motivo', 'observacao']));
   }
 
   redirect('estoque');
 }
+
+$antigo = $_SESSION['form_estoque'] ?? [];
+unset($_SESSION['form_estoque']);
+$antigoBaixa = ($antigo['acao'] ?? '') === 'baixa' ? $antigo : [];
+$antigoEntrada = $antigo && !$antigoBaixa ? $antigo : [];
+$sel = fn(array $a, string $campo, $valor) => (string) ($a[$campo] ?? '') === (string) $valor ? ' selected' : '';
 
 $busca = trim($_GET['q'] ?? '');
 
@@ -100,7 +109,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
           <?php foreach ($todos as $p): ?>
 
             <option
-              value="<?= $p['id'] ?>"
+              value="<?= $p['id'] ?>"<?= $sel($antigoEntrada, 'produto_id', $p['id']) ?>
               data-codigo="<?= e($p['codigo_barras'] ?? '') ?>">
               <?= e($p['nome']) ?>
               (atual: <?= $p['estoque'] ?>)
@@ -119,6 +128,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
           type="number"
           name="quantidade"
           min="1"
+          value="<?= e($antigoEntrada['quantidade'] ?? '') ?>"
           required>
       </label>
 
@@ -128,6 +138,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
         <input
           name="lote"
           maxlength="40"
+          value="<?= e($antigoEntrada['lote'] ?? '') ?>"
           placeholder="Opcional">
       </label>
 
@@ -138,6 +149,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
           name="validade"
           type="date"
           min="<?= date('Y-m-d') ?>"
+          value="<?= e($antigoEntrada['validade'] ?? '') ?>"
           title="Deixe vazio para produtos sem validade">
       </label>
 
@@ -146,6 +158,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
 
         <input
           name="fornecedor"
+          value="<?= e($antigoEntrada['fornecedor'] ?? '') ?>"
           maxlength="100">
       </label>
 
@@ -179,7 +192,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
         <select name="lote_id" required>
           <option value="">Escolha…</option>
           <?php foreach (Estoque::lotes() as $l): ?>
-            <option value="<?= $l['id'] ?>">
+            <option value="<?= $l['id'] ?>"<?= $sel($antigoBaixa, 'lote_id', $l['id']) ?>>
               <?= e($l['produto']) ?> · lote <?= e($l['codigo']) ?> · <?= $l['quantidade'] ?> un.<?= $l['validade'] ? ' · val. ' . date('d/m/Y', strtotime($l['validade'])) : '' ?><?= Estoque::situacao($l['validade']) === 'vencido' ? ' (VENCIDO)' : '' ?>
             </option>
           <?php endforeach; ?>
@@ -189,7 +202,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
       <label>
         Quantidade
 
-        <input name="quantidade" type="number" min="1" required>
+        <input name="quantidade" type="number" min="1" value="<?= e($antigoBaixa['quantidade'] ?? '') ?>" required>
       </label>
 
       <label>
@@ -197,7 +210,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
 
         <select name="motivo" required>
           <?php foreach (Estoque::MOTIVOS_BAIXA as $chave => $rotulo): ?>
-            <option value="<?= $chave ?>"><?= e($rotulo) ?></option>
+            <option value="<?= $chave ?>"<?= $sel($antigoBaixa, 'motivo', $chave) ?>><?= e($rotulo) ?></option>
           <?php endforeach; ?>
         </select>
       </label>
@@ -205,7 +218,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
       <label>
         Observação
 
-        <input name="observacao" maxlength="200" placeholder="Opcional">
+        <input name="observacao" maxlength="200" value="<?= e($antigoBaixa['observacao'] ?? '') ?>" placeholder="Opcional">
       </label>
 
       <button class="btn btn-primary">
@@ -266,7 +279,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
       <?php foreach ($produtos as $p): ?>
 
         <?php
-        $baixo = $p['estoque'] <= $p['estoque_minimo'];
+        $baixo = Produto::precisaRepor($p);
         ?>
 
         <tr>

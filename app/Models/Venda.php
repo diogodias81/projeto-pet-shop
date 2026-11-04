@@ -46,9 +46,7 @@ class Venda {
             $total = round($subtotal - $desconto, 2);
             $recebido = null;
             if ($forma === 'dinheiro') {
-                $bruto = trim((string)($pag['recebido'] ?? ''));
-                if ($bruto !== '' && !preg_match('/\d/', $bruto)) throw new DomainException('Valor recebido inválido: digite só números, ex.: 50,00.');
-                $recebido = numero($bruto) ?: $total;
+                $recebido = numero($pag['recebido'] ?? '', 'Valor recebido inválido: digite só números, ex.: 50,00.') ?: $total;
                 if ($recebido > 1000000) throw new DomainException('Valor recebido acima do limite de R$ 1.000.000,00.');
                 if ($recebido < $total) throw new DomainException('O valor recebido (' . moeda($recebido) . ') é menor que o total (' . moeda($total) . ').');
             }
@@ -61,9 +59,7 @@ class Venda {
 
     /** Desconto em R$, validado contra o subtotal e o limite de quem vende */
     private static function desconto(float $subtotal, array $pag, float $max): float {
-        $bruto = trim((string)($pag['desconto'] ?? ''));
-        if ($bruto !== '' && !preg_match('/\d/', $bruto)) throw new DomainException('Desconto inválido: digite só números, ex.: 5,00.');
-        $v = numero($bruto);
+        $v = numero($pag['desconto'] ?? '', 'Desconto inválido: digite só números, ex.: 5,00.');
         if ($v < 0) throw new DomainException('O desconto não pode ser negativo.');
         $desconto = round(($pag['desconto_tipo'] ?? 'valor') === 'percentual' ? $subtotal * $v / 100 : $v, 2);
         if ($desconto >= $subtotal) throw new DomainException('O desconto deve ser menor que o subtotal: a venda não pode ficar em R$ 0,00.');

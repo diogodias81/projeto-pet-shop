@@ -29,6 +29,10 @@ return [
     'desconto_max_vendedor' => 0.10,
 
 
+    // Minutos sem usar o sistema até a sessão expirar e pedir login de novo (caixa esquecido aberto).
+    'sessao_inatividade_min' => 30,
+
+
     // Prazos dos alertas de validade, em dias antes do vencimento.
     'alertas_validade_dias' => [30, 15, 7],
 

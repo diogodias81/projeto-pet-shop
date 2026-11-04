@@ -19,10 +19,20 @@ $situacao = Venda::situacao($venda);
 
 ?>
 
-<?php // venda acabou de ser feita (não é 2ª via): tela de sucesso do caixa ?>
-<?php if (!$segundaVia && $venda['status'] === 'concluida' && time() - strtotime($venda['criado_em']) < 600): ?>
+<?php
+// Venda que a própria pessoa acabou de fazer (não é 2ª via): tela de sucesso do caixa
+$sucesso = !$segundaVia && $venda['status'] === 'concluida' && (int) $venda['usuario_id'] === (int) usuario()['id']
+  && time() - strtotime($venda['criado_em']) < 600;
+if ($sucesso) {
+  // a tela já diz "Venda concluída": o aviso flutuante de sucesso repetiria e cobria o ícone no celular (avisos de estoque continuam)
+  foreach (flash() as [$msg, $tipo]) {
+    if ($tipo !== 'ok') flash($msg, $tipo);
+  }
+}
+?>
+<?php if ($sucesso): ?>
 
-  <div class="venda-sucesso nao-imprimir">
+  <div class="venda-sucesso nao-imprimir" data-limpar-carrinho="<?= (int) usuario()['id'] ?>">
     <span class="venda-sucesso-icone"><i class="bi bi-check-lg" aria-hidden="true"></i></span>
     <h1>Venda concluída</h1>
     <p><?= moeda($venda['total']) ?> em <?= e(Venda::FORMAS[$venda['forma_pagamento']] ?? '—') ?><?= $venda['valor_recebido'] !== null && $venda['valor_recebido'] > $venda['total'] ? ' · troco de <strong>' . moeda($venda['valor_recebido'] - $venda['total']) . '</strong>' : '' ?></p>
@@ -178,6 +188,9 @@ $situacao = Venda::situacao($venda);
 
       <dt>Devolvido</dt>
       <dd>− <?= moeda($venda['valor_devolvido']) ?></dd>
+
+      <dt><strong>Líquido</strong></dt>
+      <dd><strong><?= moeda($venda['total'] - $venda['valor_devolvido']) ?></strong></dd>
 
     <?php endif; ?>
 

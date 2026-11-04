@@ -59,7 +59,7 @@ $produtos = Produto::listar(
 // A gaveta do formulário já abre quando: editando, voltou com erro ou pediu "novo"
 $abrirGaveta = $gerencia && ($editando || $antigo || isset($_GET['novo']));
 
-$subtituloTopo = count($produtos) . (count($produtos) === 1 ? ' produto' : ' produtos') . ($busca !== '' || $catFiltro ? ' encontrados' : ' cadastrados');
+$subtituloTopo = count($produtos) . (count($produtos) === 1 ? ' produto' : ' produtos') . ($busca !== '' || $catFiltro ? (count($produtos) === 1 ? ' encontrado' : ' encontrados') : (count($produtos) === 1 ? ' cadastrado' : ' cadastrados'));
 
 if ($gerencia) {
   // Editando: "Novo produto" recarrega a página com o formulário vazio
@@ -118,7 +118,7 @@ $linkCat = fn(int $cat) => 'index.php?page=produtos' . ($cat ? '&amp;cat=' . $ca
           <?php endif; ?>
 
           <label>
-            Foto <?= !empty($editando['foto']) ? '<small>enviar outra substitui</small>' : '<small>JPG, PNG ou WEBP até 2 MB</small>' ?>
+            Foto <?= $antigo ? '<small class="negativo">escolha a foto de novo: o navegador não guarda o arquivo depois de um erro</small>' : (!empty($editando['foto']) ? '<small>enviar outra substitui</small>' : '<small>JPG, PNG ou WEBP até 2 MB</small>') ?>
 
             <input
               name="foto"
@@ -373,7 +373,7 @@ $linkCat = fn(int $cat) => 'index.php?page=produtos' . ($cat ? '&amp;cat=' . $ca
         <?php foreach ($produtos as $p): ?>
 
           <?php
-          $baixo = $p['estoque'] <= $p['estoque_minimo'];
+          $baixo = Produto::precisaRepor($p);
           ?>
 
           <tr<?= $editando && (int) $editando['id'] === (int) $p['id'] ? ' class="linha-ativa"' : '' ?>>
@@ -468,7 +468,7 @@ $linkCat = fn(int $cat) => 'index.php?page=produtos' . ($cat ? '&amp;cat=' . $ca
 
                 <form
                   method="post"
-                  data-confirmar="Excluir <?= e($p['nome']) ?>?">
+                  data-confirmar="Excluir <?= e($p['nome']) ?>?<?= $p['estoque'] > 0 ? ' Ainda há ' . (int) $p['estoque'] . ((int) $p['estoque'] === 1 ? ' unidade' : ' unidades') . ' em estoque, que deixam de aparecer no sistema.' : '' ?> O código de barras fica livre para outro produto.">
 
                   <?= csrf_campo() ?>
 

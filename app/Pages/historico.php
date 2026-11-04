@@ -237,15 +237,25 @@ if (isset($_GET['ver'])) {
         <dd><?= moeda($venda['subtotal']) ?></dd>
 
         <dt>Desconto</dt>
-        <dd><?= moeda($venda['desconto']) ?></dd>
-
-        <?php if ($venda['valor_devolvido'] > 0): ?>
-          <dt>Devolvido</dt>
-          <dd class="negativo">− <?= moeda($venda['valor_devolvido']) ?></dd>
-        <?php endif; ?>
+        <dd><?= $venda['desconto'] > 0 ? '− ' . moeda($venda['desconto']) : moeda(0) ?></dd>
 
         <dt class="detalhes-total">Total</dt>
         <dd class="detalhes-total"><?= moeda($venda['total']) ?></dd>
+
+        <?php if ($venda['valor_recebido'] !== null): ?>
+          <dt>Recebido</dt>
+          <dd><?= moeda($venda['valor_recebido']) ?></dd>
+          <dt>Troco</dt>
+          <dd><?= moeda($venda['valor_recebido'] - $venda['total']) ?></dd>
+        <?php endif; ?>
+
+        <?php // com devolução, o que ficou para a loja é o líquido: sem esta linha o Total parecia não bater ?>
+        <?php if ($venda['valor_devolvido'] > 0 && $venda['status'] !== 'cancelada'): ?>
+          <dt>Devolvido</dt>
+          <dd class="negativo">− <?= moeda($venda['valor_devolvido']) ?></dd>
+          <dt><strong>Líquido</strong></dt>
+          <dd><strong><?= moeda($venda['total'] - $venda['valor_devolvido']) ?></strong></dd>
+        <?php endif; ?>
 
         <?php if (temPerfil(['admin', 'financeiro'])): ?>
           <dt>Lucro bruto</dt>
@@ -338,10 +348,15 @@ $vendedores = array_filter(
 );
 
 // Resumo das vendas listadas (canceladas não somam)
-$concluidas = array_filter($vendas, fn($v) => $v['status'] !== 'cancelada');
-$somaLiquido = array_sum(array_column($concluidas, 'liquido'));
+// Mesma regra do Dashboard: venda que conta é a concluída e não devolvida por inteiro
+$validas = array_filter($vendas, fn($v) => $v['status'] === 'concluida' && !($v['total'] > 0 && $v['valor_devolvido'] >= $v['total']));
+$somaLiquido = array_sum(array_column($validas, 'liquido'));
+$foraDaConta = count($vendas) - count($validas);
 
-$subtituloTopo = $soProprias ? 'Suas vendas' : 'Todas as vendas da loja';
+// as datas do filtro vêm do GET sem validação: só mostra no subtítulo se forem datas de verdade
+$dataOk = fn($d) => is_string($d) && ($dt = DateTime::createFromFormat('!Y-m-d', $d)) && $dt->format('Y-m-d') === $d; // mesma regra de Relatorio::datas (30/02 e "\n" no fim não passam)
+$subtituloTopo = ($soProprias ? 'Suas vendas' : 'Todas as vendas da loja')
+  . ($dataOk($filtros['de']) && $dataOk($filtros['ate']) ? ' · ' . date('d/m/Y', strtotime($filtros['de'])) . ' a ' . date('d/m/Y', strtotime($filtros['ate'])) : '');
 if (temPerfil(['admin', 'vendedor'])) {
   $acoesTopo = '<a class="btn btn-primary" href="index.php?page=vendas"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nova venda</a>';
 }
@@ -362,8 +377,15 @@ $linkStatus = fn(string $s) => 'index.php?' . e(http_build_query(['page' => 'his
 
     <?php if ($vendas): ?>
       <div class="resumo-lista">
-        <span><strong><?= count($vendas) ?></strong> <?= count($vendas) === 1 ? 'venda' : 'vendas' ?></span>
+        <?php if ($filtros['status'] === 'cancelada'): // na aba Canceladas, "0 vendas · R$ 0,00" não dizia nada ?>
+          <span><strong><?= count($vendas) ?></strong> <?= count($vendas) === 1 ? 'venda cancelada' : 'vendas canceladas' ?></span>
+        <?php else: ?>
+        <span><strong><?= count($validas) ?></strong> <?= count($validas) === 1 ? 'venda' : 'vendas' ?></span>
         <span><strong><?= moeda($somaLiquido) ?></strong> líquido</span>
+        <?php endif; ?>
+        <?php if ($foraDaConta && $filtros['status'] !== 'cancelada'): ?>
+          <span title="Canceladas e devolvidas por inteiro não entram na soma"><strong><?= $foraDaConta ?></strong> <?= $foraDaConta === 1 ? 'cancelada/devolvida' : 'canceladas/devolvidas' ?></span>
+        <?php endif; ?>
       </div>
     <?php endif; ?>
   </div>
@@ -518,9 +540,11 @@ $linkStatus = fn(string $s) => 'index.php?' . e(http_build_query(['page' => 'his
             <td class="acoes">
 
               <a
-                class="btn btn-light btn-sm"
-                href="index.php?page=historico&amp;ver=<?= $v['id'] ?>">
-                Detalhes <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                class="btn btn-light btn-sm btn-quadrado"
+                href="index.php?page=historico&amp;ver=<?= $v['id'] ?>"
+                title="Detalhes da venda #<?= $v['id'] ?>"
+                aria-label="Detalhes da venda #<?= $v['id'] ?>">
+                <i class="bi bi-chevron-right" aria-hidden="true"></i>
               </a>
 
             </td>

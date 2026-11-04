@@ -33,7 +33,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       'sessao_versao' => (int) $u['sessao_versao']
     ];
 
-    redirect('inicio');
+    // Volta para a tela onde estava (ex.: sessão expirada no meio do trabalho), se este perfil pode abri-la.
+    // Só telas do menu: as que dependem de um id (comprovante) vão para o início.
+    $voltar = $_SESSION['voltar'] ?? null;
+    unset($_SESSION['voltar']);
+
+    redirect(is_string($voltar) && isset($rotas[$voltar]) && $rotas[$voltar][0] !== null && temPerfil($rotas[$voltar][1]) ? $voltar : 'inicio');
   }
 }
 
@@ -103,18 +108,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         value="<?= e($_POST['email'] ?? '') ?>"
         autocomplete="username"
         required
-        autofocus>
+        <?= $erro ? '' : 'autofocus' ?>>
     </label>
 
     <label>
       Senha
 
+      <?php // errou: o e-mail continua preenchido, então o cursor já vai para a senha ?>
       <input
         type="password"
         name="senha"
         autocomplete="current-password"
         data-revelar
-        required>
+        required
+        <?= $erro ? 'autofocus' : '' ?>>
     </label>
 
     <button class="btn btn-primary btn-lg">

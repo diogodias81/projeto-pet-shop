@@ -12,6 +12,11 @@ class Relatorio {
         return (float)self::um("SELECT COALESCE(SUM(" . self::LIQUIDO . "),0) FROM vendas WHERE date(criado_em) BETWEEN ? AND ?", [$de, $ate]);
     }
 
+    /** Faturamento de ontem só até este mesmo horário: comparar o dia de hoje (ainda pela metade) com o dia de ontem inteiro sempre parecia queda */
+    public static function faturamentoOntemAteAgora(): float {
+        return (float)self::um("SELECT COALESCE(SUM(" . self::LIQUIDO . "),0) FROM vendas WHERE date(criado_em) = date('now','localtime','-1 day') AND criado_em <= datetime('now','localtime','-1 day')");
+    }
+
     /**
      * Indicadores do período. Custo = custo das unidades vendidas e não devolvidas (custo 0 quando não foi cadastrado).
      * Lucro bruto = faturamento - custo; resultado = lucro bruto - despesas.

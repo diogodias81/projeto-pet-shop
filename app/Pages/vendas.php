@@ -86,7 +86,8 @@ $esgotados = array_values(array_map(
     method="post"
     id="form-venda"
     class="pdv"
-    data-desconto-max="<?= $descontoMax ?>">
+    data-desconto-max="<?= $descontoMax ?>"
+    data-usuario="<?= (int) usuario()['id'] ?>">
 
     <?= csrf_campo() ?>
 

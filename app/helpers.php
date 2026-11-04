@@ -51,28 +51,39 @@ function dataBr(string $d): string
 
 
 /**
- * Converte "143,99", "R$ 143,99", "1.234,56" ou "143.99" em número.
- * Retorna 0 se o valor for inválido.
+ * Converte "143,99", "R$ 143,99", "1.234,56", "1.250" (milhar) ou "143.99" em número. Vazio vira 0.
+ * Outro texto (ex.: "1' OR '1'='1", "12abc", "1e5") é recusado com $erro: antes os dígitos eram juntados e viravam outro valor.
+ * O PDV (numero() em app.js) aceita os mesmos formatos.
  */
-function numero($v): float
+function numero($v, string $erro = 'Informe um valor válido, ex.: 1.250,00'): float
 {
-    // mantém só dígitos, vírgula, ponto e sinal de menos (remove "R$", espaços etc.)
-    $v = preg_replace('/[^\d,.\-]/', '', (string) $v);
-
-    if (str_contains($v, ',')) {
-
-        $v = str_replace(
-            ['.', ','],
-            ['', '.'],
-            $v
-        );
-    } elseif (preg_match('/^-?[1-9]\d{0,2}(\.\d{3})+$/', $v)) {
-
-        // "1.250" sem vírgula é milhar (R$ 1.250,00), não 1,25
-        $v = str_replace('.', '', $v);
+    // "R$" e espaços (comum, tab, NBSP do moeda() do navegador) só nas pontas: "12 15" e "1R$2" não viram outro número
+    if (!preg_match('/^[ \t\x{A0}]*(?:R\$)?[ \t\x{A0}]*(.*?)[ \t\x{A0}]*\z/isu', (string) $v, $m)) {
+        throw new DomainException($erro);
     }
 
-    return is_numeric($v) ? (float) $v : 0.0;
+    $v = $m[1];
+
+    if ($v === '') {
+        return 0.0;
+    }
+
+    // Formato brasileiro: "1.250,00", "1250,5", "12"; "1.250" sem vírgula é milhar (R$ 1.250,00), não 1,25
+    if (preg_match('/^-?([1-9]\d{0,2}(\.\d{3})+|\d+)(,\d*)?$/D', $v)) {
+        $x = (float) str_replace(['.', ','], ['', '.'], $v);
+    } elseif (preg_match('/^-?\d+(\.\d+)?$/D', $v)) {
+        // Ponto decimal: "12.5"
+        $x = (float) $v;
+    } else {
+        throw new DomainException($erro);
+    }
+
+    // Dinheiro tem centavos: "0,001" seria exibido como R$ 0,00 e "50,001" como R$ 50,00 ("0.500" = 0,50 passa)
+    if (round($x, 2) != $x) {
+        throw new DomainException($erro);
+    }
+
+    return $x;
 }
 
 

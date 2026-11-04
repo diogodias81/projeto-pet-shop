@@ -124,6 +124,8 @@ class Usuario {
     }
     /** Admin define uma senha provisória (ex.: o usuário esqueceu a dele); o usuário troca no próximo acesso */
     public static function redefinirSenha(int $id, string $senha): void {
+        // A própria senha só em "Minha senha", que pede a atual e bloqueia após 5 erros
+        if ($id === (usuario()['id'] ?? 0)) throw new DomainException('Para trocar a sua própria senha use "Minha senha", que pede a senha atual.');
         self::validarSenha($senha);
         $st = Database::pdo()->prepare('SELECT nome, email FROM usuarios WHERE id = ?');
         $st->execute([$id]);
@@ -132,7 +134,6 @@ class Usuario {
         if (!$alvo) throw new DomainException('Usuário não encontrado.');
         // Derruba as sessões abertas do usuário: quem roubou uma não chega na tela de trocar a senha provisória
         Database::pdo()->prepare('UPDATE usuarios SET senha_hash = ?, trocar_senha = 1, sessao_versao = sessao_versao + 1 WHERE id = ?')->execute([password_hash($senha, PASSWORD_DEFAULT), $id]);
-        self::manterSessaoAtual($id);
         Auditoria::registrar('senha_redefinida', "{$alvo['nome']} <{$alvo['email']}>");
     }
     public static function listar(): array {

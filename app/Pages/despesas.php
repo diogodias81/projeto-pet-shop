@@ -24,7 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
   }
 
-  redirect('despesas');
+  // Volta com os mesmos filtros (excluir uma despesa limpava o período e a categoria)
+  [$deVolta, $ateVolta] = Relatorio::datas($_POST);
+  $catVolta = (string) ($_POST['filtro_categoria'] ?? '');
+  redirect('despesas', ['de' => $deVolta, 'ate' => $ateVolta] + (isset(Despesa::CATEGORIAS[$catVolta]) ? ['categoria' => $catVolta] : []));
 }
 
 $antigo = $_SESSION['form_despesa'] ?? [];
@@ -126,9 +129,15 @@ $icone = fn(string $cat) => Despesa::ICONES[$cat] ?? 'receipt';
 <div class="painel-topo painel-despesas">
 
   <section class="kpi kpi-destaque">
-    <span>Total no período</span>
-    <strong><?= moeda(array_sum($porCategoria)) ?></strong>
-    <small><?= count($porCategoria) ?> <?= count($porCategoria) === 1 ? 'categoria' : 'categorias' ?> com gastos</small>
+    <?php if ($categoria !== '' && isset(Despesa::CATEGORIAS[$categoria])): // com chip ativo, o destaque segue o filtro ?>
+      <span>Total de <?= e(Despesa::CATEGORIAS[$categoria]) ?> no período</span>
+      <strong><?= moeda($total) ?></strong>
+      <small>de <?= moeda(array_sum($porCategoria)) ?> em todas as categorias</small>
+    <?php else: ?>
+      <span>Total no período</span>
+      <strong><?= moeda(array_sum($porCategoria)) ?></strong>
+      <small><?= count($porCategoria) ?> <?= count($porCategoria) === 1 ? 'categoria' : 'categorias' ?> com gastos</small>
+    <?php endif; ?>
   </section>
 
   <section class="card card-body">
@@ -155,6 +164,15 @@ $icone = fn(string $cat) => Despesa::ICONES[$cat] ?? 'receipt';
   <div class="card-titulo card-titulo-quebra">
     <h2>Lançamentos</h2>
 
+    <div class="filtro-periodo">
+    <?php // mesmos atalhos do Dashboard e dos Relatórios, mantendo a categoria escolhida ?>
+    <nav class="segmentado" aria-label="Atalhos de período">
+      <?php foreach (['hoje' => 'Hoje', 'semana' => '7 dias', 'mes' => 'Este mês'] as $chave => $rotulo): ?>
+        <?php $ativo = ($_GET['periodo'] ?? '') === $chave; ?>
+        <a class="<?= $ativo ? 'active' : '' ?>" href="index.php?<?= e(http_build_query(['page' => 'despesas', 'periodo' => $chave] + ($categoria !== '' ? ['categoria' => $categoria] : []))) ?>"<?= $ativo ? ' aria-current="true"' : '' ?>><?= $rotulo ?></a>
+      <?php endforeach; ?>
+    </nav>
+
     <form method="get" class="filtro-datas">
       <input type="hidden" name="page" value="despesas">
       <?php if ($categoria !== ''): ?><input type="hidden" name="categoria" value="<?= e($categoria) ?>"><?php endif; ?>
@@ -163,6 +181,7 @@ $icone = fn(string $cat) => Despesa::ICONES[$cat] ?? 'receipt';
       <label><span class="visually-hidden">Até</span><input type="date" name="ate" value="<?= e($ate) ?>" aria-label="Até"></label>
       <button class="btn btn-light"><i class="bi bi-funnel" aria-hidden="true"></i> Filtrar</button>
     </form>
+    </div>
   </div>
 
   <nav class="chips" aria-label="Filtrar por categoria">
@@ -215,6 +234,9 @@ $icone = fn(string $cat) => Despesa::ICONES[$cat] ?? 'receipt';
                 <?= csrf_campo() ?>
                 <input type="hidden" name="acao" value="excluir">
                 <input type="hidden" name="id" value="<?= $d['id'] ?>">
+                <input type="hidden" name="de" value="<?= e($de) ?>">
+                <input type="hidden" name="ate" value="<?= e($ate) ?>">
+                <input type="hidden" name="filtro_categoria" value="<?= e($categoria) ?>">
                 <button class="btn btn-outline-danger btn-sm btn-quadrado" title="Excluir" aria-label="Excluir a despesa <?= e($d['descricao']) ?>"><i class="bi bi-trash3" aria-hidden="true"></i></button>
               </form>
             </td>

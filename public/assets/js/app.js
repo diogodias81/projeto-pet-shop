@@ -198,7 +198,66 @@ if (matchMedia('(min-width: 641px)').matches) {
 // Gaveta com formulário (ex.: produto): abre já carregada quando está editando ou voltou com erro
 document.querySelectorAll('.offcanvas[data-abrir]').forEach(el => {
 
+    // O erro do servidor fica dentro da gaveta: na página ele ficava atrás do fundo escuro
+    const corpo = el.querySelector('.offcanvas-body');
+
+    document.querySelectorAll('#conteudo > .alert-danger, #conteudo > .alert-warning').forEach(a => corpo?.prepend(a));
+
     if (window.bootstrap) bootstrap.Offcanvas.getOrCreateInstance(el).show();
+});
+
+document.querySelectorAll('.offcanvas.gaveta').forEach(el => {
+
+    // Ao abrir, o cursor vai para o primeiro campo (não para a caixa da gaveta)
+    el.addEventListener('shown.bs.offcanvas', () => {
+
+        el.querySelector('.offcanvas-body input:not([type="hidden"]):not([type="file"]):not([type="radio"]), .offcanvas-body select')?.focus();
+    });
+
+    // Fechou sem salvar: tira ?editar= e &novo= do endereço, senão recarregar a página abria a gaveta de novo
+    el.addEventListener('hidden.bs.offcanvas', () => {
+
+        const url = new URL(location.href);
+
+        if (url.searchParams.has('editar') || url.searchParams.has('novo')) {
+
+            url.searchParams.delete('editar');
+            url.searchParams.delete('novo');
+
+            history.replaceState(null, '', url);
+        }
+    });
+});
+
+
+// Abas de seção (estoque): destaca a seção que está na tela
+
+document.querySelectorAll('.abas-secao').forEach(nav => {
+
+    const links = [...nav.querySelectorAll('a[href^="#"]')];
+
+    const secoes = links.map(a => document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean);
+
+    if (!secoes.length || !('IntersectionObserver' in window)) return;
+
+    const visiveis = new Set();
+
+    const marcar = () => {
+
+        const atual = secoes.find(s => visiveis.has(s));
+
+        links.forEach(a => a.classList.toggle('active', !!atual && a.getAttribute('href') === '#' + atual.id));
+    };
+
+    const obs = new IntersectionObserver(entradas => {
+
+        entradas.forEach(e => e.isIntersecting ? visiveis.add(e.target) : visiveis.delete(e.target));
+
+        marcar();
+
+    }, { rootMargin: '-140px 0px -55% 0px' });
+
+    secoes.forEach(s => obs.observe(s));
 });
 
 
@@ -226,11 +285,32 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
         );
 
 
-        if (!opt) {
+        // Aviso na tela (não alert): e o código desconhecido desmarca o produto escolhido antes,
+        // para o estoquista não lançar a entrada no produto errado
+        let aviso = input.parentElement.querySelector('.busca-aviso');
 
-            return alert('Nenhum produto com o código ' + codigo + '.');
+        if (!aviso) {
+            aviso = document.createElement('small');
+            aviso.className = 'busca-aviso';
+            aviso.setAttribute('role', 'alert');
+            input.after(aviso);
         }
 
+        if (!opt) {
+
+            select.value = '';
+
+            aviso.textContent = codigo ? 'Nenhum produto com o código ' + codigo + '.' : 'Leia ou digite o código.';
+
+            aviso.hidden = false;
+
+            input.select();
+
+            return;
+        }
+
+
+        aviso.hidden = true;
 
         select.value = opt.value;
 
@@ -304,16 +384,21 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
     };
 
 
-    // "1.234,56", "12,5" ou "12.5" → número
+    // "1.234,56", "12,5" ou "12.5" → número; vazio → 0; outro texto → NaN (mesmos formatos de numero() em helpers.php)
     const numero = texto => {
 
-        // mantém o "-" para a tela recusar o mesmo que o servidor recusa
-        let v = String(texto).replace(/[^\d,.\-]/g, '');
+        // "R$" e espaços (comum, tab, NBSP) só nas pontas, igual ao servidor: "12 15" e "1R$2" são recusados
+        const v = /^[ \t\u00A0]*(?:R\$)?[ \t\u00A0]*([\s\S]*?)[ \t\u00A0]*$/i.exec(String(texto))[1];
 
-        if (v.includes(',')) v = v.replace(/\./g, '').replace(',', '.');
-        else if (/^-?[1-9]\d{0,2}(\.\d{3})+$/.test(v)) v = v.replace(/\./g, ''); // "1.250" é milhar
+        if (v === '') return 0;
 
-        return parseFloat(v) || 0;
+        // "1.250" sem vírgula é milhar
+        let x = NaN;
+        if (/^-?([1-9]\d{0,2}(\.\d{3})+|\d+)(,\d*)?$/.test(v)) x = parseFloat(v.replace(/\./g, '').replace(',', '.'));
+        else if (/^-?\d+(\.\d+)?$/.test(v)) x = parseFloat(v);
+
+        // Dinheiro tem centavos: "0,001" e "50,001" são recusados ("0.500" = 0,50 passa), igual ao servidor
+        return Math.round(x * 100) / 100 === x ? x : NaN;
     };
 
 
@@ -334,7 +419,13 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
         if (jaNoCarrinho + quantidade > produto.estoque) {
 
-            alert('Estoque insuficiente para ' + produto.nome + '. Disponível: ' + produto.estoque);
+            avisoBusca.textContent = 'Estoque insuficiente para ' + produto.nome + ': ' + produto.estoque + (produto.estoque === 1 ? ' unidade disponível' : ' unidades disponíveis') + (jaNoCarrinho ? ', todas já no carrinho.' : '.');
+
+            avisoBusca.hidden = false;
+
+            fecharSugestoes();
+
+            busca.select();
 
             return;
         }
@@ -524,6 +615,8 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
         } else {
 
+            fecharSugestoes(); // a lista também dizia "nenhum produto": a mensagem aparecia duas vezes
+
             const esgotado = encontrar(texto, esgotados)[0];
 
             avisoBusca.textContent = esgotado
@@ -543,21 +636,22 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
         const subtotal = centavos(itens.reduce((s, i) => s + i.produto.preco * i.quantidade, 0));
 
-        const v = numero(descInput.value);
+        // Texto inválido (NaN) conta como 0 nos totais e vira a mensagem de problema abaixo
+        const descLido = numero(descInput.value);
+        const v = descLido || 0;
 
-        const desconto = centavos(descTipo.value === 'percentual' ? subtotal * v / 100 : v);
+        // Negativo vira o aviso abaixo; nos totais conta 0 (antes a prévia mostrava "− -R$ 5,00" e o total subia)
+        const desconto = v < 0 ? 0 : centavos(descTipo.value === 'percentual' ? subtotal * v / 100 : v);
 
         const total = centavos(subtotal - desconto);
 
-        const pago = numero(recebido.value);
+        const pagoLido = numero(recebido.value);
+        const pago = pagoLido || 0;
 
 
         let problema = '';
 
-        // Texto sem nenhum número (ex.: "abc") viraria 0 em silêncio
-        const semNumero = campo => campo.value.trim() !== '' && !/\d/.test(campo.value);
-
-        if (semNumero(descInput)) {
+        if (Number.isNaN(descLido)) {
 
             problema = 'Desconto inválido: digite só números, ex.: 5,00.';
 
@@ -565,7 +659,7 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
             problema = 'O desconto não pode ser negativo.';
 
-        } else if (forma.value === 'dinheiro' && semNumero(recebido)) {
+        } else if (forma.value === 'dinheiro' && Number.isNaN(pagoLido)) {
 
             problema = 'Valor recebido inválido: digite só números, ex.: 50,00.';
 
@@ -685,7 +779,9 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
                     qtd.value = item.quantidade = p.estoque;
 
-                    alert('Estoque disponível de ' + p.nome + ': ' + p.estoque);
+                    avisoBusca.textContent = 'Estoque disponível de ' + p.nome + ': ' + p.estoque + (p.estoque === 1 ? ' unidade.' : ' unidades.');
+
+                    avisoBusca.hidden = false;
 
                 } else {
 
@@ -722,9 +818,20 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
             btn.type = 'button';
 
-            btn.className = 'btn btn-outline-danger btn-sm';
+            // Só ícone (como nas outras tabelas): o texto "Remover" não cabia na linha do carrinho no celular
+            btn.className = 'btn btn-outline-danger btn-sm btn-quadrado';
 
-            btn.textContent = 'Remover';
+            btn.title = 'Remover';
+
+            btn.setAttribute('aria-label', 'Remover ' + p.nome);
+
+            const lixeira = document.createElement('i');
+
+            lixeira.className = 'bi bi-trash3';
+
+            lixeira.setAttribute('aria-hidden', 'true');
+
+            btn.appendChild(lixeira);
 
             btn.addEventListener('click', () => {
 
@@ -765,6 +872,61 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
     [descTipo, forma].forEach(el => el.addEventListener('change', atualizarTotais));
 
 
+    // ---- carrinho guardado no navegador ----
+    // Recarregar, sair da tela ou a sessão expirar (30 min) não pode fazer o caixa ler tudo de novo
+    // com o cliente esperando. Fica por usuário neste navegador; o comprovante da venda limpa (data-limpar-carrinho).
+
+    const chave = 'pdv-carrinho:' + (form.dataset.usuario || '');
+
+    const guardar = () => {
+
+        try {
+
+            if (!itens.length) { localStorage.removeItem(chave); return; }
+
+            localStorage.setItem(chave, JSON.stringify({
+                itens: JSON.parse(hidden.value || '[]'),
+                desconto_tipo: descTipo.value, desconto: descInput.value, forma: forma.value, recebido: recebido.value,
+                em: Date.now(),
+            }));
+
+        } catch (e) { /* navegador sem armazenamento (modo privado): segue sem guardar */ }
+    };
+
+    [descInput, recebido].forEach(el => el.addEventListener('input', guardar));
+
+    [descTipo, forma].forEach(el => el.addEventListener('change', guardar));
+
+    const sincronizarSemGuardar = sincronizar;
+
+    sincronizar = () => { sincronizarSemGuardar(); guardar(); };
+
+    let recuperado = false;
+
+    // Só quando o servidor não devolveu um carrinho (venda recusada tem prioridade)
+    if (!hidden.value) {
+
+        try {
+
+            const salvo = JSON.parse(localStorage.getItem(chave) || 'null');
+
+            // carrinho de mais de 12 h é de outro dia: descarta
+            if (salvo && Array.isArray(salvo.itens) && salvo.itens.length && Date.now() - salvo.em < 12 * 3600 * 1000) {
+
+                hidden.value = JSON.stringify(salvo.itens);
+
+                descTipo.value = salvo.desconto_tipo === 'percentual' ? 'percentual' : 'valor';
+                descInput.value = String(salvo.desconto || '');
+                if ([...forma.options].some(o => o.value === salvo.forma)) forma.value = salvo.forma;
+                recebido.value = String(salvo.recebido || '');
+
+                recuperado = true;
+            }
+
+        } catch (e) { /* armazenamento indisponível ou corrompido: começa vazio */ }
+    }
+
+
     form.addEventListener('submit', ev => {
 
         if (finalizar.disabled) { ev.preventDefault(); return; }
@@ -773,7 +935,19 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
     });
 
 
-    // Venda recusada pelo servidor: o carrinho volta, limitado ao estoque de agora
+    // Barra do celular: rola até o pagamento sem pôr #pdv-pagamento no endereço
+    // (o fragmento ia junto no redirecionamento para o comprovante)
+    $('v-barra').addEventListener('click', ev => {
+
+        ev.preventDefault();
+
+        $('pdv-pagamento').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        forma.focus({ preventScroll: true });
+    });
+
+
+    // Venda recusada pelo servidor (ou carrinho recuperado): volta limitado ao estoque de agora
     let ajustados = [];
 
     try {
@@ -796,8 +970,28 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
         avisoBusca.textContent = 'Ajustado ao estoque disponível: ' + ajustados.join(', ') + '.';
 
         avisoBusca.hidden = false;
+
+    } else if (recuperado && itens.length) {
+
+        avisoBusca.textContent = 'Carrinho recuperado (' + itens.length + (itens.length === 1 ? ' produto' : ' produtos') + '). Confira antes de finalizar.';
+
+        avisoBusca.hidden = false;
     }
 
     renderizar();
 
 })();
+
+
+// Sair: apaga os carrinhos guardados neste navegador (a sessão expirada não passa por aqui, e aí o carrinho fica para o novo login)
+document.querySelectorAll('form[action="index.php?page=logout"]').forEach(f => f.addEventListener('submit', () => {
+
+    try { Object.keys(localStorage).filter(k => k.startsWith('pdv-carrinho:')).forEach(k => localStorage.removeItem(k)); } catch (e) { }
+}));
+
+
+// Comprovante da venda que o caixa acabou de fazer: o carrinho guardado já virou venda
+document.querySelectorAll('[data-limpar-carrinho]').forEach(el => {
+
+    try { localStorage.removeItem('pdv-carrinho:' + el.dataset.limparCarrinho); } catch (e) { }
+});

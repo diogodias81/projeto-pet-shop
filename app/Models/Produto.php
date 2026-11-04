@@ -26,8 +26,8 @@ class Produto {
     public static function salvar(array $d, ?array $foto = null): void {
         $nome = trim($d['nome'] ?? '');
         $codigo = trim($d['codigo_barras'] ?? '') ?: null;
-        $preco = numero($d['preco'] ?? 0);
-        $custo = numero($d['preco_custo'] ?? 0);
+        $preco = numero($d['preco'] ?? 0, 'Informe um preço de venda válido, ex.: 143,99');
+        $custo = numero($d['preco_custo'] ?? 0, 'Informe um preço de custo válido, ex.: 80,00');
         $min = (int)($d['estoque_minimo'] ?? 0);
         $cat = (int)($d['categoria_id'] ?? 0) ?: null;
         $id = (int)($d['id'] ?? 0);
@@ -39,14 +39,17 @@ class Produto {
         if ($preco > 1000000 || $custo > 1000000) throw new DomainException('Preço acima do limite de R$ 1.000.000,00.');
         if ($min < 0)     throw new DomainException('O estoque mínimo não pode ser negativo.');
         $pdo = Database::pdo();
-        if ($codigo !== null) {
-            $st = $pdo->prepare('SELECT nome FROM produtos WHERE codigo_barras = ? AND id <> ?');
-            $st->execute([$codigo, $id]);
-            if ($outro = $st->fetchColumn()) throw new DomainException("O código de barras $codigo já pertence a \"$outro\".");
-        }
         $arquivo = null;
         $pdo->exec('BEGIN IMMEDIATE'); // lê o produto antes de gravar: ver Estoque::entrada
         try {
+            if ($codigo !== null) {
+                // Produto excluído (inativo) não segura o código: libera para o cadastro novo (o índice é UNIQUE).
+                // Dentro da transação: se o salvamento falhar (produto inexistente, foto recusada), o rollback desfaz.
+                $pdo->prepare('UPDATE produtos SET codigo_barras = NULL WHERE codigo_barras = ? AND ativo = 0 AND id <> ?')->execute([$codigo, $id]);
+                $st = $pdo->prepare('SELECT nome FROM produtos WHERE codigo_barras = ? AND id <> ?');
+                $st->execute([$codigo, $id]);
+                if ($outro = $st->fetchColumn()) throw new DomainException("O código de barras $codigo já pertence a \"$outro\".");
+            }
             // foto dentro do try: se a transação falhar, o catch apaga o arquivo salvo
             $arquivo = $foto && $foto['error'] !== UPLOAD_ERR_NO_FILE ? self::guardarFoto($foto) : null;
             if ($id) {
@@ -80,12 +83,17 @@ class Produto {
     public static function excluir(int $id): void {
         $p = self::buscar($id);
         if (!$p) throw new DomainException('Produto não encontrado.');
-        Database::pdo()->prepare('UPDATE produtos SET ativo = 0 WHERE id = ?')->execute([$id]);
-        Auditoria::registrar('produto_excluido', "{$p['nome']} (#$id), estoque de {$p['estoque']} unidade(s)");
+        // Libera o código de barras: o índice é UNIQUE e o produto excluído não volta pela tela
+        Database::pdo()->prepare('UPDATE produtos SET ativo = 0, codigo_barras = NULL WHERE id = ?')->execute([$id]);
+        Auditoria::registrar('produto_excluido', "{$p['nome']} (#$id)" . ($p['codigo_barras'] ? ", código {$p['codigo_barras']} liberado" : '') . ", estoque de {$p['estoque']} " . ((int) $p['estoque'] === 1 ? 'unidade' : 'unidades'));
     }
-    /** Produtos com estoque igual ou abaixo do mínimo */
+    /** Precisa repor: estoque igual ou abaixo do mínimo (mínimo 0 = não controla reposição) */
+    public static function precisaRepor(array $p): bool {
+        return $p['estoque_minimo'] > 0 && $p['estoque'] <= $p['estoque_minimo'];
+    }
+    /** Produtos que precisam de reposição (ver precisaRepor) */
     public static function baixoEstoque(): array {
-        return Database::pdo()->query('SELECT p.*, c.nome AS categoria FROM produtos p LEFT JOIN categorias c ON c.id=p.categoria_id WHERE p.ativo=1 AND p.estoque <= p.estoque_minimo ORDER BY p.estoque')->fetchAll();
+        return Database::pdo()->query('SELECT p.*, c.nome AS categoria FROM produtos p LEFT JOIN categorias c ON c.id=p.categoria_id WHERE p.ativo=1 AND p.estoque_minimo > 0 AND p.estoque <= p.estoque_minimo ORDER BY p.estoque')->fetchAll();
     }
     /** Margem sobre o preço de venda, em %. Null quando o custo não foi informado. */
     public static function margem(array $p): ?float {

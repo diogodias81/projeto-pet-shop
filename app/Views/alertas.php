@@ -11,7 +11,7 @@ $prazos ??= Estoque::prazos();
 
     <?php if (!$alertasValidade && !$alertasBaixo): ?>
 
-        <p class="vazio">Nenhum alerta: nada vencido, nada vencendo nos próximos <?= $prazos[0] ?> dias e nenhum produto abaixo do mínimo.</p>
+        <p class="vazio">Nenhum alerta: nada vencido, nada vencendo nos próximos <?= $prazos[0] ?> dias e nenhum produto precisando de reposição.</p>
 
     <?php else: ?>
 
@@ -48,11 +48,11 @@ $prazos ??= Estoque::prazos();
                             <td class="num"><?= $l['quantidade'] ?></td>
                             <td>
                                 <?php if ($l['dias'] < 0): ?>
-                                    <span class="selo selo-erro">Vencido há <?= -$l['dias'] ?> dia(s): retirar</span>
+                                    <span class="selo selo-erro">Vencido há <?= -$l['dias'] ?> <?= -$l['dias'] === 1 ? 'dia' : 'dias' ?>: retirar</span>
                                 <?php elseif ($l['dias'] === 0): ?>
                                     <span class="selo selo-erro">Vence hoje</span>
                                 <?php else: ?>
-                                    <span class="selo <?= Estoque::faixa($l['dias']) === min($prazos) ? 'selo-erro' : 'selo-alerta' ?>">Vence em <?= $l['dias'] ?> dia(s)</span>
+                                    <span class="selo <?= Estoque::faixa($l['dias']) === min($prazos) ? 'selo-erro' : 'selo-alerta' ?>">Vence em <?= $l['dias'] ?> <?= $l['dias'] === 1 ? 'dia' : 'dias' ?></span>
                                 <?php endif; ?>
                             </td>
                         </tr>

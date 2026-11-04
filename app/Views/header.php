@@ -131,15 +131,17 @@ $sair = '<form method="post" action="index.php?page=logout" class="m-0">' . csrf
     <!-- Celular: topo com o nome da tela -->
     <header class="topo-movel d-lg-none d-print-none">
         <a class="marca" href="index.php"><span class="marca-icone" aria-hidden="true">🐾</span> <?= e(config('app_nome')) ?></a>
-        <span class="avatar avatar-sm" title="<?= e($u['nome'] . ' · ' . $perfilNome) ?>" aria-hidden="true"><?= e($iniciais) ?></span>
+        <button type="button" class="avatar avatar-sm avatar-botao" data-bs-toggle="offcanvas" data-bs-target="#menu-mais" aria-controls="menu-mais" title="<?= e($u['nome'] . ' · ' . $perfilNome) ?>" aria-label="Menu da conta: <?= e($u['nome']) ?>"><?= e($iniciais) ?></button>
     </header>
 
     <main class="conteudo" id="conteudo" tabindex="-1">
 
         <?php if (!in_array($atual, ['dashboard', 'comprovante'], true) && $tituloAba): // o dashboard tem saudação própria ?>
             <?php // a página roda antes do layout: pode definir $subtituloTopo (texto) e $acoesTopo (HTML pronto, já escapado) ?>
-            <header class="pagina-topo d-print-none">
+            <header class="pagina-topo">
                 <div>
+                    <?php // no papel (relatórios) o cabeçalho identifica a loja ?>
+                    <p class="so-imprimir pagina-loja"><?= e(config('loja')['nome'] ?? config('app_nome')) ?></p>
                     <h1><?= e($tituloAba) ?></h1>
                     <?php if (!empty($subtituloTopo)): ?><p class="pagina-sub"><?= e($subtituloTopo) ?></p><?php endif; ?>
                 </div>

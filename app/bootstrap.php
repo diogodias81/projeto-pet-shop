@@ -20,9 +20,19 @@ session_start([
     'cookie_samesite' => 'Lax',
     'cookie_secure' => ($_SERVER['HTTPS'] ?? 'off') !== 'off',
     'use_strict_mode' => true,
+    // O PHP não pode apagar o arquivo da sessão antes do prazo de inatividade (padrão dele: 24 min)
+    'gc_maxlifetime' => config('sessao_inatividade_min') * 60,
 ]);
 
 $_SESSION['csrf'] ??= bin2hex(random_bytes(16));
+
+// Caixa esquecido aberto: sem uso por sessao_inatividade_min minutos, a sessão acaba e pede login de novo
+if (isset($_SESSION['user']) && time() - ($_SESSION['ultimo_acesso'] ?? time()) > config('sessao_inatividade_min') * 60) {
+    $_SESSION = ['csrf' => bin2hex(random_bytes(16))];
+    session_regenerate_id(true);
+    flash('Sua sessão expirou por inatividade. Entre de novo.', 'alerta');
+}
+$_SESSION['ultimo_acesso'] = time();
 
 header_remove('X-Powered-By');
 header('X-Frame-Options: DENY');

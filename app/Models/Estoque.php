@@ -165,7 +165,7 @@ class Estoque {
             $st->execute([$loteId]);
             $l = $st->fetch();
             if (!$l) throw new DomainException('Lote não encontrado.');
-            if ($qtd > $l['quantidade']) throw new DomainException("O lote {$l['codigo']} de {$l['nome']} só tem {$l['quantidade']} unidade(s).");
+            if ($qtd > $l['quantidade']) throw new DomainException("O lote {$l['codigo']} de {$l['nome']} só tem {$l['quantidade']} " . ((int) $l['quantidade'] === 1 ? 'unidade' : 'unidades') . '.');
             $pdo->prepare('UPDATE lotes SET quantidade = quantidade - ? WHERE id = ?')->execute([$qtd, $loteId]);
             $pdo->prepare('UPDATE produtos SET estoque = estoque - ? WHERE id = ?')->execute([$qtd, $l['produto_id']]);
             self::registrar((int)$l['produto_id'], $loteId, 'baixa', -$qtd, null, self::MOTIVOS_BAIXA[$motivo] . (trim($obs) ? ': ' . trim($obs) : ''));
