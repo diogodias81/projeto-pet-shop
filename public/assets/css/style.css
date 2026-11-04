@@ -513,6 +513,9 @@ tr.linha-inativa .pessoa { opacity: .55; }
 .opcao-perfil input { position: absolute; opacity: 0; pointer-events: none; }
 .opcao-perfil small { font-weight: 400; }
 .opcao-perfil:hover { border-color: #d3ccc0; }
+/* Perfil travado (o próprio usuário): parece travado, sem cursor de mão nem destaque ao passar o mouse */
+.opcao-perfil:has(input:disabled) { opacity: .5; cursor: not-allowed; background: var(--fundo); }
+.opcao-perfil:has(input:disabled):hover { border-color: var(--borda); }
 .opcao-perfil:has(input:checked) { border-color: var(--primaria); background: var(--primaria-clara); box-shadow: inset 0 0 0 1px var(--primaria); }
 .opcao-perfil:has(input:focus-visible) { outline: 3px solid var(--primaria); outline-offset: 2px; }
 /* Menu "⋯" com as ações da linha */
@@ -522,6 +525,8 @@ tr.linha-inativa .pessoa { opacity: .55; }
 .menu-acoes > summary::-webkit-details-marker { display: none; }
 .menu-acoes[open] > summary { background: var(--neutro); }
 .menu-acoes-painel { position: absolute; right: 0; top: calc(100% + .35rem); z-index: 20; display: grid; gap: .25rem; width: 17rem; padding: .5rem; border: 1px solid var(--borda); border-radius: var(--raio); background: var(--painel); box-shadow: var(--sombra-alta); text-align: left; white-space: normal; animation: surgir .15s ease-out; }
+/* Últimas linhas da lista: o menu abre para cima (para baixo ficava atrás da barra inferior do celular) */
+tbody tr:nth-last-child(-n+2):not(:nth-child(-n+2)) .menu-acoes-painel { top: auto; bottom: calc(100% + .35rem); }
 .menu-acoes-painel form { margin: 0 !important; }
 .menu-acoes-senha { display: grid; gap: .45rem; padding: .35rem .35rem .6rem; margin-bottom: .2rem !important; border-bottom: 1px solid var(--borda); }
 .menu-acoes-senha input { width: 100%; min-width: 0; margin: 0 !important; }
@@ -680,7 +685,8 @@ tr.linha-inativa .pessoa { opacity: .55; }
 .avatar-botao:focus-visible { outline: 3px solid var(--primaria); outline-offset: 2px; }
 
 /* Aviso do leitor de código (entrada de estoque) logo abaixo do campo */
-small.busca-aviso { display: block; margin: .25rem 0 0; font-size: .8rem; }
+/* width 0 + min-width 100%: o aviso quebra na largura do campo em vez de alargar o campo */
+small.busca-aviso { display: block; width: 0; min-width: 100%; margin: .25rem 0 0; font-size: .8rem; }
 .gaveta-form > .alert { margin: 0; }
 
 /* Quem pediu menos movimento no aparelho não vê animações */

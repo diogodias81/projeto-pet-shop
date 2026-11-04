@@ -1,14 +1,16 @@
 <?php
 // Filtro de período (atalhos + De/Até). Espera $pagina, $de, $ate.
-$atual = $_GET['periodo'] ?? '';
+
 ?>
 <form method="get" class="filtro-periodo d-print-none">
 
     <input type="hidden" name="page" value="<?= e($pagina) ?>">
 
     <nav class="segmentado" aria-label="Atalhos de período">
+        <?php $aceso = false; ?>
         <?php foreach (['hoje' => 'Hoje', 'semana' => '7 dias', 'mes' => 'Este mês'] as $chave => $rotulo): ?>
-            <a class="<?= $atual === $chave ? 'active' : '' ?>" href="index.php?page=<?= e($pagina) ?>&amp;periodo=<?= $chave ?>"<?= $atual === $chave ? ' aria-current="true"' : '' ?>><?= $rotulo ?></a>
+            <?php $ativo = !$aceso && Relatorio::datas(['periodo' => $chave]) === [$de, $ate]; $aceso = $aceso || $ativo; // aceso pelas datas (vale depois de filtrar); no dia 1º Hoje = Este mês: acende só o primeiro ?>
+            <a class="<?= $ativo ? 'active' : '' ?>" href="index.php?page=<?= e($pagina) ?>&amp;periodo=<?= $chave ?>"<?= $ativo ? ' aria-current="true"' : '' ?>><?= $rotulo ?></a>
         <?php endforeach; ?>
     </nav>
 

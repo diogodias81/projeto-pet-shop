@@ -142,6 +142,7 @@ class Usuario {
     public static function criar(array $d): void {
         $nome = trim($d['nome'] ?? ''); $email = mb_strtolower(trim($d['email'] ?? ''));
         if ($nome === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) throw new DomainException('Informe nome e e-mail válidos.');
+        if (mb_strlen($nome) > 100) throw new DomainException('O nome deve ter no máximo 100 caracteres.');
         self::validarSenha($d['senha'] ?? '');
         if (!isset(self::PERFIS[$d['perfil'] ?? ''])) throw new DomainException('Perfil inválido.');
         // e-mails antigos podem ter maiúsculas: compara sem diferenciar
@@ -165,32 +166,39 @@ class Usuario {
      * Admin corrige nome, e-mail e perfil. A senha não muda aqui (ver redefinirSenha).
      * O próprio perfil não muda (evita o admin se rebaixar sem querer) e o sistema nunca fica sem admin ativo.
      * O perfil novo vale na próxima página: o bootstrap relê o usuário a cada requisição.
+     * @return bool se algo mudou (sem mudança não grava nem vai para a auditoria)
      */
-    public static function editar(int $id, array $d): void {
+    public static function editar(int $id, array $d): bool {
         $nome = trim($d['nome'] ?? ''); $email = mb_strtolower(trim($d['email'] ?? ''));
         $perfil = $d['perfil'] ?? '';
         if ($nome === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) throw new DomainException('Informe nome e e-mail válidos.');
+        if (mb_strlen($nome) > 100) throw new DomainException('O nome deve ter no máximo 100 caracteres.');
         if (!isset(self::PERFIS[$perfil])) throw new DomainException('Perfil inválido.');
-        $antes = self::buscar($id);
-        if (!$antes) throw new DomainException('Usuário não encontrado.');
-        if ($id === (usuario()['id'] ?? 0) && $perfil !== $antes['perfil']) throw new DomainException('Você não pode mudar o seu próprio perfil. Peça a outro administrador.');
-        $st = Database::pdo()->prepare('SELECT 1 FROM usuarios WHERE lower(email) = ? AND id <> ?');
-        $st->execute([$email, $id]);
-        $duplicado = $st->fetchColumn();
-        $st->closeCursor();
-        if ($duplicado) throw new DomainException('Este e-mail já está cadastrado.');
         $pdo = Database::pdo();
         $pdo->exec('BEGIN IMMEDIATE');
         try {
-            if ($antes['perfil'] === 'admin' && $perfil !== 'admin') self::exigirOutroAdmin($id);
-            $pdo->prepare('UPDATE usuarios SET nome = ?, email = ?, perfil = ? WHERE id = ?')->execute([$nome, $email, $perfil, $id]);
+            // Lido dentro da transação: outro admin não muda o alvo entre a leitura e a gravação
+            $antes = self::buscar($id);
+            if (!$antes) throw new DomainException('Usuário não encontrado.');
+            if ($id === (usuario()['id'] ?? 0) && $perfil !== $antes['perfil']) throw new DomainException('Você não pode mudar o seu próprio perfil. Peça a outro administrador.');
+            $st = $pdo->prepare('SELECT 1 FROM usuarios WHERE lower(email) = ? AND id <> ?');
+            $st->execute([$email, $id]);
+            $duplicado = $st->fetchColumn();
+            $st->closeCursor(); // ver autenticar
+            if ($duplicado) throw new DomainException('Este e-mail já está cadastrado.');
+            // Sempre que o perfil final não é admin: o SQL de exigirOutroAdmin já confere se o alvo é admin ativo
+            if ($perfil !== 'admin') self::exigirOutroAdmin($id);
             $mudou = array_filter([
                 $antes['nome'] !== $nome ? "nome {$antes['nome']} → $nome" : null,
                 $antes['email'] !== $email ? "e-mail {$antes['email']} → $email" : null,
                 $antes['perfil'] !== $perfil ? 'perfil ' . self::PERFIS[$antes['perfil']] . ' → ' . self::PERFIS[$perfil] : null,
             ]);
-            Auditoria::registrar('usuario_alterado', "$nome <$email>" . ($mudou ? ': ' . implode(', ', $mudou) : ': sem mudanças'));
+            if ($mudou) {
+                $pdo->prepare('UPDATE usuarios SET nome = ?, email = ?, perfil = ? WHERE id = ?')->execute([$nome, $email, $perfil, $id]);
+                Auditoria::registrar('usuario_alterado', "$nome <$email>: " . implode(', ', $mudou));
+            }
             $pdo->commit();
+            return (bool) $mudou;
         } catch (PDOException $e) {
             $pdo->rollBack();
             throw new DomainException('Este e-mail já está cadastrado.');

@@ -31,9 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       flash('Senha redefinida. O usuário deverá trocá-la no próximo acesso.');
     } elseif ((int) ($_POST['id'] ?? 0)) {
 
-      Usuario::editar((int) $_POST['id'], $_POST);
-
-      flash('Usuário alterado.');
+      flash(Usuario::editar((int) $_POST['id'], $_POST) ? 'Usuário alterado.' : 'Nada mudou no usuário.');
     } else {
 
       Usuario::criar($_POST);
@@ -62,6 +60,8 @@ unset($_SESSION['form_usuario']);
 // Edição: ?editar=ID, ou voltou com erro de uma edição
 $idEditar = (int) ($antigo['id'] ?? ($_GET['editar'] ?? 0));
 $editando = $idEditar ? Usuario::buscar($idEditar) : null;
+// depois de um POST o erro do salvamento já foi mostrado: não repete o aviso
+if ($idEditar && !$editando && !$antigo) flash('Usuário não encontrado: ele pode ter sido excluído.', 'erro');
 $editandoEu = $editando && (int) $editando['id'] === (int) usuario()['id'];
 
 $usuarios = Usuario::listar();
@@ -94,7 +94,12 @@ $perfilAtual = $antigo['perfil'] ?? $editando['perfil'] ?? '';
   <div class="offcanvas-header">
     <div>
       <h2 class="offcanvas-title" id="gaveta-usuario-titulo"><?= $editando ? 'Editar usuário' : 'Novo usuário' ?></h2>
-      <p class="card-sub"><?= $editando ? 'A senha não muda aqui: use "Redefinir senha" no menu ⋯.' : 'Ele vai trocar a senha no primeiro acesso.' ?></p>
+      <?php if ($editando): // diz quem está sendo editado e onde muda a senha (a própria é em "Minha senha") ?>
+        <p class="card-sub"><strong><?= e($editando['nome']) ?></strong> · <?= e($editando['email']) ?><?= $editandoEu ? ' (você)' : '' ?></p>
+        <p class="card-sub"><?= $editandoEu ? 'A sua senha não muda aqui: use "Trocar minha senha" no menu&nbsp;⋯.' : 'A senha não muda aqui: use "Redefinir senha" no menu&nbsp;⋯.' ?></p>
+      <?php else: ?>
+        <p class="card-sub">Ele vai trocar a senha no primeiro acesso.</p>
+      <?php endif; ?>
     </div>
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Fechar"></button>
   </div>
@@ -114,6 +119,7 @@ $perfilAtual = $antigo['perfil'] ?? $editando['perfil'] ?? '';
         <input
           name="nome"
           value="<?= e($antigo['nome'] ?? $editando['nome'] ?? '') ?>"
+          maxlength="100"
           required>
       </label>
 

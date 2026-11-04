@@ -2,6 +2,8 @@
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
+  $salva = null; // despesa gravada: a lista volta mostrando ela
+
   try {
 
     if (($_POST['acao'] ?? '') === 'excluir') {
@@ -11,22 +13,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       flash('Despesa excluída.');
     } else {
 
-      Despesa::salvar($_POST, usuario()['id']);
+      $mudou = Despesa::salvar($_POST, usuario()['id']);
 
-      flash((int) ($_POST['id'] ?? 0) ? 'Despesa alterada.' : 'Despesa registrada.');
+      $salva = ['categoria' => (string) $_POST['categoria'], 'data' => trim((string) $_POST['data'])]; // a mesma limpeza da validação
+
+      flash(!(int) ($_POST['id'] ?? 0) ? 'Despesa registrada.' : ($mudou ? 'Despesa alterada.' : 'Nada mudou na despesa.'));
     }
   } catch (DomainException $ex) {
 
     flash($ex->getMessage(), 'erro');
 
     if (($_POST['acao'] ?? '') !== 'excluir') {
-      $_SESSION['form_despesa'] = $_POST;
+      // Só os campos do formulário: o $_POST inteiro enchia a sessão
+      $_SESSION['form_despesa'] = array_intersect_key($_POST, array_flip(['id', 'descricao', 'categoria', 'valor', 'data']));
     }
   }
 
   // Volta com os mesmos filtros (excluir uma despesa limpava o período e a categoria)
   [$deVolta, $ateVolta] = Relatorio::datas($_POST);
   $catVolta = (string) ($_POST['filtro_categoria'] ?? '');
+  if ($salva) {
+    // Salvou com outra categoria ou fora do período filtrado: a lista acompanha (antes a despesa "sumia")
+    if ($catVolta !== '' && $catVolta !== $salva['categoria']) $catVolta = $salva['categoria'];
+    $deVolta = min($deVolta, $salva['data']);
+    $ateVolta = max($ateVolta, $salva['data']);
+  }
   redirect('despesas', ['de' => $deVolta, 'ate' => $ateVolta] + (isset(Despesa::CATEGORIAS[$catVolta]) ? ['categoria' => $catVolta] : []));
 }
 
@@ -40,6 +51,8 @@ $categoria = (string) ($_GET['categoria'] ?? '');
 // Edição: ?editar=ID, ou voltou com erro de uma edição
 $idEditar = (int) ($antigo['id'] ?? ($_GET['editar'] ?? 0));
 $editando = $idEditar ? Despesa::buscar($idEditar) : null;
+// depois de um POST o erro do salvamento já foi mostrado: não repete o aviso
+if ($idEditar && !$editando && !$antigo) flash('Despesa não encontrada: ela pode ter sido excluída.', 'erro');
 $filtrosAtuais = ['de' => $de, 'ate' => $ate] + ($categoria !== '' ? ['categoria' => $categoria] : []);
 
 $despesas = Despesa::listar($de, $ate, $categoria);
@@ -131,6 +144,7 @@ $icone = fn(string $cat) => Despesa::ICONES[$cat] ?? 'receipt';
           type="date"
           required
           value="<?= e($antigo['data'] ?? $editando['data'] ?? date('Y-m-d')) ?>"
+          min="<?= Despesa::DATA_MINIMA ?>"
           max="<?= date('Y-m-d') ?>">
       </label>
     </div>
@@ -185,8 +199,9 @@ $icone = fn(string $cat) => Despesa::ICONES[$cat] ?? 'receipt';
     <div class="filtro-periodo">
     <?php // mesmos atalhos do Dashboard e dos Relatórios, mantendo a categoria escolhida ?>
     <nav class="segmentado" aria-label="Atalhos de período">
+      <?php $aceso = false; ?>
       <?php foreach (['hoje' => 'Hoje', 'semana' => '7 dias', 'mes' => 'Este mês'] as $chave => $rotulo): ?>
-        <?php $ativo = ($_GET['periodo'] ?? '') === $chave; ?>
+        <?php $ativo = !$aceso && Relatorio::datas(['periodo' => $chave]) === [$de, $ate]; $aceso = $aceso || $ativo; // aceso pelas datas (vale depois de filtrar); no dia 1º Hoje = Este mês: acende só o primeiro ?>
         <a class="<?= $ativo ? 'active' : '' ?>" href="index.php?<?= e(http_build_query(['page' => 'despesas', 'periodo' => $chave] + ($categoria !== '' ? ['categoria' => $categoria] : []))) ?>"<?= $ativo ? ' aria-current="true"' : '' ?>><?= $rotulo ?></a>
       <?php endforeach; ?>
     </nav>

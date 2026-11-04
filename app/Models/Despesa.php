@@ -1,24 +1,41 @@
 <?php
 class Despesa {
     const CATEGORIAS = ['aluguel' => 'Aluguel', 'energia' => 'Energia', 'agua' => 'Água', 'salarios' => 'Salários', 'fornecedores' => 'Fornecedores', 'impostos' => 'Impostos e taxas', 'manutencao' => 'Manutenção', 'outras' => 'Outras'];
+    /** Data mais antiga aceita numa despesa (servidor e min do formulário) */
+    const DATA_MINIMA = '2000-01-01';
     /** Ícone (Bootstrap Icons) de cada categoria, para as telas */
     const ICONES = ['aluguel' => 'house-door', 'energia' => 'lightning-charge', 'agua' => 'droplet', 'salarios' => 'people', 'fornecedores' => 'truck', 'impostos' => 'bank', 'manutencao' => 'tools', 'outras' => 'three-dots'];
 
-    /** Cria (sem id) ou edita (com id). Quem registrou a despesa continua o mesmo ao editar. */
-    public static function salvar(array $d, int $usuarioId): void {
+    /**
+     * Cria (sem id) ou edita (com id). Quem registrou a despesa continua o mesmo ao editar.
+     * @return bool se algo mudou (edição sem mudança não grava nem vai para a auditoria)
+     */
+    public static function salvar(array $d, int $usuarioId): bool {
         $id = (int) ($d['id'] ?? 0);
-        if (!$id) { self::criar($d, $usuarioId); return; }
-        $st = Database::pdo()->prepare('SELECT descricao, categoria, valor, data FROM despesas WHERE id = ?');
-        $st->execute([$id]);
-        $antes = $st->fetch();
-        $st->closeCursor(); // ver excluir
-        if (!$antes) throw new DomainException('Despesa não encontrada.');
+        if (!$id) { self::criar($d, $usuarioId); return true; }
         [$descricao, $categoria, $valor, $data] = self::validar($d);
-        Database::pdo()->prepare('UPDATE despesas SET descricao = ?, categoria = ?, valor = ?, data = ? WHERE id = ?')
-            ->execute([$descricao, $categoria, round($valor, 2), $data, $id]);
-        // o antes e o depois: valor de despesa mexe no resultado do mês
-        Auditoria::registrar('despesa_alterada', "$descricao (#$id): " . moeda($antes['valor']) . ' em ' . date('d/m/Y', strtotime($antes['data']))
-            . ' → ' . moeda($valor) . ' em ' . date('d/m/Y', strtotime($data)) . ($antes['categoria'] !== $categoria ? ', categoria ' . self::CATEGORIAS[$antes['categoria']] . ' → ' . self::CATEGORIAS[$categoria] : ''));
+        $pdo = Database::pdo();
+        // O antes é lido na mesma transação do UPDATE: duas edições ao mesmo tempo não deixam um antes errado na auditoria
+        $pdo->exec('BEGIN IMMEDIATE');
+        try {
+            $st = $pdo->prepare('SELECT descricao, categoria, valor, data FROM despesas WHERE id = ?');
+            $st->execute([$id]);
+            $antes = $st->fetch();
+            $st->closeCursor(); // ver excluir
+            if (!$antes) throw new DomainException('Despesa não encontrada.');
+            $mudou = $antes['descricao'] !== $descricao || $antes['categoria'] !== $categoria || round((float) $antes['valor'], 2) !== round($valor, 2) || $antes['data'] !== $data;
+            if ($mudou) {
+                $pdo->prepare('UPDATE despesas SET descricao = ?, categoria = ?, valor = ?, data = ? WHERE id = ?')
+                    ->execute([$descricao, $categoria, round($valor, 2), $data, $id]);
+                // o antes e o depois de tudo: valor de despesa mexe no resultado do mês
+                Auditoria::registrar('despesa_alterada', "$descricao (#$id): " . moeda($antes['valor']) . ' em ' . date('d/m/Y', strtotime($antes['data']))
+                    . ' → ' . moeda($valor) . ' em ' . date('d/m/Y', strtotime($data))
+                    . ($antes['categoria'] !== $categoria ? ', categoria ' . self::CATEGORIAS[$antes['categoria']] . ' → ' . self::CATEGORIAS[$categoria] : '')
+                    . ($antes['descricao'] !== $descricao ? ', descrição "' . $antes['descricao'] . '" → "' . $descricao . '"' : ''));
+            }
+            $pdo->commit();
+            return $mudou;
+        } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
     }
 
     public static function criar(array $d, int $usuarioId): void {
@@ -42,6 +59,8 @@ class Despesa {
         if (!$dt || $dt->format('Y-m-d') !== $data) throw new DomainException('Informe a data da despesa.');
         // Despesa futura ficaria fora do período padrão da lista (até hoje) e pareceria perdida
         if ($data > date('Y-m-d')) throw new DomainException('A data da despesa não pode ser no futuro.');
+        // Ano digitado errado (0025, 1925) some dos períodos; nenhuma conta da loja é anterior a 2000
+        if ($data < self::DATA_MINIMA) throw new DomainException('A data da despesa não pode ser anterior a 01/01/2000.');
         return [$descricao, $categoria, $valor, $data];
     }
 

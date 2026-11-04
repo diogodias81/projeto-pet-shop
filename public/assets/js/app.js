@@ -326,23 +326,45 @@ function abrirCamera(input) {
     fechar.innerHTML = '<i class="bi bi-x-lg" aria-hidden="true"></i>';
 
     tela.append(video, mira, texto, fechar);
-    document.body.appendChild(tela);
+
+    // Dentro da gaveta aberta (ex.: cadastro de produto), a tela fica DENTRO dela: a gaveta prende o foco
+    // nela mesma e fecha com Esc; fora dela, o foco pulava para o X da gaveta e o Esc fechava as duas.
+    // A gaveta aberta não tem transform, então o position: fixed continua cobrindo a tela inteira.
+    (input.closest('.offcanvas.show') || document.body).appendChild(tela);
     fechar.focus();
 
     let fluxo = null, ativo = true;
+
+    const gaveta = input.closest('.offcanvas.show');
 
     const encerrar = () => {
 
         ativo = false;
         fluxo?.getTracks().forEach(t => t.stop());
         tela.remove();
-        document.removeEventListener('keydown', esc);
+        document.removeEventListener('keydown', teclas, true);
+        gaveta?.removeEventListener('hide.bs.offcanvas', encerrar);
     };
 
-    const esc = ev => { if (ev.key === 'Escape') { encerrar(); input.focus(); } };
+    // Em captura no document: pega o Esc e o Tab onde quer que o foco esteja (ex.: depois de tocar no vídeo
+    // o foco ia para a gaveta) e não deixa o Esc chegar na gaveta
+    const teclas = ev => {
+
+        if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); encerrar(); input.focus(); }
+
+        // aria-modal: o Tab não sai da tela da câmera (o único controle é o Fechar)
+        if (ev.key === 'Tab') { ev.preventDefault(); ev.stopPropagation(); fechar.focus(); }
+    };
+
+    document.addEventListener('keydown', teclas, true);
+
+    // tocar no vídeo não tira o foco da câmera
+    tela.addEventListener('pointerdown', ev => { if (ev.target !== fechar && !fechar.contains(ev.target)) { ev.preventDefault(); fechar.focus(); } });
+
+    // se a gaveta fechar por qualquer motivo, a câmera desliga junto (não fica ligada escondida)
+    gaveta?.addEventListener('hide.bs.offcanvas', encerrar);
 
     fechar.addEventListener('click', () => { encerrar(); input.focus(); });
-    document.addEventListener('keydown', esc);
 
     (async () => {
 
@@ -369,11 +391,13 @@ function abrirCamera(input) {
                     encerrar();
                     input.value = codigo;
                     input.focus();
+                    // "input" antes do Enter, como na digitação: o Enter é o último (no Caixa, depois do input
+                    // a lista "Nenhum produto disponível" ficava aberta por cima do carrinho)
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
                     // o mesmo caminho da pistola: cada tela já sabe o que fazer com o Enter (e bipa achou/não achou)
                     const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
                     input.dispatchEvent(enter);
                     if (!enter.bipou) bipe(true); // campo sem busca (ex.: cadastro de produto): bipe de "lido"
-                    input.dispatchEvent(new Event('input', { bubbles: true }));
                     return;
                 }
 
@@ -443,13 +467,17 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
         // Aviso na tela (não alert): e o código desconhecido desmarca o produto escolhido antes,
         // para o estoquista não lançar a entrada no produto errado
-        let aviso = input.parentElement.querySelector('.busca-aviso');
+        // o aviso vai depois do campo inteiro (com o botão de câmera, se houver), não dentro dele:
+        // dentro, empurrava o botão para baixo da borda
+        const campo = input.closest('.campo-camera') || input;
+
+        let aviso = campo.parentElement.querySelector('.busca-aviso');
 
         if (!aviso) {
             aviso = document.createElement('small');
             aviso.className = 'busca-aviso';
             aviso.setAttribute('role', 'alert');
-            input.after(aviso);
+            campo.after(aviso);
         }
 
         ev.bipou = true;
@@ -619,36 +647,74 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
     }
 
 
-    // Pistola lendo com o cursor fora da busca (ex.: depois de mexer na quantidade ou no desconto):
-    // a pistola "digita" muito rápido e termina com Enter. Teclas rápidas fora de um campo viram leitura na busca.
-    let lidos = '', ultimaTecla = 0;
+    // Pistola lendo com o cursor FORA da busca: na quantidade, no desconto, no valor recebido, numa sugestão,
+    // num botão ou em lugar nenhum. A pistola "digita" muito rápido (menos de 80 ms por tecla) e termina com Enter.
+    // Uma rajada assim é tratada como leitura: o que ela digitou no campo é desfeito e o código vai para a busca.
+    // Antes, ler com o cursor na quantidade virava "quantidade = estoque inteiro" e o Enter finalizava a venda.
+    // Fase de captura: roda antes do Enter da sugestão e do botão, que também agiriam.
+    let rajada = { alvo: null, antes: null, digitos: '', valida: true, ultima: 0 };
 
     document.addEventListener('keydown', ev => {
 
         const alvo = ev.target;
 
-        if (alvo === busca || alvo.closest?.('input, textarea, select, [contenteditable], .camera-leitor') || ev.ctrlKey || ev.altKey || ev.metaKey) return;
+        if (alvo === busca || alvo.closest?.('.camera-leitor, .modal, .offcanvas') || ev.ctrlKey || ev.altKey || ev.metaKey) return;
+
+        if (ev.key === 'Shift') return;
 
         const agora = Date.now();
 
-        if (agora - ultimaTecla > 80) lidos = ''; // pausa de gente digitando: começa de novo
+        // pausa de gente digitando ou troca de campo: começa outra rajada (o valor do campo ANTES dela fica guardado)
+        if (agora - rajada.ultima > 80 || rajada.alvo !== alvo) {
 
-        ultimaTecla = agora;
+            // quantidade do carrinho: volta à última quantidade válida (com o campo vazio, voltar a "" deixava o estoque inteiro)
+            const antes = alvo.dataset?.confirmada ?? ('value' in alvo && alvo.matches?.('input, textarea') ? alvo.value : null);
 
-        if (ev.key === 'Enter' && /^\d{4,14}$/.test(lidos)) {
-
-            ev.preventDefault();
-
-            busca.value = lidos;
-            lidos = '';
-
-            busca.focus();
-            busca.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
-
-        } else if (/^\d$/.test(ev.key)) {
-
-            lidos += ev.key;
+            rajada = { alvo, antes, digitos: '', valida: true, ultima: agora };
         }
+
+        rajada.ultima = agora;
+
+        if (/^\d$/.test(ev.key)) { rajada.digitos += ev.key; return; }
+
+        if (ev.key !== 'Enter') {
+
+            if (ev.key.length === 1) rajada.valida = false; // letra no meio ("LOTE789..."): não é código de produto
+            return;
+        }
+
+        // No desconto e no valor recebido só código de barras de produto (EAN-8/EAN-13, 8+ dígitos): "1000" digitado
+        // bem rápido continua sendo valor. Na quantidade (ninguém digita 4 números em menos de 80 ms) e fora dos campos, 4+.
+        const minimo = rajada.antes !== null && !alvo.matches?.('input.qtd') ? 8 : 4;
+
+        if (!rajada.valida || rajada.digitos.length < minimo || !/^\d{4,14}$/.test(rajada.digitos)) return;
+
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+
+        // desfaz no campo o que a pistola digitou (ex.: a quantidade volta ao que era)
+        if (rajada.antes !== null) {
+
+            alvo.value = rajada.antes;
+            alvo.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        const codigo = rajada.digitos;
+
+        rajada = { alvo: null, antes: null, digitos: '', valida: true, ultima: 0 };
+
+        busca.value = codigo;
+        busca.focus();
+        busca.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+    }, true);
+
+
+    // Enter dentro dos campos do caixa (quantidade, desconto, recebido) NUNCA finaliza a venda:
+    // finalizar é só no botão. Antes, mudar a quantidade e apertar Enter já gravava a venda.
+    form.addEventListener('keydown', ev => {
+
+        if (ev.key === 'Enter' && ev.target !== busca && ev.target.matches?.('input, select')) ev.preventDefault();
     });
 
 
@@ -971,6 +1037,9 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
             qtd.value = item.quantidade;
 
+            // última quantidade válida: a leitura da pistola neste campo volta a ela (o campo pode estar vazio)
+            qtd.dataset.confirmada = item.quantidade;
+
             qtd.className = 'qtd';
 
             qtd.setAttribute('aria-label', 'Quantidade de ' + p.nome);
@@ -995,6 +1064,8 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
                 }
 
                 tdSub.textContent = moeda(p.preco * item.quantidade);
+
+                qtd.dataset.confirmada = item.quantidade;
 
                 sincronizar();
             });

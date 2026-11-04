@@ -97,18 +97,40 @@ try {
     $_SESSION['user'] = ['id' => $admin2];
     ok(recusa(fn() => Usuario::editar((int) $admin['id'], ['nome' => 'Admin Renomeado', 'email' => $admin['email'], 'perfil' => 'vendedor']), 'único administrador'), 'não rebaixa o único admin ativo');
     ok(Usuario::buscar((int) $admin['id'])['perfil'] === 'admin', 'o único admin continua admin');
+    // o último admin ativo é um usuário promovido (perfil lido dentro da transação): rebaixá-lo também é recusado
+    $pdo->exec("UPDATE usuarios SET perfil = 'admin' WHERE id = $caixa");
+    $pdo->exec("UPDATE usuarios SET perfil = 'vendedor' WHERE id = " . (int) $admin['id']);
+    ok(recusa(fn() => Usuario::editar($caixa, ['nome' => 'Caixa Um Silva', 'email' => 'caixa.silva@teste.com', 'perfil' => 'financeiro']), 'único administrador'), 'não rebaixa o último admin ativo mesmo que tenha virado admin há pouco');
+    $pdo->exec("UPDATE usuarios SET perfil = 'admin' WHERE id = " . (int) $admin['id']);
+    $pdo->exec("UPDATE usuarios SET perfil = 'financeiro' WHERE id = $caixa");
     $_SESSION = [];
+
+    // 7b. Nome com no máximo 100 caracteres (500 mil caracteres enchiam usuarios, auditoria e vendas)
+    ok(recusa(fn() => Usuario::criar(['nome' => str_repeat('A', 101), 'email' => 'longo@teste.com', 'senha' => 'senha123', 'perfil' => 'vendedor']), '100 caracteres'), 'criar usuário recusa nome com 101 caracteres');
+    ok(recusa(fn() => Usuario::editar($caixa, ['nome' => str_repeat('é', 101), 'email' => 'caixa.silva@teste.com', 'perfil' => 'financeiro']), '100 caracteres'), 'editar usuário recusa nome com 101 caracteres');
+    Usuario::editar($caixa, ['nome' => str_repeat('é', 100), 'email' => 'caixa.silva@teste.com', 'perfil' => 'financeiro']);
+    ok(Usuario::buscar($caixa)['nome'] === str_repeat('é', 100), 'nome com 100 caracteres (acentuados) é aceito');
 
     // 8. Editar despesa: mesmas validações do cadastro; quem registrou continua o mesmo
     Despesa::criar(['descricao' => 'Conta de luz', 'categoria' => 'energia', 'valor' => '100,00', 'data' => date('Y-m-d')], (int) $admin['id']);
     $desp = (int) $pdo->query("SELECT id FROM despesas WHERE descricao = 'Conta de luz'")->fetchColumn();
     $_SESSION['user'] = ['id' => (int) $admin['id'], 'nome' => 'Admin Renomeado'];
+    $auditAntes = (int) $pdo->query("SELECT COUNT(*) FROM auditoria")->fetchColumn();
+    ok(Despesa::salvar(['id' => $desp, 'descricao' => 'Conta de luz', 'categoria' => 'energia', 'valor' => '100,00', 'data' => date('Y-m-d')], $caixa) === false
+        && (int) $pdo->query("SELECT COUNT(*) FROM auditoria")->fetchColumn() === $auditAntes, 'salvar despesa sem mudança não grava nem audita');
+    ok(Usuario::editar($caixa, Usuario::buscar($caixa)) === false && (int) $pdo->query("SELECT COUNT(*) FROM auditoria")->fetchColumn() === $auditAntes, 'salvar usuário sem mudança não grava nem audita');
     Despesa::salvar(['id' => $desp, 'descricao' => 'Conta de luz outubro', 'categoria' => 'energia', 'valor' => '120,50', 'data' => date('Y-m-d')], $caixa);
+    ok(str_contains((string) $pdo->query("SELECT detalhes FROM auditoria WHERE acao = 'despesa_alterada' ORDER BY id DESC LIMIT 1")->fetchColumn(), 'descrição "Conta de luz" → "Conta de luz outubro"'), 'auditoria da despesa mostra a descrição antiga');
     $d = Despesa::buscar($desp);
     ok($d['descricao'] === 'Conta de luz outubro' && abs($d['valor'] - 120.5) < 0.001 && (int) $d['usuario_id'] === (int) $admin['id'], 'editar despesa muda descrição e valor e mantém quem registrou');
     ok(recusa(fn() => Despesa::salvar(['id' => $desp, 'descricao' => 'X', 'categoria' => 'energia', 'valor' => '12abc', 'data' => date('Y-m-d')], $caixa), 'valor válido'), 'editar despesa recusa valor inválido');
     ok(recusa(fn() => Despesa::salvar(['id' => 999999, 'descricao' => 'X', 'categoria' => 'energia', 'valor' => '10', 'data' => date('Y-m-d')], $caixa), 'não encontrada'), 'editar despesa inexistente é recusado');
     ok((int) $pdo->query("SELECT COUNT(*) FROM auditoria WHERE acao = 'despesa_alterada'")->fetchColumn() === 1, 'edição de despesa fica na auditoria');
+    // data antes de 2000 sumia dos períodos (ano digitado errado)
+    ok(recusa(fn() => Despesa::criar(['descricao' => 'Antiga', 'categoria' => 'outras', 'valor' => '10', 'data' => '1999-12-31'], (int) $admin['id']), 'anterior a 01/01/2000'), 'criar despesa recusa data antes de 2000');
+    ok(recusa(fn() => Despesa::salvar(['id' => $desp, 'descricao' => 'X', 'categoria' => 'energia', 'valor' => '10', 'data' => '0001-01-01'], $caixa), 'anterior a 01/01/2000'), 'editar despesa recusa data 0001-01-01');
+    Despesa::salvar(['id' => $desp, 'descricao' => 'Conta de luz outubro', 'categoria' => 'energia', 'valor' => '120,50', 'data' => '2000-01-01'], $caixa);
+    ok(Despesa::buscar($desp)['data'] === '2000-01-01', 'despesa em 01/01/2000 é aceita');
     $_SESSION = [];
 } catch (Throwable $e) {
     echo 'ERRO - ' . get_class($e) . ': ' . $e->getMessage() . "\n";
