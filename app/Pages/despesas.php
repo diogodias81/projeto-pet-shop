@@ -11,9 +11,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       flash('Despesa excluída.');
     } else {
 
-      Despesa::criar($_POST, usuario()['id']);
+      Despesa::salvar($_POST, usuario()['id']);
 
-      flash('Despesa registrada.');
+      flash((int) ($_POST['id'] ?? 0) ? 'Despesa alterada.' : 'Despesa registrada.');
     }
   } catch (DomainException $ex) {
 
@@ -37,6 +37,11 @@ unset($_SESSION['form_despesa']);
 
 $categoria = (string) ($_GET['categoria'] ?? '');
 
+// Edição: ?editar=ID, ou voltou com erro de uma edição
+$idEditar = (int) ($antigo['id'] ?? ($_GET['editar'] ?? 0));
+$editando = $idEditar ? Despesa::buscar($idEditar) : null;
+$filtrosAtuais = ['de' => $de, 'ate' => $ate] + ($categoria !== '' ? ['categoria' => $categoria] : []);
+
 $despesas = Despesa::listar($de, $ate, $categoria);
 
 $total = array_sum(array_column($despesas, 'valor'));
@@ -46,7 +51,11 @@ $porCategoria = Despesa::porCategoria($de, $ate);
 $totalPeriodo = array_sum($porCategoria) ?: 1;
 
 $subtituloTopo = date('d/m/Y', strtotime($de)) . ' a ' . date('d/m/Y', strtotime($ate));
-$acoesTopo = '<button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#gaveta-despesa" aria-controls="gaveta-despesa"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nova despesa</button>';
+// Editando: "Nova despesa" recarrega a página com o formulário vazio (como em Produtos)
+$acoesTopo = $editando
+  ? '<a class="btn btn-primary" href="index.php?' . e(http_build_query(['page' => 'despesas', 'novo' => 1] + $filtrosAtuais)) . '"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nova despesa</a>'
+  : '<button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#gaveta-despesa" aria-controls="gaveta-despesa"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nova despesa</button>';
+$valorAtual = $antigo['valor'] ?? ($editando ? number_format((float) $editando['valor'], 2, ',', '.') : '');
 
 $linkCat = fn(string $cat) => 'index.php?' . e(http_build_query(['page' => 'despesas', 'de' => $de, 'ate' => $ate] + ($cat !== '' ? ['categoria' => $cat] : [])));
 $icone = fn(string $cat) => Despesa::ICONES[$cat] ?? 'receipt';
@@ -58,16 +67,25 @@ $icone = fn(string $cat) => Despesa::ICONES[$cat] ?? 'receipt';
   tabindex="-1"
   id="gaveta-despesa"
   aria-labelledby="gaveta-despesa-titulo"
-  <?= $antigo ? 'data-abrir' : '' ?>>
+  <?= $antigo || $editando || isset($_GET['novo']) ? 'data-abrir' : '' ?>>
 
   <div class="offcanvas-header">
-    <h2 class="offcanvas-title" id="gaveta-despesa-titulo">Nova despesa</h2>
+    <div>
+      <h2 class="offcanvas-title" id="gaveta-despesa-titulo"><?= $editando ? 'Editar despesa' : 'Nova despesa' ?></h2>
+      <?php if ($editando): ?><p class="card-sub"><?= e($editando['descricao']) ?></p><?php endif; ?>
+    </div>
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Fechar"></button>
   </div>
 
   <form method="post" class="offcanvas-body gaveta-form">
 
     <?= csrf_campo() ?>
+
+    <?php // volta para a mesma lista depois de salvar ?>
+    <input type="hidden" name="id" value="<?= $editando ? (int) $editando['id'] : '' ?>">
+    <input type="hidden" name="de" value="<?= e($de) ?>">
+    <input type="hidden" name="ate" value="<?= e($ate) ?>">
+    <input type="hidden" name="filtro_categoria" value="<?= e($categoria) ?>">
 
     <label>
       Descrição
@@ -77,7 +95,7 @@ $icone = fn(string $cat) => Despesa::ICONES[$cat] ?? 'receipt';
         required
         maxlength="120"
         placeholder="Ex.: Conta de luz de outubro"
-        value="<?= e($antigo['descricao'] ?? '') ?>">
+        value="<?= e($antigo['descricao'] ?? $editando['descricao'] ?? '') ?>">
     </label>
 
     <fieldset>
@@ -85,7 +103,7 @@ $icone = fn(string $cat) => Despesa::ICONES[$cat] ?? 'receipt';
       <div class="opcoes-icone">
         <?php foreach (Despesa::CATEGORIAS as $chave => $rotulo): ?>
           <label class="opcao-icone">
-            <input type="radio" name="categoria" value="<?= $chave ?>" required <?= ($antigo['categoria'] ?? '') === $chave ? 'checked' : '' ?>>
+            <input type="radio" name="categoria" value="<?= $chave ?>" required <?= ($antigo['categoria'] ?? $editando['categoria'] ?? '') === $chave ? 'checked' : '' ?>>
             <i class="bi bi-<?= $icone($chave) ?>" aria-hidden="true"></i>
             <span><?= e($rotulo) ?></span>
           </label>
@@ -102,7 +120,7 @@ $icone = fn(string $cat) => Despesa::ICONES[$cat] ?? 'receipt';
           required
           inputmode="decimal"
           placeholder="0,00"
-          value="<?= e($antigo['valor'] ?? '') ?>">
+          value="<?= e($valorAtual) ?>">
       </label>
 
       <label>
@@ -112,14 +130,14 @@ $icone = fn(string $cat) => Despesa::ICONES[$cat] ?? 'receipt';
           name="data"
           type="date"
           required
-          value="<?= e($antigo['data'] ?? date('Y-m-d')) ?>"
+          value="<?= e($antigo['data'] ?? $editando['data'] ?? date('Y-m-d')) ?>"
           max="<?= date('Y-m-d') ?>">
       </label>
     </div>
 
     <div class="gaveta-rodape">
       <button type="button" class="btn btn-light" data-bs-dismiss="offcanvas">Cancelar</button>
-      <button class="btn btn-primary">Registrar despesa</button>
+      <button class="btn btn-primary"><?= $editando ? 'Salvar alterações' : 'Registrar despesa' ?></button>
     </div>
 
   </form>
@@ -218,7 +236,7 @@ $icone = fn(string $cat) => Despesa::ICONES[$cat] ?? 'receipt';
 
         <?php foreach ($despesas as $d): ?>
 
-          <tr>
+          <tr<?= $editando && (int) $editando['id'] === (int) $d['id'] ? ' class="linha-ativa"' : '' ?>>
             <td>
               <span class="produto-celula">
                 <span class="icone-redondo" aria-hidden="true"><i class="bi bi-<?= $icone($d['categoria']) ?>"></i></span>
@@ -230,6 +248,7 @@ $icone = fn(string $cat) => Despesa::ICONES[$cat] ?? 'receipt';
             <td><?= e($d['usuario'] ?? '—') ?></td>
             <td class="num"><strong><?= moeda($d['valor']) ?></strong></td>
             <td class="acoes">
+              <a class="btn btn-light btn-sm btn-quadrado" href="index.php?<?= e(http_build_query(['page' => 'despesas', 'editar' => (int) $d['id']] + $filtrosAtuais)) ?>" title="Editar" aria-label="Editar a despesa <?= e($d['descricao']) ?>"><i class="bi bi-pencil" aria-hidden="true"></i></a>
               <form method="post" data-confirmar="Excluir a despesa &quot;<?= e($d['descricao']) ?>&quot;?">
                 <?= csrf_campo() ?>
                 <input type="hidden" name="acao" value="excluir">

@@ -29,6 +29,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       );
 
       flash('Senha redefinida. O usuário deverá trocá-la no próximo acesso.');
+    } elseif ((int) ($_POST['id'] ?? 0)) {
+
+      Usuario::editar((int) $_POST['id'], $_POST);
+
+      flash('Usuário alterado.');
     } else {
 
       Usuario::criar($_POST);
@@ -44,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Erro no cadastro: a gaveta reabre com nome, e-mail e perfil (a senha nunca volta para a tela)
     if (!in_array($_POST['acao'] ?? '', ['excluir', 'desativar', 'reativar', 'redefinir'], true)) {
-      $_SESSION['form_usuario'] = array_intersect_key($_POST, array_flip(['nome', 'email', 'perfil']));
+      $_SESSION['form_usuario'] = array_intersect_key($_POST, array_flip(['id', 'nome', 'email', 'perfil']));
     }
   }
 
@@ -53,6 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $antigo = $_SESSION['form_usuario'] ?? [];
 unset($_SESSION['form_usuario']);
+
+// Edição: ?editar=ID, ou voltou com erro de uma edição
+$idEditar = (int) ($antigo['id'] ?? ($_GET['editar'] ?? 0));
+$editando = $idEditar ? Usuario::buscar($idEditar) : null;
+$editandoEu = $editando && (int) $editando['id'] === (int) usuario()['id'];
 
 $usuarios = Usuario::listar();
 $ativos = count(array_filter($usuarios, fn($u) => $u['ativo']));
@@ -66,7 +76,11 @@ $perfis = [
 ];
 
 $subtituloTopo = $ativos . ($ativos === 1 ? ' usuário ativo' : ' usuários ativos') . (count($usuarios) > $ativos ? ' · ' . (count($usuarios) - $ativos) . (count($usuarios) - $ativos === 1 ? ' desativado' : ' desativados') : '');
-$acoesTopo = '<button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#gaveta-usuario" aria-controls="gaveta-usuario"><i class="bi bi-person-plus" aria-hidden="true"></i> Novo usuário</button>';
+// Editando: "Novo usuário" recarrega a página com o formulário vazio
+$acoesTopo = $editando
+  ? '<a class="btn btn-primary" href="index.php?page=usuarios&amp;novo=1"><i class="bi bi-person-plus" aria-hidden="true"></i> Novo usuário</a>'
+  : '<button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#gaveta-usuario" aria-controls="gaveta-usuario"><i class="bi bi-person-plus" aria-hidden="true"></i> Novo usuário</button>';
+$perfilAtual = $antigo['perfil'] ?? $editando['perfil'] ?? '';
 
 ?>
 
@@ -75,12 +89,12 @@ $acoesTopo = '<button class="btn btn-primary" type="button" data-bs-toggle="offc
   tabindex="-1"
   id="gaveta-usuario"
   aria-labelledby="gaveta-usuario-titulo"
-  <?= $antigo ? 'data-abrir' : '' ?>>
+  <?= $antigo || $editando || isset($_GET['novo']) ? 'data-abrir' : '' ?>>
 
   <div class="offcanvas-header">
     <div>
-      <h2 class="offcanvas-title" id="gaveta-usuario-titulo">Novo usuário</h2>
-      <p class="card-sub">Ele vai trocar a senha no primeiro acesso.</p>
+      <h2 class="offcanvas-title" id="gaveta-usuario-titulo"><?= $editando ? 'Editar usuário' : 'Novo usuário' ?></h2>
+      <p class="card-sub"><?= $editando ? 'A senha não muda aqui: use "Redefinir senha" no menu ⋯.' : 'Ele vai trocar a senha no primeiro acesso.' ?></p>
     </div>
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Fechar"></button>
   </div>
@@ -88,6 +102,8 @@ $acoesTopo = '<button class="btn btn-primary" type="button" data-bs-toggle="offc
   <form method="post" class="offcanvas-body gaveta-form">
 
     <?= csrf_campo() ?>
+
+    <input type="hidden" name="id" value="<?= $editando ? (int) $editando['id'] : '' ?>">
 
     <fieldset>
       <legend>Dados de acesso</legend>
@@ -97,7 +113,7 @@ $acoesTopo = '<button class="btn btn-primary" type="button" data-bs-toggle="offc
 
         <input
           name="nome"
-          value="<?= e($antigo['nome'] ?? '') ?>"
+          value="<?= e($antigo['nome'] ?? $editando['nome'] ?? '') ?>"
           required>
       </label>
 
@@ -107,10 +123,11 @@ $acoesTopo = '<button class="btn btn-primary" type="button" data-bs-toggle="offc
         <input
           type="email"
           name="email"
-          value="<?= e($antigo['email'] ?? '') ?>"
+          value="<?= e($antigo['email'] ?? $editando['email'] ?? '') ?>"
           required>
       </label>
 
+      <?php if (!$editando): ?>
       <label>
         Senha provisória
         <small>Mínimo de 6 caracteres<?= $antigo ? ' · digite de novo' : '' ?></small>
@@ -124,16 +141,21 @@ $acoesTopo = '<button class="btn btn-primary" type="button" data-bs-toggle="offc
           data-revelar
           required>
       </label>
+      <?php endif; ?>
     </fieldset>
 
     <fieldset>
       <legend>Perfil</legend>
 
+      <?php if ($editandoEu): ?>
+        <p class="nota"><i class="bi bi-info-circle" aria-hidden="true"></i> Você não pode mudar o seu próprio perfil. Peça a outro administrador.</p>
+      <?php endif; ?>
+
       <!-- Sem padrão: esquecer o campo não pode criar outro administrador -->
       <div class="opcoes-perfil">
         <?php foreach (Usuario::PERFIS as $k => $v): ?>
           <label class="opcao-perfil">
-            <input type="radio" name="perfil" value="<?= $k ?>" required<?= ($antigo['perfil'] ?? '') === $k ? ' checked' : '' ?>>
+            <input type="radio" name="perfil" value="<?= $k ?>" required<?= $perfilAtual === $k ? ' checked' : '' ?><?= $editandoEu && $perfilAtual !== $k ? ' disabled' : '' ?>>
             <span class="icone-redondo perfil-<?= $k ?>" aria-hidden="true"><i class="bi bi-<?= $perfis[$k][0] ?? 'person' ?>"></i></span>
             <span class="tile-texto">
               <strong><?= e($v) ?></strong>
@@ -146,7 +168,7 @@ $acoesTopo = '<button class="btn btn-primary" type="button" data-bs-toggle="offc
 
     <div class="gaveta-rodape">
       <button type="button" class="btn btn-light" data-bs-dismiss="offcanvas">Cancelar</button>
-      <button class="btn btn-primary">Criar usuário</button>
+      <button class="btn btn-primary"><?= $editando ? 'Salvar alterações' : 'Criar usuário' ?></button>
     </div>
 
   </form>
@@ -204,6 +226,10 @@ $acoesTopo = '<button class="btn btn-primary" type="button" data-bs-toggle="offc
               </summary>
 
               <div class="menu-acoes-painel">
+
+                <a class="menu-acoes-item" href="index.php?page=usuarios&amp;editar=<?= (int) $u['id'] ?>">
+                  <i class="bi bi-pencil" aria-hidden="true"></i> Editar nome, e-mail e perfil
+                </a>
 
                 <?php if ($souEu): ?>
 

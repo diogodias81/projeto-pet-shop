@@ -154,6 +154,48 @@ class Usuario {
             Auditoria::registrar('usuario_criado', "$nome <$email>, perfil " . self::PERFIS[$d['perfil']]);
         } catch (PDOException $e) { throw new DomainException('Este e-mail já está cadastrado.'); }
     }
+    public static function buscar(int $id): ?array {
+        $st = Database::pdo()->prepare('SELECT id,nome,email,perfil,ativo FROM usuarios WHERE id = ?');
+        $st->execute([$id]);
+        $u = $st->fetch();
+        $st->closeCursor(); // ver autenticar
+        return $u ?: null;
+    }
+    /**
+     * Admin corrige nome, e-mail e perfil. A senha não muda aqui (ver redefinirSenha).
+     * O próprio perfil não muda (evita o admin se rebaixar sem querer) e o sistema nunca fica sem admin ativo.
+     * O perfil novo vale na próxima página: o bootstrap relê o usuário a cada requisição.
+     */
+    public static function editar(int $id, array $d): void {
+        $nome = trim($d['nome'] ?? ''); $email = mb_strtolower(trim($d['email'] ?? ''));
+        $perfil = $d['perfil'] ?? '';
+        if ($nome === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) throw new DomainException('Informe nome e e-mail válidos.');
+        if (!isset(self::PERFIS[$perfil])) throw new DomainException('Perfil inválido.');
+        $antes = self::buscar($id);
+        if (!$antes) throw new DomainException('Usuário não encontrado.');
+        if ($id === (usuario()['id'] ?? 0) && $perfil !== $antes['perfil']) throw new DomainException('Você não pode mudar o seu próprio perfil. Peça a outro administrador.');
+        $st = Database::pdo()->prepare('SELECT 1 FROM usuarios WHERE lower(email) = ? AND id <> ?');
+        $st->execute([$email, $id]);
+        $duplicado = $st->fetchColumn();
+        $st->closeCursor();
+        if ($duplicado) throw new DomainException('Este e-mail já está cadastrado.');
+        $pdo = Database::pdo();
+        $pdo->exec('BEGIN IMMEDIATE');
+        try {
+            if ($antes['perfil'] === 'admin' && $perfil !== 'admin') self::exigirOutroAdmin($id);
+            $pdo->prepare('UPDATE usuarios SET nome = ?, email = ?, perfil = ? WHERE id = ?')->execute([$nome, $email, $perfil, $id]);
+            $mudou = array_filter([
+                $antes['nome'] !== $nome ? "nome {$antes['nome']} → $nome" : null,
+                $antes['email'] !== $email ? "e-mail {$antes['email']} → $email" : null,
+                $antes['perfil'] !== $perfil ? 'perfil ' . self::PERFIS[$antes['perfil']] . ' → ' . self::PERFIS[$perfil] : null,
+            ]);
+            Auditoria::registrar('usuario_alterado', "$nome <$email>" . ($mudou ? ': ' . implode(', ', $mudou) : ': sem mudanças'));
+            $pdo->commit();
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            throw new DomainException('Este e-mail já está cadastrado.');
+        } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+    }
     public static function excluir(int $id): void {
         if ($id === (usuario()['id'] ?? 0)) throw new DomainException('Você não pode excluir seu próprio usuário.');
         $st = Database::pdo()->prepare('SELECT nome, email FROM usuarios WHERE id = ?');

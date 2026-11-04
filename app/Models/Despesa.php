@@ -4,7 +4,32 @@ class Despesa {
     /** Ícone (Bootstrap Icons) de cada categoria, para as telas */
     const ICONES = ['aluguel' => 'house-door', 'energia' => 'lightning-charge', 'agua' => 'droplet', 'salarios' => 'people', 'fornecedores' => 'truck', 'impostos' => 'bank', 'manutencao' => 'tools', 'outras' => 'three-dots'];
 
+    /** Cria (sem id) ou edita (com id). Quem registrou a despesa continua o mesmo ao editar. */
+    public static function salvar(array $d, int $usuarioId): void {
+        $id = (int) ($d['id'] ?? 0);
+        if (!$id) { self::criar($d, $usuarioId); return; }
+        $st = Database::pdo()->prepare('SELECT descricao, categoria, valor, data FROM despesas WHERE id = ?');
+        $st->execute([$id]);
+        $antes = $st->fetch();
+        $st->closeCursor(); // ver excluir
+        if (!$antes) throw new DomainException('Despesa não encontrada.');
+        [$descricao, $categoria, $valor, $data] = self::validar($d);
+        Database::pdo()->prepare('UPDATE despesas SET descricao = ?, categoria = ?, valor = ?, data = ? WHERE id = ?')
+            ->execute([$descricao, $categoria, round($valor, 2), $data, $id]);
+        // o antes e o depois: valor de despesa mexe no resultado do mês
+        Auditoria::registrar('despesa_alterada', "$descricao (#$id): " . moeda($antes['valor']) . ' em ' . date('d/m/Y', strtotime($antes['data']))
+            . ' → ' . moeda($valor) . ' em ' . date('d/m/Y', strtotime($data)) . ($antes['categoria'] !== $categoria ? ', categoria ' . self::CATEGORIAS[$antes['categoria']] . ' → ' . self::CATEGORIAS[$categoria] : ''));
+    }
+
     public static function criar(array $d, int $usuarioId): void {
+        [$descricao, $categoria, $valor, $data] = self::validar($d);
+        Database::pdo()->prepare('INSERT INTO despesas (descricao,categoria,valor,data,usuario_id) VALUES (?,?,?,?,?)')
+            ->execute([$descricao, $categoria, round($valor, 2), $data, $usuarioId]);
+        Auditoria::registrar('despesa_criada', "$descricao (" . self::CATEGORIAS[$categoria] . "): " . moeda($valor) . ' em ' . date('d/m/Y', strtotime($data)));
+    }
+
+    /** [descrição, categoria, valor, data] já validados (mesmas regras no cadastro e na edição) */
+    private static function validar(array $d): array {
         $descricao = trim($d['descricao'] ?? '');
         $categoria = $d['categoria'] ?? '';
         $valor = numero($d['valor'] ?? '');
@@ -17,9 +42,15 @@ class Despesa {
         if (!$dt || $dt->format('Y-m-d') !== $data) throw new DomainException('Informe a data da despesa.');
         // Despesa futura ficaria fora do período padrão da lista (até hoje) e pareceria perdida
         if ($data > date('Y-m-d')) throw new DomainException('A data da despesa não pode ser no futuro.');
-        Database::pdo()->prepare('INSERT INTO despesas (descricao,categoria,valor,data,usuario_id) VALUES (?,?,?,?,?)')
-            ->execute([$descricao, $categoria, round($valor, 2), $data, $usuarioId]);
-        Auditoria::registrar('despesa_criada', "$descricao (" . self::CATEGORIAS[$categoria] . "): " . moeda($valor) . ' em ' . date('d/m/Y', strtotime($data)));
+        return [$descricao, $categoria, $valor, $data];
+    }
+
+    public static function buscar(int $id): ?array {
+        $st = Database::pdo()->prepare('SELECT * FROM despesas WHERE id = ?');
+        $st->execute([$id]);
+        $d = $st->fetch();
+        $st->closeCursor(); // ver excluir
+        return $d ?: null;
     }
 
     public static function excluir(int $id): void {

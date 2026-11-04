@@ -6,9 +6,9 @@ class Auditoria {
         'venda' => 'Venda', 'venda_cancelada' => 'Cancelamento de venda', 'devolucao' => 'Devolução',
         'produto_criado' => 'Produto cadastrado', 'produto_alterado' => 'Produto alterado', 'preco_alterado' => 'Alteração de preço', 'produto_excluido' => 'Produto excluído',
         'estoque_entrada' => 'Entrada de estoque', 'estoque_baixa' => 'Baixa de estoque',
-        'usuario_criado' => 'Usuário criado', 'usuario_excluido' => 'Usuário excluído', 'usuario_desativado' => 'Usuário desativado', 'usuario_reativado' => 'Usuário reativado','senha_alterada' => 'Senha alterada', 'senha_redefinida' => 'Senha redefinida', 'senha_bloqueada' => 'Troca de senha bloqueada',
+        'usuario_criado' => 'Usuário criado', 'usuario_alterado' => 'Usuário alterado', 'usuario_excluido' => 'Usuário excluído', 'usuario_desativado' => 'Usuário desativado', 'usuario_reativado' => 'Usuário reativado','senha_alterada' => 'Senha alterada', 'senha_redefinida' => 'Senha redefinida', 'senha_bloqueada' => 'Troca de senha bloqueada',
         'categoria_criada' => 'Categoria criada', 'categoria_excluida' => 'Categoria excluída',
-        'despesa_criada' => 'Despesa registrada', 'despesa_excluida' => 'Despesa excluída',
+        'despesa_criada' => 'Despesa registrada', 'despesa_alterada' => 'Despesa alterada', 'despesa_excluida' => 'Despesa excluída',
     ];
 
     /** Grava junto da operação (dentro da mesma transação, quando houver). Guarda o nome do usuário para o registro sobreviver à exclusão dele. */
