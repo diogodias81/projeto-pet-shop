@@ -22,6 +22,11 @@ function Falhar([string] $motivo, [string] $aviso = '') {
     exit 1
 }
 
+# Marca o início de cada execução: se o computador desligar ou dormir no meio, o log mostra "INICIO" sem OK/FALHA
+# depois (antes não ficava rastro nenhum e a tarefa do Windows ainda dizia "sucesso").
+New-Item -ItemType Directory -Force $origem | Out-Null
+Add-Content -Encoding utf8 -LiteralPath $log "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') INICIO windows: backup começou"
+
 try {
     # O backup em si roda dentro do container. Logo depois de ligar o computador (tarefa atrasada) o Docker Desktop
     # ainda está subindo: tenta por até 10 minutos. 'up -d' sobe o sistema se ele estiver parado.

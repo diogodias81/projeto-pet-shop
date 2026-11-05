@@ -117,7 +117,7 @@ Register-ScheduledTask -TaskName 'PetShop Backup' -Action $acao -Trigger (New-Sc
 Start-ScheduledTask -TaskName 'PetShop Backup'
 ```
 
-**Para conferir se funcionou:** abra `storage\backups\backup.log` (a última linha deve ser `OK`) e veja se apareceu um arquivo `.7z` novo em `OneDrive\Backups PetShop`. O Dashboard do administrador avisa quando algo dá errado (veja [Avisos e problemas comuns](#avisos-e-problemas-comuns)).
+**Para conferir se funcionou:** abra `storage\backups\backup.log` (a última linha deve ser `OK`; cada execução começa com uma linha `INICIO`, e um `INICIO` sem `OK` ou `FALHA` depois quer dizer que o computador desligou ou dormiu no meio do backup) e veja se apareceu um arquivo `.7z` novo em `OneDrive\Backups PetShop`. O Dashboard do administrador avisa quando algo dá errado (veja [Avisos e problemas comuns](#avisos-e-problemas-comuns)).
 
 ## Etapa 4 — Cadastrar categorias e produtos
 
