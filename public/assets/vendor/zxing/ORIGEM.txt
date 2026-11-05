@@ -1,0 +1,4 @@
+@zxing/library 0.23.0 (Apache-2.0), arquivo umd/index.min.js do pacote npm.
+Baixado de https://registry.npmjs.org/@zxing/library/-/library-0.23.0.tgz em 2026-11-04,
+integridade sha512-6fkkoFwP8CHxl6ugnPsj74PLJgX2iRv5zczGAyt5OBzQgxFhuhF0NCEc4t4OvSr8xAv2MRLlI0Iu9ZGDZQ2urA== conferida.
+Usado só quando o navegador não tem leitor nativo (iPhone/Safari): ver cameraDisponivel() em app.js.

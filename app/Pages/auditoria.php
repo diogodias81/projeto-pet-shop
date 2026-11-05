@@ -52,7 +52,7 @@ $filtrando = $acao !== '' || $usuarioId || isset($_GET['de']) || isset($_GET['at
   <details class="filtros-caixa" data-aberto-desktop<?= $filtrando ? ' open' : '' ?>>
   <summary class="btn btn-light"><i class="bi bi-sliders" aria-hidden="true"></i> Filtros</summary>
 
-  <form method="get" class="filtros">
+  <form autocomplete="off" method="get" class="filtros">
 
     <input type="hidden" name="page" value="auditoria">
 

@@ -76,7 +76,7 @@ if (isset($_GET['ver'])) {
         <span class="selo <?= $seloSituacao($venda) ?>"><?= e(Venda::situacao($venda)) ?></span>
       </div>
 
-      <form method="post">
+      <form autocomplete="off" method="post">
 
         <?= csrf_campo() ?>
 
@@ -395,7 +395,7 @@ $linkStatus = fn(string $s) => 'index.php?' . e(http_build_query(['page' => 'his
   <details class="filtros-caixa" data-aberto-desktop<?= $filtrando ? ' open' : '' ?>>
   <summary class="btn btn-light"><i class="bi bi-sliders" aria-hidden="true"></i> Filtros<?= $filtrando ? ' <span class="selo selo-neutro">em uso</span>' : '' ?></summary>
 
-  <form method="get" class="filtros">
+  <form autocomplete="off" method="get" class="filtros">
 
     <input type="hidden" name="page" value="historico">
 

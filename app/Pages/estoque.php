@@ -83,7 +83,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
 
     <h2>Registrar entrada</h2>
 
-    <form method="post" class="linha">
+    <form autocomplete="off" method="post" class="linha">
 
       <?= csrf_campo() ?>
 
@@ -181,7 +181,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
 
     <h2>Dar baixa (vencido, avaria, perda)</h2>
 
-    <form method="post" class="linha" data-confirmar="Confirmar a baixa? As unidades saem do estoque.">
+    <form autocomplete="off" method="post" class="linha" data-confirmar="Confirmar a baixa? As unidades saem do estoque.">
 
       <?= csrf_campo() ?>
 
@@ -237,7 +237,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
 
   <h2>Posição do estoque</h2>
 
-  <form method="get" class="busca-barra" role="search">
+  <form autocomplete="off" method="get" class="busca-barra" role="search">
 
     <input
       type="hidden"

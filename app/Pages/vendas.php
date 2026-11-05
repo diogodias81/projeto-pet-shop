@@ -84,6 +84,7 @@ $esgotados = array_values(array_map(
 
 <form
     method="post"
+    autocomplete="off"
     id="form-venda"
     class="pdv"
     data-desconto-max="<?= $descontoMax ?>"

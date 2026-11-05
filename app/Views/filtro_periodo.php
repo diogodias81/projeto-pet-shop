@@ -2,7 +2,7 @@
 // Filtro de período (atalhos + De/Até). Espera $pagina, $de, $ate.
 
 ?>
-<form method="get" class="filtro-periodo d-print-none">
+<form autocomplete="off" method="get" class="filtro-periodo d-print-none">
 
     <input type="hidden" name="page" value="<?= e($pagina) ?>">
 

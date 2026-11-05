@@ -104,7 +104,7 @@ $perfilAtual = $antigo['perfil'] ?? $editando['perfil'] ?? '';
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Fechar"></button>
   </div>
 
-  <form method="post" class="offcanvas-body gaveta-form">
+  <form autocomplete="off" method="post" class="offcanvas-body gaveta-form">
 
     <?= csrf_campo() ?>
 

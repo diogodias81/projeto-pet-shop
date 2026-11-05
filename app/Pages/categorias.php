@@ -31,7 +31,7 @@ $subtituloTopo = count($categorias) . (count($categorias) === 1 ? ' categoria' :
 
 <section class="card card-body mb-3">
 
-  <form method="post" class="nova-categoria">
+  <form autocomplete="off" method="post" class="nova-categoria">
 
     <?= csrf_campo() ?>
 

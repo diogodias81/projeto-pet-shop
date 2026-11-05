@@ -90,7 +90,7 @@ $icone = fn(string $cat) => Despesa::ICONES[$cat] ?? 'receipt';
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Fechar"></button>
   </div>
 
-  <form method="post" class="offcanvas-body gaveta-form">
+  <form autocomplete="off" method="post" class="offcanvas-body gaveta-form">
 
     <?= csrf_campo() ?>
 
@@ -206,7 +206,7 @@ $icone = fn(string $cat) => Despesa::ICONES[$cat] ?? 'receipt';
       <?php endforeach; ?>
     </nav>
 
-    <form method="get" class="filtro-datas">
+    <form autocomplete="off" method="get" class="filtro-datas">
       <input type="hidden" name="page" value="despesas">
       <?php if ($categoria !== ''): ?><input type="hidden" name="categoria" value="<?= e($categoria) ?>"><?php endif; ?>
       <label><span class="visually-hidden">De</span><input type="date" name="de" value="<?= e($de) ?>" aria-label="De"></label>

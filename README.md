@@ -286,7 +286,7 @@ public/
 ├── assets/
 │   ├── css/          # Estilos do sistema (tema por cima do Bootstrap; menu lateral e barra inferior no celular)
 │   ├── js/           # JavaScript das telas
-│   └── vendor/       # Bootstrap 5.3.8 e Bootstrap Icons 1.13.1 (locais, sem CDN)
+│   └── vendor/       # Bootstrap 5.3.8, Bootstrap Icons 1.13.1 e ZXing 0.23.0 (leitor de código pela câmera no iPhone; locais, sem CDN)
 ├── uploads/produtos/ # Fotos dos produtos
 └── index.php         # Ponto de entrada
 

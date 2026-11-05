@@ -95,7 +95,7 @@ $linkCat = fn(int $cat) => 'index.php?page=produtos' . ($cat ? '&amp;cat=' . $ca
       <?php endif; ?>
     </div>
 
-    <form method="post" class="offcanvas-body gaveta-form" enctype="multipart/form-data">
+    <form autocomplete="off" method="post" class="offcanvas-body gaveta-form" enctype="multipart/form-data">
 
       <?= csrf_campo() ?>
 
@@ -292,7 +292,7 @@ $linkCat = fn(int $cat) => 'index.php?page=produtos' . ($cat ? '&amp;cat=' . $ca
 
 <section class="card card-body mb-3">
 
-  <form method="get" class="busca-barra" role="search">
+  <form autocomplete="off" method="get" class="busca-barra" role="search">
 
     <input
       type="hidden"

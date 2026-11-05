@@ -286,17 +286,92 @@ function bipe(ok = true) {
 
 
 // Leitor pela CÂMERA (<input data-camera>): botão ao lado do campo, lê o código e age como a pistola
-// (preenche e "aperta Enter"). Usa o leitor nativo do navegador (Chrome/Edge no Android); onde não existe,
-// o botão não aparece e vale a pistola. A câmera só abre em HTTPS ou neste computador (localhost).
+// (preenche e "aperta Enter"). Usa o leitor nativo do navegador (Chrome/Edge no Android); onde não existe
+// (iPhone/Safari, Firefox) usa a biblioteca ZXing local (assets/vendor/zxing), carregada só ao abrir a câmera.
+// A câmera só abre em HTTPS ou neste computador (localhost).
 const formatosCamera = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'codabar'];
+
+async function leitorNativo() {
+
+    if (!('BarcodeDetector' in window)) return null;
+
+    try {
+        const formatos = (await BarcodeDetector.getSupportedFormats()).filter(f => formatosCamera.includes(f));
+        return formatos.length ? new BarcodeDetector({ formats: formatos }) : null;
+    } catch (e) { return null; }
+}
 
 async function cameraDisponivel() {
 
-    if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia || !window.isSecureContext) return false;
+    if (!navigator.mediaDevices?.getUserMedia || !window.isSecureContext) return false;
 
-    try { return (await BarcodeDetector.getSupportedFormats()).some(f => formatosCamera.includes(f)); }
+    if (await leitorNativo()) return true;
 
-    catch (e) { return false; }
+    // sem leitor nativo: ZXing, só em aparelho de toque (no computador vale a pistola)
+    return matchMedia('(pointer: coarse)').matches;
+}
+
+// ZXing (362 KB) só baixa na primeira vez que alguém abre a câmera num aparelho sem leitor nativo
+let carregandoZxing = null;
+
+function carregarZxing() {
+
+    carregandoZxing ??= new Promise((ok, erro) => {
+
+        if (window.ZXing) return ok();
+
+        const s = document.createElement('script');
+        s.src = 'assets/vendor/zxing/zxing.min.js';
+        s.onload = () => (window.ZXing ? ok() : erro(new Error('ZXing')));
+        s.onerror = () => { carregandoZxing = null; erro(new Error('ZXing')); };
+        document.head.appendChild(s);
+    });
+
+    return carregandoZxing;
+}
+
+// Mesma "cara" do BarcodeDetector (detect(video) → [{ rawValue }]): o resto da câmera não muda
+async function criarLeitor() {
+
+    const nativo = await leitorNativo();
+
+    if (nativo) return nativo;
+
+    await carregarZxing();
+
+    const Z = window.ZXing;
+    const dicas = new Map();
+    dicas.set(Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.UPC_E,
+        Z.BarcodeFormat.CODE_128, Z.BarcodeFormat.CODE_39, Z.BarcodeFormat.ITF, Z.BarcodeFormat.CODABAR]);
+    dicas.set(Z.DecodeHintType.TRY_HARDER, true);
+
+    const leitor = new Z.MultiFormatReader();
+    leitor.setHints(dicas);
+
+    const quadro = document.createElement('canvas');
+    const ctx = quadro.getContext('2d', { willReadFrequently: true });
+
+    return {
+        async detect(video) {
+
+            if (!video.videoWidth) return [];
+
+            // reduz para no máximo 800 px de largura: mais rápido e lê igual
+            const escala = Math.min(1, 800 / video.videoWidth);
+            quadro.width = Math.round(video.videoWidth * escala);
+            quadro.height = Math.round(video.videoHeight * escala);
+            ctx.drawImage(video, 0, 0, quadro.width, quadro.height);
+
+            try {
+                const lido = leitor.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(quadro))));
+                return [{ rawValue: lido.getText() }];
+            } catch (e) {
+                return []; // nenhum código neste quadro
+            } finally {
+                leitor.reset();
+            }
+        },
+    };
 }
 
 function abrirCamera(input) {
@@ -377,8 +452,11 @@ function abrirCamera(input) {
             video.srcObject = fluxo;
             await video.play();
 
-            const formatos = (await BarcodeDetector.getSupportedFormats()).filter(f => formatosCamera.includes(f));
-            const leitor = new BarcodeDetector({ formats: formatos });
+            texto.textContent = 'Preparando o leitor…';
+
+            const leitor = await criarLeitor();
+
+            texto.textContent = 'Aponte para o código de barras';
 
             // ~6 leituras por segundo: rápido o bastante e não esquenta o celular
             while (ativo) {
@@ -410,7 +488,9 @@ function abrirCamera(input) {
 
             texto.textContent = e && e.name === 'NotAllowedError'
                 ? 'O navegador não liberou a câmera. Toque no cadeado da barra de endereço e permita a câmera.'
-                : 'Não foi possível abrir a câmera neste aparelho.';
+                : e && e.message === 'ZXing'
+                    ? 'Não foi possível carregar o leitor de código. Confira a conexão com o sistema e tente de novo.'
+                    : 'Não foi possível abrir a câmera neste aparelho.';
 
             tela.classList.add('camera-erro');
         }
