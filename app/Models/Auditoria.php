@@ -19,7 +19,7 @@ class Auditoria {
     }
 
     public static function listar(string $de, string $ate, string $acao = '', int $usuarioId = 0, int $limite = 500): array {
-        $sql = 'SELECT * FROM auditoria WHERE date(criado_em) BETWEEN ? AND ?';
+        $sql = "SELECT * FROM auditoria WHERE criado_em BETWEEN ? AND ? || ' 23:59:59'";
         $par = [$de, $ate];
         if (isset(self::ACOES[$acao])) { $sql .= ' AND acao = ?'; $par[] = $acao; }
         if ($usuarioId) { $sql .= ' AND usuario_id = ?'; $par[] = $usuarioId; }

@@ -131,6 +131,16 @@ try {
     ok(recusa(fn() => Despesa::salvar(['id' => $desp, 'descricao' => 'X', 'categoria' => 'energia', 'valor' => '10', 'data' => '0001-01-01'], $caixa), 'anterior a 01/01/2000'), 'editar despesa recusa data 0001-01-01');
     Despesa::salvar(['id' => $desp, 'descricao' => 'Conta de luz outubro', 'categoria' => 'energia', 'valor' => '120,50', 'data' => '2000-01-01'], $caixa);
     ok(Despesa::buscar($desp)['data'] === '2000-01-01', 'despesa em 01/01/2000 é aceita');
+
+    // 10. Filtro de datas: pega o dia inteiro (00:00:00 a 23:59:59), nada dos vizinhos, e usa o índice
+    $nova = $pdo->prepare("INSERT INTO vendas (total, status, criado_em) VALUES (?, 'concluida', ?)");
+    foreach ([1 => '2001-03-10 00:00:00', 2 => '2001-03-10 23:59:59', 4 => '2001-03-09 23:59:59', 8 => '2001-03-11 00:00:00'] as $total => $quando) $nova->execute([$total, $quando]);
+    ok(abs(Relatorio::faturamento('2001-03-10', '2001-03-10') - 3) < 0.001, 'faturamento do dia conta 00:00:00 e 23:59:59 e não os dias vizinhos');
+    ok(count(Venda::listar(['de' => '2001-03-10', 'ate' => '2001-03-10'])) === 2, 'histórico do dia traz as 2 vendas do primeiro ao último segundo');
+    $plano = implode(' ', $pdo->query("EXPLAIN QUERY PLAN SELECT SUM(total) FROM vendas WHERE criado_em BETWEEN '2001-03-10' AND '2001-03-10' || ' 23:59:59'")->fetchAll(PDO::FETCH_COLUMN, 3));
+    ok(str_contains($plano, 'idx_vendas_data'), 'filtro por período usa o índice de datas');
+    $fontes = implode(array_map('file_get_contents', glob("$real/app/Models/*.php")));
+    ok(!preg_match('/date\(\w*\.?criado_em\)/', $fontes), 'nenhuma consulta volta a usar date(criado_em), que ignora o índice');
     $_SESSION = [];
 } catch (Throwable $e) {
     echo 'ERRO - ' . get_class($e) . ': ' . $e->getMessage() . "\n";

@@ -93,8 +93,8 @@ class Venda {
                 (SELECT GROUP_CONCAT(vi.quantidade || 'x ' || p.nome, ', ') FROM venda_itens vi JOIN produtos p ON p.id=vi.produto_id WHERE vi.venda_id=v.id) AS itens
                 FROM vendas v LEFT JOIN usuarios u ON u.id=v.usuario_id WHERE 1=1";
         $par = [];
-        if (!empty($f['de']))         { $sql .= ' AND date(v.criado_em) >= ?'; $par[] = $f['de']; }
-        if (!empty($f['ate']))        { $sql .= ' AND date(v.criado_em) <= ?'; $par[] = $f['ate']; }
+        if (!empty($f['de']))         { $sql .= ' AND v.criado_em >= ?'; $par[] = $f['de']; }
+        if (!empty($f['ate']))        { $sql .= " AND v.criado_em <= ? || ' 23:59:59'"; $par[] = $f['ate']; }
         if (!empty($f['usuario_id'])) { $sql .= ' AND v.usuario_id = ?'; $par[] = (int)$f['usuario_id']; }
         if (!empty($f['forma']))      { $sql .= ' AND v.forma_pagamento = ?'; $par[] = $f['forma']; }
         if (!empty($f['status']))     { $sql .= ' AND v.status = ?'; $par[] = $f['status']; }

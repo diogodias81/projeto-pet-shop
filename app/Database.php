@@ -410,6 +410,18 @@ class Database
             CREATE INDEX IF NOT EXISTS idx_vendas_data
                 ON vendas (criado_em);
 
+            CREATE INDEX IF NOT EXISTS idx_movimentacoes_data
+                ON movimentacoes_estoque (criado_em);
+
+            CREATE INDEX IF NOT EXISTS idx_auditoria_data
+                ON auditoria (criado_em);
+
+            CREATE INDEX IF NOT EXISTS idx_despesas_data
+                ON despesas (data);
+
+            CREATE INDEX IF NOT EXISTS idx_devolucoes_venda
+                ON devolucoes (venda_id);
+
             CREATE INDEX IF NOT EXISTS idx_venda_itens_venda
                 ON venda_itens (venda_id);
 

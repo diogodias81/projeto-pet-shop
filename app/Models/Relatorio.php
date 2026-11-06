@@ -1,5 +1,7 @@
 <?php
 class Relatorio {
+    // Filtro de datas: compara criado_em direto. Com a função date() em volta, o banco ignora o índice e lê a tabela inteira.
+
     /** Quanto a venda rendeu de fato: canceladas valem zero e devoluções são descontadas */
     private const LIQUIDO = "CASE WHEN status='cancelada' THEN 0 ELSE total - valor_devolvido END";
 
@@ -9,12 +11,12 @@ class Relatorio {
 
     /** Faturamento líquido entre duas datas (inclusive) */
     public static function faturamento(string $de, string $ate): float {
-        return (float)self::um("SELECT COALESCE(SUM(" . self::LIQUIDO . "),0) FROM vendas WHERE date(criado_em) BETWEEN ? AND ?", [$de, $ate]);
+        return (float)self::um("SELECT COALESCE(SUM(" . self::LIQUIDO . "),0) FROM vendas WHERE criado_em BETWEEN ? AND ? || ' 23:59:59'", [$de, $ate]);
     }
 
     /** Faturamento de ontem só até este mesmo horário: comparar o dia de hoje (ainda pela metade) com o dia de ontem inteiro sempre parecia queda */
     public static function faturamentoOntemAteAgora(): float {
-        return (float)self::um("SELECT COALESCE(SUM(" . self::LIQUIDO . "),0) FROM vendas WHERE date(criado_em) = date('now','localtime','-1 day') AND criado_em <= datetime('now','localtime','-1 day')");
+        return (float)self::um("SELECT COALESCE(SUM(" . self::LIQUIDO . "),0) FROM vendas WHERE criado_em >= date('now','localtime','-1 day') AND criado_em <= datetime('now','localtime','-1 day')");
     }
 
     /**
@@ -23,8 +25,8 @@ class Relatorio {
      */
     public static function periodo(string $de, string $ate): array {
         $fat = self::faturamento($de, $ate);
-        $vendas = (int)self::um("SELECT COUNT(*) FROM vendas WHERE status='concluida' AND NOT (total > 0 AND valor_devolvido >= total) AND date(criado_em) BETWEEN ? AND ?", [$de, $ate]);
-        $custo = (float)self::um("SELECT COALESCE(SUM((vi.quantidade - vi.quantidade_devolvida) * vi.custo_unit),0) FROM venda_itens vi JOIN vendas v ON v.id=vi.venda_id WHERE v.status='concluida' AND date(v.criado_em) BETWEEN ? AND ?", [$de, $ate]);
+        $vendas = (int)self::um("SELECT COUNT(*) FROM vendas WHERE status='concluida' AND NOT (total > 0 AND valor_devolvido >= total) AND criado_em BETWEEN ? AND ? || ' 23:59:59'", [$de, $ate]);
+        $custo = (float)self::um("SELECT COALESCE(SUM((vi.quantidade - vi.quantidade_devolvida) * vi.custo_unit),0) FROM venda_itens vi JOIN vendas v ON v.id=vi.venda_id WHERE v.status='concluida' AND v.criado_em BETWEEN ? AND ? || ' 23:59:59'", [$de, $ate]);
         $despesas = (float)self::um('SELECT COALESCE(SUM(valor),0) FROM despesas WHERE data BETWEEN ? AND ?', [$de, $ate]);
         $lucro = round($fat - $custo, 2);
         return [
@@ -49,7 +51,7 @@ class Relatorio {
                 SUM((vi.quantidade - vi.quantidade_devolvida) * vi.custo_unit) AS custo,
                 MIN(vi.custo_unit) = 0 AS sem_custo
             FROM venda_itens vi JOIN vendas v ON v.id=vi.venda_id JOIN produtos p ON p.id=vi.produto_id
-            WHERE v.status = 'concluida' AND date(v.criado_em) BETWEEN ? AND ? GROUP BY p.id HAVING qtd > 0 ORDER BY qtd DESC, receita DESC LIMIT " . (int)$limite);
+            WHERE v.status = 'concluida' AND v.criado_em BETWEEN ? AND ? || ' 23:59:59' GROUP BY p.id HAVING qtd > 0 ORDER BY qtd DESC, receita DESC LIMIT " . (int)$limite);
         $st->execute([$de ?? '0000-01-01', $ate ?? '9999-12-31']);
         return $st->fetchAll();
     }
@@ -58,7 +60,7 @@ class Relatorio {
     public static function serie(string $de, string $ate): array {
         $porMes = (strtotime($ate) - strtotime($de)) / 86400 > 62;
         $fmt = $porMes ? '%Y-%m' : '%Y-%m-%d';
-        $st = Database::pdo()->prepare("SELECT strftime('$fmt', criado_em) AS k, SUM(" . self::LIQUIDO . ") FROM vendas WHERE date(criado_em) BETWEEN ? AND ? GROUP BY k");
+        $st = Database::pdo()->prepare("SELECT strftime('$fmt', criado_em) AS k, SUM(" . self::LIQUIDO . ") FROM vendas WHERE criado_em BETWEEN ? AND ? || ' 23:59:59' GROUP BY k");
         $st->execute([$de, $ate]);
         $mapa = $st->fetchAll(PDO::FETCH_KEY_PAIR);
         $r = [];
@@ -71,7 +73,7 @@ class Relatorio {
 
     /** Movimentações de estoque do período, da mais recente para a mais antiga */
     public static function movimentacoes(string $de, string $ate): array {
-        $st = Database::pdo()->prepare('SELECT m.*, p.nome AS produto, l.codigo AS lote, u.nome AS usuario FROM movimentacoes_estoque m JOIN produtos p ON p.id = m.produto_id LEFT JOIN lotes l ON l.id = m.lote_id LEFT JOIN usuarios u ON u.id = m.usuario_id WHERE date(m.criado_em) BETWEEN ? AND ? ORDER BY m.id DESC');
+        $st = Database::pdo()->prepare("SELECT m.*, p.nome AS produto, l.codigo AS lote, u.nome AS usuario FROM movimentacoes_estoque m JOIN produtos p ON p.id = m.produto_id LEFT JOIN lotes l ON l.id = m.lote_id LEFT JOIN usuarios u ON u.id = m.usuario_id WHERE m.criado_em BETWEEN ? AND ? || ' 23:59:59' ORDER BY m.id DESC");
         $st->execute([$de, $ate]);
         return $st->fetchAll();
     }
