@@ -32,6 +32,7 @@ class Produto {
         $cat = (int)($d['categoria_id'] ?? 0) ?: null;
         $id = (int)($d['id'] ?? 0);
         if ($nome === '') throw new DomainException('Informe o nome do produto.');
+        if (mb_strlen($nome) > 150) throw new DomainException('O nome do produto deve ter no máximo 150 caracteres.');
         if ($codigo !== null && !preg_match('/^\d{4,14}$/', $codigo)) throw new DomainException('O código de barras deve ter de 4 a 14 números.');
         if ($preco <= 0)  throw new DomainException('Informe um preço de venda válido, ex.: 143,99');
         if ($custo < 0)   throw new DomainException('O preço de custo não pode ser negativo.');
@@ -73,7 +74,7 @@ class Produto {
             }
             $pdo->commit();
         } catch (Throwable $e) {
-            $pdo->rollBack();
+            if ($pdo->inTransaction()) $pdo->rollBack();
             if ($arquivo) @unlink(self::pastaFotos() . '/' . $arquivo);
             throw $e;
         }

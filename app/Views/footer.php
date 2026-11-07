@@ -43,7 +43,7 @@
 
     <script src="assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
 
-    <script src="<?= asset('assets/js/app.js') ?>"></script>
+    <script src="<?= asset('assets/js/app.js') ?>" data-zxing="<?= asset('assets/vendor/zxing/zxing.min.js') ?>"></script>
 
 </body>
 

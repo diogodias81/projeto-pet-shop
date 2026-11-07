@@ -6,6 +6,7 @@ class Categoria {
     public static function criar(string $nome): void {
         $nome = trim($nome);
         if ($nome === '') throw new DomainException('Informe o nome da categoria.');
+        if (mb_strlen($nome) > 150) throw new DomainException('O nome da categoria deve ter no máximo 150 caracteres.');
         // NOCASE do SQLite só ignora maiúsculas em ASCII; acentos (Ç, Ã) comparados aqui no PHP
         $existentes = array_map('mb_strtolower', Database::pdo()->query('SELECT nome FROM categorias')->fetchAll(PDO::FETCH_COLUMN));
         if (in_array(mb_strtolower($nome), $existentes, true)) throw new DomainException('Categoria já cadastrada.');

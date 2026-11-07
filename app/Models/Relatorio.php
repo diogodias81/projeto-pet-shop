@@ -78,12 +78,17 @@ class Relatorio {
         return $st->fetchAll();
     }
 
+    /** Data real (AAAA-MM-DD) de 2000 até o fim do ano que vem: fora disso o gráfico teria dezenas de milhares de pontos (ver serie) */
+    public static function dataValida($d): bool {
+        return is_string($d) && ($dt = DateTime::createFromFormat('!Y-m-d', $d)) && $dt->format('Y-m-d') === $d
+            && $d >= Despesa::DATA_MINIMA && (int) substr($d, 0, 4) <= (int) date('Y') + 1;
+    }
+
     /** Período pronto pelo atalho (hoje, semana, mes) ou pelas datas digitadas. Datas inválidas viram o mês atual. */
     public static function datas(array $q): array {
         $hoje = date('Y-m-d');
         $atalhos = ['hoje' => [$hoje, $hoje], 'semana' => [date('Y-m-d', strtotime('-6 days')), $hoje], 'mes' => [date('Y-m-01'), $hoje]];
         if (isset($atalhos[$q['periodo'] ?? ''])) return $atalhos[$q['periodo']];
-        $valida = fn($d) => is_string($d) && ($dt = DateTime::createFromFormat('!Y-m-d', $d)) && $dt->format('Y-m-d') === $d;
-        return [$valida($q['de'] ?? null) ? $q['de'] : date('Y-m-01'), $valida($q['ate'] ?? null) ? $q['ate'] : $hoje];
+        return [self::dataValida($q['de'] ?? null) ? $q['de'] : date('Y-m-01'), self::dataValida($q['ate'] ?? null) ? $q['ate'] : $hoje];
     }
 }

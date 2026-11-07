@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // devolve o que foi digitado ao formulário (a foto o navegador não deixa repor)
     if (($_POST['acao'] ?? '') !== 'excluir') {
-      $_SESSION['form_produto'] = $_POST;
+      $_SESSION['form_produto'] = array_intersect_key($_POST, array_flip(['id', 'nome', 'codigo_barras', 'categoria_id', 'preco', 'preco_custo', 'estoque', 'lote', 'validade', 'estoque_minimo']));
       redirect('produtos', (int) ($_POST['id'] ?? 0) ? ['editar' => (int) $_POST['id']] : ['novo' => 1]);
     }
   }

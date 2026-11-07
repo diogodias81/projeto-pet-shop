@@ -326,9 +326,10 @@ if (isset($_GET['ver'])) {
 
 // ---- lista com filtros ----
 
+// Campo limpo (vazio) = sem limite, para ver todo o histórico; data inválida cai no padrão
 $filtros = [
-  'de' => $_GET['de'] ?? date('Y-m-01'),
-  'ate' => $_GET['ate'] ?? date('Y-m-d'),
+  'de' => ($_GET['de'] ?? null) === '' || Relatorio::dataValida($_GET['de'] ?? null) ? $_GET['de'] : date('Y-m-01'),
+  'ate' => ($_GET['ate'] ?? null) === '' || Relatorio::dataValida($_GET['ate'] ?? null) ? $_GET['ate'] : date('Y-m-d'),
   'produto_id' => (int) ($_GET['produto_id'] ?? 0),
   'usuario_id' => $soProprias ? (int) $eu['id'] : (int) ($_GET['usuario_id'] ?? 0),
   'forma' => $_GET['forma'] ?? '',
@@ -353,10 +354,8 @@ $validas = array_filter($vendas, fn($v) => $v['status'] === 'concluida' && !($v[
 $somaLiquido = array_sum(array_column($validas, 'liquido'));
 $foraDaConta = count($vendas) - count($validas);
 
-// as datas do filtro vêm do GET sem validação: só mostra no subtítulo se forem datas de verdade
-$dataOk = fn($d) => is_string($d) && ($dt = DateTime::createFromFormat('!Y-m-d', $d)) && $dt->format('Y-m-d') === $d; // mesma regra de Relatorio::datas (30/02 e "\n" no fim não passam)
 $subtituloTopo = ($soProprias ? 'Suas vendas' : 'Todas as vendas da loja')
-  . ($dataOk($filtros['de']) && $dataOk($filtros['ate']) ? ' · ' . date('d/m/Y', strtotime($filtros['de'])) . ' a ' . date('d/m/Y', strtotime($filtros['ate'])) : '');
+  . ($filtros['de'] !== '' && $filtros['ate'] !== '' ? ' · ' . date('d/m/Y', strtotime($filtros['de'])) . ' a ' . date('d/m/Y', strtotime($filtros['ate'])) : '');
 if (temPerfil(['admin', 'vendedor'])) {
   $acoesTopo = '<a class="btn btn-primary" href="index.php?page=vendas"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nova venda</a>';
 }

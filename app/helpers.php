@@ -94,9 +94,9 @@ function redirect(
 
     if (headers_sent($arquivo, $linha)) {
 
-        die('HEADERS JÁ FORAM ENVIADOS<br>' .
-            'Arquivo: ' . $arquivo . '<br>' .
-            'Linha: ' . $linha);
+        error_log("redirect() depois de os cabeçalhos saírem: $arquivo:$linha");
+
+        die('Não foi possível continuar. Volte e tente novamente.');
     }
 
     $url = http_build_query(

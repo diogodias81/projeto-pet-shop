@@ -25,6 +25,8 @@ class Estoque {
         if ($qtd < 1) throw new DomainException('A quantidade deve ser maior que zero.');
         if ($qtd > 100000) throw new DomainException('Quantidade acima do limite de 100.000 unidades por entrada.');
         $lote = mb_strtoupper(trim($lote)) ?: 'L' . date('Ymd');
+        if (mb_strlen($lote) > 100) throw new DomainException('O lote deve ter no máximo 100 caracteres.');
+        if (mb_strlen(trim($fornecedor)) > 100) throw new DomainException('O fornecedor deve ter no máximo 100 caracteres.');
         $validade = trim($validade) ?: null;
         if ($validade !== null) {
             $dt = DateTime::createFromFormat('!Y-m-d', $validade);
@@ -49,7 +51,7 @@ class Estoque {
             self::registrar($produtoId, $loteId, 'entrada', $qtd, null, trim($fornecedor) ? 'Fornecedor: ' . trim($fornecedor) : '');
             Auditoria::registrar('estoque_entrada', "{$produto['nome']}: +$qtd no lote $lote" . ($validade ? ', validade ' . date('d/m/Y', strtotime($validade)) : ''));
             if ($propria) $pdo->commit();
-        } catch (Throwable $e) { if ($propria) $pdo->rollBack(); throw $e; }
+        } catch (Throwable $e) { if ($propria && $pdo->inTransaction()) $pdo->rollBack(); throw $e; }
     }
 
     /**
@@ -158,6 +160,7 @@ class Estoque {
     public static function baixa(int $loteId, int $qtd, string $motivo, string $obs = ''): void {
         if (!isset(self::MOTIVOS_BAIXA[$motivo])) throw new DomainException('Escolha o motivo da baixa.');
         if ($qtd < 1) throw new DomainException('A quantidade deve ser maior que zero.');
+        if (mb_strlen(trim($obs)) > 200) throw new DomainException('A observação deve ter no máximo 200 caracteres.');
         $pdo = Database::pdo();
         $pdo->exec('BEGIN IMMEDIATE');
         try {
@@ -171,7 +174,7 @@ class Estoque {
             self::registrar((int)$l['produto_id'], $loteId, 'baixa', -$qtd, null, self::MOTIVOS_BAIXA[$motivo] . (trim($obs) ? ': ' . trim($obs) : ''));
             Auditoria::registrar('estoque_baixa', "{$l['nome']}: -$qtd do lote {$l['codigo']} (" . self::MOTIVOS_BAIXA[$motivo] . ')');
             $pdo->commit();
-        } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+        } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
     }
 
     /** Últimas movimentações, filtradas pela mesma busca da tela (produto, código de barras ou lote) */

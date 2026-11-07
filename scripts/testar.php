@@ -141,6 +141,60 @@ try {
     ok(str_contains($plano, 'idx_vendas_data'), 'filtro por período usa o índice de datas');
     $fontes = implode(array_map('file_get_contents', glob("$real/app/Models/*.php")));
     ok(!preg_match('/date\(\w*\.?criado_em\)/', $fontes), 'nenhuma consulta volta a usar date(criado_em), que ignora o índice');
+
+    // 11. Limite de texto no servidor (conta caracteres, não bytes: "ç" são 2 bytes e 1 caractere)
+    $texto = fn(int $n) => str_repeat('ç', $n);
+    $precos = ['preco' => '10,00', 'preco_custo' => '4,00'];
+    ok(recusa(fn() => Produto::salvar(['nome' => $texto(151)] + $precos), 'no máximo 150'), 'produto recusa nome de 151 caracteres');
+    Produto::salvar(['nome' => $texto(150)] + $precos);
+    $lim = (int) $pdo->query("SELECT id FROM produtos WHERE length(nome) = 150")->fetchColumn();
+    ok($lim > 0, 'produto aceita nome de 150 caracteres');
+    ok(recusa(fn() => Categoria::criar($texto(151)), 'no máximo 150'), 'categoria recusa nome de 151 caracteres');
+    Categoria::criar($texto(150));
+    ok((int) $pdo->query("SELECT COUNT(*) FROM categorias WHERE length(nome) = 150")->fetchColumn() === 1, 'categoria aceita nome de 150 caracteres');
+    ok(recusa(fn() => Estoque::entrada($lim, 1, '', $texto(101)), 'lote deve ter no máximo 100'), 'entrada recusa lote de 101 caracteres');
+    ok(recusa(fn() => Estoque::entrada($lim, 1, $texto(101)), 'fornecedor deve ter no máximo 100'), 'entrada recusa fornecedor de 101 caracteres');
+    ok($estoque($lim) === 0, 'entrada recusada não mexe no estoque');
+    Estoque::entrada($lim, 10, $texto(100), $texto(100));
+    ok($estoque($lim) === 10, 'entrada aceita lote e fornecedor de 100 caracteres');
+    // o lote longo vai junto do cadastro do produto: nada fica pela metade
+    ok(recusa(fn() => Produto::salvar(['nome' => 'Lote longo', 'estoque' => '1', 'lote' => $texto(101)] + $precos), 'no máximo 100'), 'cadastro com estoque inicial recusa lote de 101 caracteres');
+    ok(!$pdo->query("SELECT 1 FROM produtos WHERE nome = 'Lote longo'")->fetchColumn(), 'cadastro recusado pelo lote não deixa o produto criado');
+    $idLote = (int) $pdo->query("SELECT id FROM lotes WHERE produto_id = $lim")->fetchColumn();
+    ok(recusa(fn() => Estoque::baixa($idLote, 1, 'perda', $texto(201)), 'no máximo 200'), 'baixa recusa observação de 201 caracteres');
+    Estoque::baixa($idLote, 1, 'perda', $texto(200));
+    ok($estoque($lim) === 9, 'baixa aceita observação de 200 caracteres');
+    $vLim = Venda::registrar($admin['id'], [['produto_id' => $lim, 'quantidade' => 2]], ['forma' => 'pix']);
+    $itemLim = (int) $pdo->query("SELECT id FROM venda_itens WHERE venda_id = {$vLim['id']}")->fetchColumn();
+    ok(recusa(fn() => Venda::devolver($vLim['id'], $admin, [$itemLim => 1], $texto(201)), 'no máximo 200'), 'devolução recusa motivo de 201 caracteres');
+    Venda::devolver($vLim['id'], $admin, [$itemLim => 1], $texto(200));
+    ok(recusa(fn() => Venda::cancelar($vLim['id'], $admin, $texto(201)), 'no máximo 200'), 'cancelamento recusa motivo de 201 caracteres');
+    Venda::cancelar($vLim['id'], $admin, $texto(200));
+    ok(Venda::buscar($vLim['id'])['status'] === 'cancelada', 'devolução e cancelamento aceitam motivo de 200 caracteres');
+    // registro de antes do limite continua aparecendo e podendo dar baixa
+    $pdo->prepare('INSERT INTO lotes (produto_id, codigo, quantidade) VALUES (?, ?, 1)')->execute([$lim, 'A' . str_repeat('X', 1000)]);
+    $idAntigo = (int) $pdo->lastInsertId();
+    $achou = array_filter(Estoque::lotes(), fn($l) => (int) $l['id'] === $idAntigo);
+    Estoque::baixa($idAntigo, 1, 'perda');
+    ok(count($achou) === 1 && (int) $pdo->query("SELECT quantidade FROM lotes WHERE id = $idAntigo")->fetchColumn() === 0, 'lote antigo acima do limite continua na lista e aceita baixa');
+
+    // 12. Período: só datas reais de 2000 até o fim do ano que vem (0000 a 9999 estourava o dashboard)
+    $hoje = date('Y-m-d'); $mes = date('Y-m-01'); $anoQueVem = (int) date('Y') + 1;
+    ok(Relatorio::datas(['de' => '0000-01-01', 'ate' => '9999-12-31']) === [$mes, $hoje], 'período 0000 a 9999 vira o mês atual');
+    ok(Relatorio::datas(['de' => '2020-01-01', 'ate' => '2026-11-06']) === ['2020-01-01', '2026-11-06'], 'período de 2020 a 2026 continua valendo');
+    ok(Relatorio::datas(['de' => '2000-01-01', 'ate' => "$anoQueVem-12-31"]) === ['2000-01-01', "$anoQueVem-12-31"], 'limites da faixa são aceitos');
+    ok(Relatorio::datas(['de' => '1999-12-31', 'ate' => ($anoQueVem + 1) . '-01-01']) === [$mes, $hoje], 'um dia fora da faixa vira o padrão');
+    foreach (['x', '0', '', '2026-02-30', "2026-01-01\n", '26-01-01', null, ['2026-01-01']] as $d) ok(!Relatorio::dataValida($d), 'dataValida recusa ' . json_encode($d));
+    ok(count(Relatorio::serie('2000-01-01', "$anoQueVem-12-31")) === ($anoQueVem - 1999) * 12, 'maior período possível dá uma série de tamanho limitado, um ponto por mês');
+    ok(count(Relatorio::maisVendidos()) > 0, 'mais vendidos sem datas continua usando o padrão interno 0000 a 9999');
+
+    // 13. Erro que já desfez a transação (como "disk I/O error" e RAISE(ROLLBACK)): chega o erro original, não "no active transaction"
+    $pdo->exec("CREATE TEMP TRIGGER erro_simulado BEFORE INSERT ON tentativas_login BEGIN SELECT RAISE(ROLLBACK, 'erro simulado'); END");
+    try { Usuario::autenticar('x@petshop.com', 'errada', '127.0.0.1'); $erro = ''; } catch (Throwable $e) { $erro = $e->getMessage(); }
+    $pdo->exec('DROP TRIGGER erro_simulado');
+    ok(str_contains($erro, 'erro simulado'), 'erro que desfaz a transação não é escondido pelo rollBack');
+    $fontes = implode(array_map('file_get_contents', glob("$real/app/Models/*.php")));
+    ok(!preg_match('/(?<!inTransaction\(\)\) )\$pdo->rollBack\(\)/', $fontes), 'nenhum rollBack sem conferir inTransaction()');
     $_SESSION = [];
 } catch (Throwable $e) {
     echo 'ERRO - ' . get_class($e) . ': ' . $e->getMessage() . "\n";

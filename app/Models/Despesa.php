@@ -35,7 +35,7 @@ class Despesa {
             }
             $pdo->commit();
             return $mudou;
-        } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+        } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
     }
 
     public static function criar(array $d, int $usuarioId): void {

@@ -54,7 +54,7 @@ class Venda {
             Auditoria::registrar('venda', "Venda #$vendaId: " . moeda($total) . ' em ' . self::FORMAS[$forma] . ($desconto > 0 ? ', desconto de ' . moeda($desconto) : ''));
             $pdo->commit();
             return ['id' => $vendaId, 'total' => $total, 'alertas' => $alertas];
-        } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+        } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
     }
 
     /** Desconto em R$, validado contra o subtotal e o limite de quem vende */
@@ -121,6 +121,7 @@ class Venda {
     public static function cancelar(int $id, array $usuario, string $motivo): void {
         $motivo = trim($motivo);
         if ($motivo === '') throw new DomainException('Informe o motivo do cancelamento.');
+        if (mb_strlen($motivo) > 200) throw new DomainException('O motivo deve ter no máximo 200 caracteres.');
         if ($usuario['perfil'] !== 'admin') throw new DomainException('Só o administrador pode cancelar vendas.');
         $pdo = Database::pdo();
         // lê e altera dentro da mesma transação de escrita: dois cancelamentos simultâneos não devolvem o estoque em dobro
@@ -138,7 +139,7 @@ class Venda {
             }
             Auditoria::registrar('venda_cancelada', "Venda #$id de " . moeda($v['total']) . " cancelada. Motivo: $motivo", $usuario);
             $pdo->commit();
-        } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+        } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
     }
 
     /**
@@ -149,6 +150,7 @@ class Venda {
     public static function devolver(int $id, array $usuario, array $qtds, string $motivo): float {
         $motivo = trim($motivo);
         if ($motivo === '') throw new DomainException('Informe o motivo da devolução.');
+        if (mb_strlen($motivo) > 200) throw new DomainException('O motivo deve ter no máximo 200 caracteres.');
         $pdo = Database::pdo();
         // lê e altera dentro da mesma transação de escrita (ver cancelar)
         $pdo->exec('BEGIN IMMEDIATE');
@@ -179,7 +181,7 @@ class Venda {
             Auditoria::registrar('devolucao', "Venda #$id: $unidades unidade(s) devolvida(s), " . moeda($soma) . " ao cliente. Motivo: $motivo", $usuario);
             $pdo->commit();
             return $soma;
-        } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+        } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
     }
 
     /** Rótulo da situação para telas e comprovante */

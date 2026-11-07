@@ -321,7 +321,7 @@ function carregarZxing() {
         if (window.ZXing) return ok();
 
         const s = document.createElement('script');
-        s.src = 'assets/vendor/zxing/zxing.min.js';
+        s.src = document.querySelector('script[data-zxing]').dataset.zxing; // footer.php: endereço com a versão do arquivo
         s.onload = () => (window.ZXing ? ok() : erro(new Error('ZXing')));
         s.onerror = () => { carregandoZxing = null; erro(new Error('ZXing')); };
         document.head.appendChild(s);

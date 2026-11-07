@@ -43,7 +43,7 @@ class Usuario {
                 $pdo->exec("DELETE FROM tentativas_login WHERE criado_em < datetime('now', '-1 day')");
             }
             $pdo->commit();
-        } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+        } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
         if ($bloqueado) throw new DomainException("Muitas tentativas de acesso. Aguarde $minutos minuto" . ($minutos > 1 ? 's' : '') . ' e tente novamente.');
 
         $st = $pdo->prepare('SELECT * FROM usuarios WHERE lower(email) = ?');
@@ -104,7 +104,7 @@ class Usuario {
                 if (!$st->fetchColumn()) Auditoria::registrar('senha_bloqueada', 'Senha atual errada 5 vezes em "Minha senha"');
             }
             $pdo->commit();
-        } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+        } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
         if ($erros >= 5) {
             $minutos = max(1, (int) $minutos);
             throw new DomainException("Muitas tentativas com a senha atual errada. Aguarde $minutos minuto" . ($minutos > 1 ? 's' : '') . ' e tente novamente.');
@@ -200,9 +200,9 @@ class Usuario {
             $pdo->commit();
             return (bool) $mudou;
         } catch (PDOException $e) {
-            $pdo->rollBack();
+            if ($pdo->inTransaction()) $pdo->rollBack();
             throw new DomainException('Este e-mail já está cadastrado.');
-        } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+        } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
     }
     public static function excluir(int $id): void {
         if ($id === (usuario()['id'] ?? 0)) throw new DomainException('Você não pode excluir seu próprio usuário.');
@@ -219,9 +219,9 @@ class Usuario {
             Auditoria::registrar('usuario_excluido', "{$alvo['nome']} <{$alvo['email']}>");
             $pdo->commit();
         } catch (PDOException $e) {
-            $pdo->rollBack();
+            if ($pdo->inTransaction()) $pdo->rollBack();
             throw new DomainException('Usuário possui vendas ou movimentações de estoque registradas e não pode ser excluído. Use "Desativar" para bloquear o acesso.');
-        } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+        } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
     }
     /** Chamar dentro de BEGIN IMMEDIATE: dois admins agindo ao mesmo tempo não deixam o sistema sem administrador ativo */
     private static function exigirOutroAdmin(int $id): void {
@@ -244,6 +244,6 @@ class Usuario {
             $pdo->prepare('UPDATE usuarios SET ativo = ? WHERE id = ?')->execute([(int) $ativo, $id]);
             Auditoria::registrar($ativo ? 'usuario_reativado' : 'usuario_desativado', "{$alvo['nome']} <{$alvo['email']}>");
             $pdo->commit();
-        } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+        } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
     }
 }
