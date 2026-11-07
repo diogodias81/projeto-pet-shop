@@ -25,6 +25,11 @@ RUN printf '%s\n' \
     > /etc/apache2/conf-available/uploads.conf \
     && a2enconf uploads
 
+# Não conta a versão do Apache/Debian no cabeçalho "Server" nem no rodapé das páginas de erro
+# (quem procura falhas conhecidas de uma versão específica deixa de saber qual é)
+RUN printf '%s\n' 'ServerTokens Prod' 'ServerSignature Off' > /etc/apache2/conf-available/zz-esconder-versao.conf \
+    && a2enconf zz-esconder-versao
+
 WORKDIR /var/www/html
 
 COPY . /var/www/html
