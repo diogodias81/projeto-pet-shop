@@ -39,7 +39,33 @@ document.querySelectorAll('button[data-confirmar-botao]').forEach(btn => {
 
 document.querySelectorAll('input[type="file"][data-max-bytes]').forEach(input => {
 
-    input.addEventListener('change', () => {
+    input.addEventListener('change', async () => {
+
+        // Foto de celular (3 a 5 MB, 4032 px) passa do limite: reduz aqui para 1600 px em JPEG antes de enviar
+        const f = input.files[0];
+        if (f && window.DataTransfer && window.createImageBitmap) {
+            input.setCustomValidity('Aguarde: preparando a foto.'); // segura o envio enquanto reduz
+            try {
+                const img = await createImageBitmap(f, { imageOrientation: 'from-image' }); // foto de pé continua de pé
+                const escala = Math.min(1, 1600 / Math.max(img.width, img.height));
+                if (escala < 1 || f.size > Number(input.dataset.maxBytes)) {
+                    const quadro = document.createElement('canvas');
+                    quadro.width = Math.round(img.width * escala);
+                    quadro.height = Math.round(img.height * escala);
+                    const ctx = quadro.getContext('2d');
+                    ctx.fillStyle = '#fff'; // PNG transparente: fundo branco em vez de preto no JPEG
+                    ctx.fillRect(0, 0, quadro.width, quadro.height);
+                    ctx.drawImage(img, 0, 0, quadro.width, quadro.height);
+                    const menor = await new Promise(ok => quadro.toBlob(ok, 'image/jpeg', 0.85));
+                    if (menor) {
+                        const dt = new DataTransfer();
+                        dt.items.add(new File([menor], f.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }));
+                        input.files = dt.files;
+                    }
+                }
+            } catch { /* não deu para reduzir: segue o arquivo original e o aviso de tamanho abaixo */ }
+            input.setCustomValidity('');
+        }
 
         const grande = [...input.files].some(f => f.size > Number(input.dataset.maxBytes));
 

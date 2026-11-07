@@ -1,6 +1,8 @@
 services:
   php:
     build: .
+    # Volta sozinho quando o Docker Desktop abre (PC reiniciado): sem isso o caixa ficava parado até alguém rodar "docker compose up -d"
+    restart: unless-stopped
     ports:
       # Só esta máquina acessa. Para expor na rede, coloque um proxy com HTTPS (ex.: Caddy/nginx) na frente, não troque por 0.0.0.0.
       - "127.0.0.1:8000:80"
