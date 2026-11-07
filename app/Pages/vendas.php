@@ -6,6 +6,12 @@ $descontoMax = temPerfil(['admin'])
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
+  // Mesmo caixa enviado de novo (reenvio da página, rede lenta, clique duplo que passou): abre a venda já feita em vez de gravar outra e baixar o estoque em dobro
+  $token = (string) ($_POST['venda_token'] ?? '');
+  if (isset($_SESSION['vendas_feitas'][$token])) {
+    redirect('comprovante', ['id' => $_SESSION['vendas_feitas'][$token]]);
+  }
+
   try {
 
     $itens = json_decode(
@@ -19,6 +25,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $_POST,
       $descontoMax
     );
+
+    if ($token !== '') {
+      $_SESSION['vendas_feitas'][$token] = $res['id'];
+      $_SESSION['vendas_feitas'] = array_slice($_SESSION['vendas_feitas'], -20, null, true); // só as últimas: a sessão não cresce sem fim
+    }
 
     flash(
       'Venda #' . $res['id'] .
@@ -91,6 +102,8 @@ $esgotados = array_values(array_map(
     data-usuario="<?= (int) usuario()['id'] ?>">
 
     <?= csrf_campo() ?>
+
+    <input type="hidden" name="venda_token" value="<?= bin2hex(random_bytes(16)) ?>">
 
     <input
       type="hidden"
