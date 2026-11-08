@@ -270,6 +270,7 @@ try {
     ok(recusa(fn() => Agenda::agendar(['pet_id' => $mimi, 'servico_id' => $banho, 'data' => $amanha, 'hora' => '09:30']), 'Horário ocupado'), 'com 1 atendimento por vez, recusa horário que cruza outro');
     ok(recusa(fn() => Agenda::agendar(['pet_id' => $mimi, 'servico_id' => $tosa, 'data' => $amanha, 'hora' => '08:00']), 'Horário ocupado'), 'recusa serviço que começa antes e termina dentro de outro');
     $a2 = Agenda::agendar(['pet_id' => $mimi, 'servico_id' => $banho, 'data' => $amanha, 'hora' => '10:00']);
+    ok(in_array(["$amanha 09:00", Agenda::buscar($a1)['fim']], Agenda::ocupados(), true) && in_array(["$amanha 10:00", Agenda::buscar($a2)['fim']], Agenda::ocupados(), true), 'ocupados() lista os horários tomados (formulário marca "(ocupado)")');
     ok($a2 > 0, 'horário encostado (termina 10:00, começa 10:00) é aceito');
     ok(recusa(fn() => Agenda::agendar(['pet_id' => $mimi, 'servico_id' => $tosa, 'data' => $amanha, 'hora' => '18:00']), 'Fora do horário'), 'serviço que passa do fechamento é recusado');
     ok(recusa(fn() => Agenda::agendar(['pet_id' => $mimi, 'servico_id' => $banho, 'data' => date('Y-m-d', strtotime('-1 day')), 'hora' => '10:00']), 'já passou'), 'horário passado é recusado');

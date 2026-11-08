@@ -229,6 +229,13 @@ class Agenda {
             WHERE venda_id = ?")->execute([$vendaId]);
     }
 
+    /** Horários já tomados de hoje em diante [[inicio, fim], ...]: o formulário marca "(ocupado)" (quem decide continua sendo conferirVaga) */
+    public static function ocupados(): array {
+        // shortcut: até 3000 agendamentos futuros vão para a página; com mais que isso, buscar por dia via requisição
+        return Database::pdo()->query("SELECT inicio, fim FROM agendamentos WHERE status IN ('agendado','em_atendimento','pronto','pago')
+            AND fim > strftime('%Y-%m-%d %H:%M', 'now', 'localtime') ORDER BY inicio LIMIT 3000")->fetchAll(PDO::FETCH_NUM);
+    }
+
     /** Horários de 15 em 15 minutos do expediente, para o formulário */
     public static function horarios(): array {
         $h = [];

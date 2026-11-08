@@ -103,6 +103,7 @@ h3 { font-size: .95rem; font-weight: 650; margin: 1.5rem 0 .6rem; }
 .btn-primary { --bs-btn-bg: var(--primaria); --bs-btn-border-color: var(--primaria); --bs-btn-hover-bg: var(--primaria-esc); --bs-btn-hover-border-color: var(--primaria-esc); --bs-btn-active-bg: var(--primaria-esc); --bs-btn-active-border-color: var(--primaria-esc); --bs-btn-disabled-bg: var(--primaria); --bs-btn-disabled-border-color: var(--primaria); background-image: linear-gradient(180deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, 0)); box-shadow: 0 1px 2px rgba(28, 94, 86, .25), inset 0 1px 0 rgba(255, 255, 255, .15); }
 .btn-primary:hover:not(:disabled) { box-shadow: 0 6px 16px rgba(36, 118, 108, .28); }
 .btn-light { --bs-btn-bg: var(--painel); --bs-btn-border-color: var(--borda); --bs-btn-hover-bg: var(--neutro-2); --bs-btn-hover-border-color: #e0dad0; --bs-btn-active-bg: var(--neutro); --bs-btn-active-border-color: #e0dad0; --bs-btn-color: var(--tinta); box-shadow: var(--sombra-leve); }
+.btn-outline-primary { --bs-btn-color: var(--primaria); --bs-btn-border-color: var(--primaria); --bs-btn-bg: #fff; --bs-btn-hover-bg: var(--primaria); --bs-btn-hover-color: #fff; --bs-btn-hover-border-color: var(--primaria); --bs-btn-active-bg: var(--primaria-esc); --bs-btn-active-border-color: var(--primaria-esc); }
 .btn-outline-danger { --bs-btn-color: var(--erro); --bs-btn-border-color: #efc6c0; --bs-btn-hover-bg: var(--erro-fundo); --bs-btn-hover-color: var(--erro); --bs-btn-hover-border-color: #e9b3ab; }
 
 /* Ícone posicionado (não flex): o texto do aviso pode ter links no meio e precisa fluir normal */
@@ -741,7 +742,7 @@ small.busca-aviso { display: block; width: 0; min-width: 100%; margin: .25rem 0 
 .pet-texto small { color: var(--suave); font-size: .8rem; }
 .pet-texto .pet-obs { color: var(--alerta); }
 .lista-pets .acoes { flex: none; white-space: nowrap; }
-@media (max-width: 576px) { .lista-pets li { flex-wrap: wrap; } .lista-pets .acoes { display: flex; gap: .4rem; width: 100%; justify-content: flex-end; } } /* celular: botões descem, o texto do pet usa a largura toda */
+@media (max-width: 576px) { .lista-pets li { flex-wrap: wrap; } .lista-pets .acoes { display: flex; flex-wrap: wrap; white-space: normal; gap: .4rem; width: 100%; justify-content: flex-end; } } /* celular: botões descem, o texto do pet usa a largura toda */
 .dados-cliente { display: grid; grid-template-columns: auto 1fr; gap: .45rem 1rem; margin: .5rem 0 0; font-size: .92rem; }
 .dados-cliente dt { color: var(--suave); font-weight: 550; }
 .dados-cliente dd { margin: 0; overflow-wrap: anywhere; }

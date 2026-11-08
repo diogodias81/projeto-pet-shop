@@ -42,31 +42,32 @@ if ($sucesso) {
 
 <div class="comprovante-acoes nao-imprimir">
 
-  <button
-    type="button"
-    class="btn btn-primary"
-    data-imprimir>
-    <i class="bi bi-printer" aria-hidden="true"></i> Imprimir / Salvar PDF
-  </button>
-
+  <?php // na loja o normal é o cupom e depois outra venda: esses dois na frente; folha A4/PDF fica como opção ?>
   <?php $largura = (int) config('cupom_largura_mm') === 58 ? 58 : 80; ?>
   <button
     type="button"
-    class="btn btn-light"
+    class="btn btn-primary"
     data-imprimir-cupom="<?= $largura ?>"
     title="Para a impressora de cupom (papel de <?= $largura ?> mm): escolha ela na janela de impressão">
-    <i class="bi bi-receipt-cutoff" aria-hidden="true"></i> Imprimir cupom (<?= $largura ?> mm)
+    <i class="bi bi-receipt-cutoff" aria-hidden="true"></i> Imprimir cupom
   </button>
 
   <?php if (temPerfil(['admin', 'vendedor'])): ?>
 
     <a
-      class="btn btn-light"
+      class="btn btn-outline-primary"
       href="index.php?page=vendas">
       <i class="bi bi-plus-lg" aria-hidden="true"></i> Nova venda
     </a>
 
   <?php endif; ?>
+
+  <button
+    type="button"
+    class="btn btn-light"
+    data-imprimir>
+    <i class="bi bi-printer" aria-hidden="true"></i> Folha A4 / PDF
+  </button>
 
   <a
     class="btn btn-light"

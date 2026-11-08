@@ -1,14 +1,69 @@
-// Agenda: com a data de hoje, os horários que já passaram ficam desabilitados no seletor
+// Agenda: no seletor de horário ficam desabilitados os que já passaram (hoje), os que não cabem até o fim
+// do expediente e os ocupados (mesma conta do servidor em Agenda::conferirVaga; quem decide é o servidor).
+
+const agendaHora = (inicio, minutos) => {
+    const [h, m] = inicio.split(':').map(Number);
+    const t = h * 60 + m + minutos;
+    return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
+};
+
+const agendaLotado = (ini, fim, outros, limite) => [ini, ...outros.map(o => o[0])]
+    .filter(t => t >= ini && t < fim)
+    .some(t => outros.filter(o => o[0] <= t && o[1] > t).length >= limite);
 
 document.querySelectorAll('select[name="hora"][data-hoje]').forEach(sel => {
     const data = sel.form.querySelector('input[name="data"]');
+    const servico = sel.form.querySelector('select[name="servico_id"]');
+    let ocupados = [];
+    try { ocupados = JSON.parse(document.getElementById('agenda-ocupados')?.textContent || '[]'); } catch { /* sem a lista, só o servidor confere */ }
+    const limite = Number(sel.dataset.limite) || 1;
+
     const atualizar = () => {
-        const hoje = data && data.value === sel.dataset.hoje;
-        sel.querySelectorAll('option[value]:not([value=""])').forEach(op => { op.disabled = hoje && op.value < sel.dataset.agora; });
+        const dia = data?.value || '';
+        const hoje = dia === sel.dataset.hoje;
+        const duracao = Number(servico?.selectedOptions[0]?.dataset.duracao) || 15;
+        const doDia = ocupados.filter(o => o[0].slice(0, 10) <= dia && o[1].slice(0, 10) >= dia);
+
+        sel.querySelectorAll('option[value]:not([value=""])').forEach(op => {
+            const fimHora = agendaHora(op.value, duracao);
+            const passou = hoje && op.value < sel.dataset.agora;
+            const naoCabe = sel.dataset.fecha && (fimHora > sel.dataset.fecha || fimHora < op.value);
+            const lotado = dia && agendaLotado(`${dia} ${op.value}`, `${dia} ${fimHora}`, doDia, limite);
+            op.disabled = passou || naoCabe || lotado;
+            op.textContent = op.value + (lotado && !passou ? ' (ocupado)' : '');
+        });
         if (sel.selectedOptions[0]?.disabled) sel.value = '';
     };
+
     data?.addEventListener('change', atualizar);
+    servico?.addEventListener('change', atualizar);
     atualizar();
+});
+
+
+// <input data-filtrar-select="nome-do-select">: digitar filtra as opções do select (sem acento e sem maiúsculas);
+// se sobrar uma só, ela já fica escolhida.
+
+document.querySelectorAll('input[data-filtrar-select]').forEach(input => {
+    const sel = input.form?.querySelector(`select[name="${input.dataset.filtrarSelect}"]`);
+    if (!sel) return;
+    const sem = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+    input.addEventListener('input', () => {
+        const t = sem(input.value.trim());
+        const visiveis = [];
+        sel.querySelectorAll('option[value]:not([value=""])').forEach(op => {
+            // shortcut: option escondida não some no Safari do iPhone (lá a lista continua inteira); no Chrome/Android/PC funciona
+            op.hidden = !!t && !sem(op.textContent).includes(t);
+            if (!op.hidden) visiveis.push(op);
+        });
+        sel.querySelectorAll('optgroup').forEach(g => { g.hidden = ![...g.children].some(op => !op.hidden); });
+        if (visiveis.length === 1) sel.value = visiveis[0].value;
+        else if (sel.selectedOptions[0]?.hidden) sel.value = '';
+    });
+
+    // Enter na busca não envia o agendamento
+    input.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); sel.focus(); } });
 });
 
 

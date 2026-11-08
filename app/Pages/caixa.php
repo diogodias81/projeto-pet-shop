@@ -142,7 +142,11 @@ if (isset($_GET['ver'])) {
 
 // ----------------------------- caixa de hoje -----------------------------
 $caixa = Caixa::aberto();
-$historico = Caixa::listar();
+// só os últimos 10 por padrão: a lista inteira deixava a tela enorme no celular
+$verTodos = isset($_GET['todos']);
+$historico = Caixa::listar($verTodos ? 60 : 11);
+$temMais = !$verTodos && count($historico) > 10;
+if ($temMais) array_pop($historico);
 
 if ($caixa) {
   $r = Caixa::resumo($caixa);
@@ -235,7 +239,7 @@ if ($caixa) {
 
 <?php endif; ?>
 
-<section class="card card-body mb-3">
+<section class="card card-body mb-3" id="caixas-fechados">
   <h2>Caixas fechados</h2>
   <?php if (!$historico): ?>
     <p class="vazio">Nenhum caixa fechado ainda.</p>
@@ -258,5 +262,10 @@ if ($caixa) {
         <?php endforeach; ?>
       </tbody>
     </table></div>
+    <?php if ($temMais): ?>
+      <a class="btn btn-light btn-sm align-self-start" href="index.php?page=caixa&amp;todos=1#caixas-fechados">Ver mais caixas fechados</a>
+    <?php elseif ($verTodos): ?>
+      <p class="nota">Mostrando os últimos <?= count($historico) ?> caixas fechados.</p>
+    <?php endif; ?>
   <?php endif; ?>
 </section>

@@ -433,9 +433,9 @@ $hoje = date('Y-m-d');
               <?php if ($p['observacao']): ?><small class="pet-obs"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> <?= e($p['observacao']) ?></small><?php endif; ?>
             </span>
             <span class="acoes">
-              <a class="btn btn-light btn-sm btn-quadrado" href="index.php?page=clientes&amp;id=<?= $id ?>&amp;dose=<?= $p['id'] ?>" title="Registrar vacina/vermífugo" aria-label="Registrar vacina ou vermífugo de <?= e($p['nome']) ?>"><i class="bi bi-shield-plus" aria-hidden="true"></i></a>
-              <a class="btn btn-light btn-sm btn-quadrado" href="index.php?page=agenda&amp;pet=<?= $p['id'] ?>" title="Agendar banho/tosa" aria-label="Agendar banho ou tosa para <?= e($p['nome']) ?>"><i class="bi bi-calendar-plus" aria-hidden="true"></i></a>
-              <a class="btn btn-light btn-sm btn-quadrado" href="index.php?page=clientes&amp;id=<?= $id ?>&amp;pet=<?= $p['id'] ?>" title="Editar" aria-label="Editar o pet <?= e($p['nome']) ?>"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+              <a class="btn btn-light btn-sm" href="index.php?page=clientes&amp;id=<?= $id ?>&amp;dose=<?= $p['id'] ?>" aria-label="Registrar vacina ou vermífugo de <?= e($p['nome']) ?>"><i class="bi bi-shield-plus" aria-hidden="true"></i> Vacina</a>
+              <a class="btn btn-light btn-sm" href="index.php?page=agenda&amp;pet=<?= $p['id'] ?>" aria-label="Agendar banho ou tosa para <?= e($p['nome']) ?>"><i class="bi bi-calendar-plus" aria-hidden="true"></i> Agendar</a>
+              <a class="btn btn-light btn-sm" href="index.php?page=clientes&amp;id=<?= $id ?>&amp;pet=<?= $p['id'] ?>" aria-label="Editar o pet <?= e($p['nome']) ?>"><i class="bi bi-pencil" aria-hidden="true"></i> Editar</a>
               <form method="post" data-confirmar="Excluir o pet <?= e($p['nome']) ?>?">
                 <?= csrf_campo() ?>
                 <input type="hidden" name="acao" value="excluir_pet">

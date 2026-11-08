@@ -1,9 +1,10 @@
     </main>
 
-    <!-- Celular: barra inferior com os 4 primeiros itens e "Mais" com o resto -->
+    <!-- Celular: barra inferior com 4 itens (primeiro os do dia a dia da loja) e "Mais" com o resto -->
     <nav class="barra-inferior d-lg-none d-print-none" aria-label="Menu principal">
 
-        <?php foreach (array_slice(array_keys($menu), 0, 4) as $chave): ?>
+        <?php $chaves = array_keys($menu); ?>
+        <?php foreach (array_slice(array_unique(array_merge(array_intersect(['dashboard', 'vendas', 'agenda', 'caixa', 'clientes'], $chaves), $chaves)), 0, 4) as $chave): ?>
             <?= $item($chave, 'barra-item') ?>
         <?php endforeach; ?>
 

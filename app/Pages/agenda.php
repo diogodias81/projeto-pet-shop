@@ -104,6 +104,9 @@ $rotuloPasso = ['em_atendimento' => ['Iniciar', 'play-fill', 'btn-primary'], 'pr
 
     <label>
       Pet
+      <?php if (count($pets) > 8): ?>
+        <input type="search" data-filtrar-select="pet_id" placeholder="Buscar pet ou dono" aria-label="Buscar pet ou dono" autocomplete="off" class="mb-1">
+      <?php endif; ?>
       <select name="pet_id" required>
         <option value="">Escolha…</option>
         <?php $dono = null; foreach ($pets as $p): ?>
@@ -120,7 +123,7 @@ $rotuloPasso = ['em_atendimento' => ['Iniciar', 'play-fill', 'btn-primary'], 'pr
       <select name="servico_id" required>
         <option value="">Escolha…</option>
         <?php foreach ($servicosAtivos as $s): ?>
-          <option value="<?= $s['id'] ?>" <?= (int) ($antigo['servico_id'] ?? 0) === (int) $s['id'] ? 'selected' : '' ?>><?= e($s['nome']) ?> — <?= moeda($s['preco']) ?> (<?= $s['duracao_min'] ?> min)</option>
+          <option value="<?= $s['id'] ?>" data-duracao="<?= (int) $s['duracao_min'] ?>" <?= (int) ($antigo['servico_id'] ?? 0) === (int) $s['id'] ? 'selected' : '' ?>><?= e($s['nome']) ?> — <?= moeda($s['preco']) ?> (<?= $s['duracao_min'] ?> min)</option>
         <?php endforeach; ?>
       </select>
     </label>
@@ -133,7 +136,8 @@ $rotuloPasso = ['em_atendimento' => ['Iniciar', 'play-fill', 'btn-primary'], 'pr
 
       <label>
         Horário
-        <select name="hora" required data-hoje="<?= $hoje ?>" data-agora="<?= date('H:i') ?>">
+        <script type="application/json" id="agenda-ocupados"><?= json_encode(Agenda::ocupados()) ?></script>
+        <select name="hora" required data-hoje="<?= $hoje ?>" data-agora="<?= date('H:i') ?>" data-fecha="<?= e(config('agenda_fecha')) ?>" data-limite="<?= max(1, (int) config('banho_tosa_simultaneos')) ?>">
           <option value="">Escolha…</option>
           <?php foreach (Agenda::horarios() as $h): ?>
             <option value="<?= $h ?>" <?= ($antigo['hora'] ?? '') === $h ? 'selected' : '' ?>><?= $h ?></option>
