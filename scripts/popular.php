@@ -24,7 +24,7 @@ echo "Cópia do banco anterior: storage/" . basename($copia) . "\n";
 // 1. Apaga tudo, menos as contas 1 a 4 (admin, vendedor, estoque, financeiro)
 $pdo->exec('PRAGMA foreign_keys = OFF');
 $pdo->exec('BEGIN IMMEDIATE');
-foreach (['venda_item_lotes', 'devolucoes', 'movimentacoes_estoque', 'entradas_estoque', 'venda_itens', 'vendas', 'lotes', 'produtos', 'categorias', 'despesas', 'auditoria', 'tentativas_login'] as $t) $pdo->exec("DELETE FROM $t");
+foreach (['caixa_movimentos', 'caixas', 'venda_servicos', 'agendamentos', 'servicos', 'venda_item_lotes', 'devolucoes', 'movimentacoes_estoque', 'entradas_estoque', 'venda_itens', 'vendas', 'lotes', 'produtos', 'categorias', 'pet_doses', 'pets', 'clientes', 'despesas', 'auditoria', 'tentativas_login'] as $t) $pdo->exec("DELETE FROM $t");
 $pdo->exec('DELETE FROM usuarios WHERE id > 4');
 $pdo->exec("DELETE FROM sqlite_sequence WHERE name <> 'usuarios'");
 $pdo->exec("UPDATE sqlite_sequence SET seq = 4 WHERE name = 'usuarios'");
@@ -79,8 +79,51 @@ foreach ($produtos as [$nome, $cat, $codigo, $preco, $custo, $min, $qtd, $dias, 
     Estoque::entrada($id, $qtd, 'Distribuidora Norte Pet', 'NP' . date('ymd', strtotime($inicio)), $dias ? date('Y-m-d', strtotime("+$dias days")) : '');
     $como('admin');
 }
+// Clientes e pets (nomes e telefones fictícios)
+$clientesTeste = [
+    ['Maria Souza', '91988871234', [['Thor', 'cao', 'Labrador', 'G', '-4 years', 'Puxa muito na guia']]],
+    ['João Pereira', '91991234567', [['Mel', 'cao', 'Shih-tzu', 'P', '-2 years', ''], ['Bolinha', 'gato', 'SRD', 'P', '-6 years', '']]],
+    ['Ana Lima', '91987654321', [['Luna', 'gato', 'Siamês', 'P', '-3 years', 'Alérgica a shampoo com perfume']]],
+    ['Carlos Santos', '91984561237', [['Max', 'cao', 'Golden', 'G', '-1 year', '']]],
+    ['Fernanda Costa', '91996325874', [['Nina', 'cao', 'Poodle', 'P', '-8 years', 'Idosa: cuidado ao secar'], ['Pipoca', 'cao', 'Yorkshire', 'P', '-5 months', '']]],
+    ['Rafael Oliveira', '9132245566', [['Simba', 'gato', 'Persa', 'M', '-5 years', '']]],
+    ['Juliana Alves', '91981112233', [['Bob', 'cao', 'Beagle', 'M', '-3 years', 'Morde ao cortar unha']]],
+    ['Pedro Rocha', '91982223344', [['Fred', 'cao', 'Bulldog Francês', 'M', '-2 years', '']]],
+    ['Camila Martins', '91983334455', [['Mia', 'gato', 'SRD', 'P', '-1 year', ''], ['Tom', 'gato', 'SRD', 'M', '-7 years', '']]],
+    ['Lucas Ferreira', '91984445566', [['Zeus', 'cao', 'Pastor Alemão', 'G', '-6 years', '']]],
+    ['Patrícia Gomes', '91985556677', [['Lili', 'cao', 'Maltês', 'P', '-4 years', '']]],
+    ['Bruno Ribeiro', '91986667788', [['Nemo', 'outro', 'Peixe Betta', '', '', '']]],
+    ['Aline Carvalho', '91987778899', []],
+    ['Marcos Teixeira', '91988889900', [['Duke', 'cao', 'Rottweiler', 'G', '-5 years', 'Bravo com outros cães']]],
+];
+$como('vendedor');
+$idsClientes = [];
+foreach ($clientesTeste as $i => [$nome, $tel, $pets]) {
+    $cid = Cliente::salvar(['nome' => $nome, 'telefone' => $tel, 'email' => $i % 3 === 0 ? strtolower(strtok(iconv('UTF-8', 'ASCII//TRANSLIT', $nome), ' ')) . '@exemplo.com' : '', 'observacao' => $i === 1 ? 'Prefere contato por WhatsApp' : '']);
+    $idsClientes[] = $cid;
+    foreach ($pets as [$pn, $esp, $raca, $porte, $idade, $obs]) {
+        Cliente::salvarPet(['cliente_id' => $cid, 'nome' => $pn, 'especie' => $esp, 'raca' => $raca, 'porte' => $porte, 'nascimento' => $idade ? date('Y-m-d', strtotime($idade)) : '', 'observacao' => $obs]);
+    }
+}
+$como('admin');
+
 // Tudo o que foi cadastrado até aqui fica no primeiro dia
-foreach (['auditoria', 'lotes', 'entradas_estoque', 'movimentacoes_estoque'] as $t) $pdo->prepare("UPDATE $t SET criado_em = ?")->execute([$inicio]);
+foreach (['auditoria', 'lotes', 'entradas_estoque', 'movimentacoes_estoque', 'clientes', 'pets'] as $t) $pdo->prepare("UPDATE $t SET criado_em = ?")->execute([$inicio]);
+
+// Serviços de banho e tosa (os atendimentos pagos entram no dia a dia abaixo)
+$como('admin');
+foreach ([['Banho porte P', '45,00', 60], ['Banho porte M', '60,00', 60], ['Banho porte G', '80,00', 90], ['Tosa higiênica', '35,00', 30], ['Tosa completa', '90,00', 120], ['Hidratação de pelos', '30,00', 30]] as [$n, $pr, $du]) {
+    Agenda::salvarServico(['nome' => $n, 'preco' => $pr, 'duracao_min' => $du]);
+}
+$pdo->prepare('UPDATE auditoria SET criado_em = ? WHERE acao = ?')->execute([$inicio, 'servico_criado']);
+$servs = $pdo->query('SELECT * FROM servicos')->fetchAll();
+$petsCao = $pdo->query("SELECT p.id, p.cliente_id, p.porte FROM pets p WHERE p.especie <> 'outro'")->fetchAll();
+$servicoDo = function (array $pet) use ($servs) { // banho do porte do pet ou tosa/hidratação
+    $porte = ['P' => 0, 'M' => 1, 'G' => 2][$pet['porte'] ?: 'P'] ?? 0;
+    return $servs[mt_rand(1, 4) === 1 ? mt_rand(3, 5) : $porte];
+};
+$insere = $pdo->prepare('INSERT INTO agendamentos (cliente_id, pet_id, servico_id, inicio, fim, preco, status, usuario_id, criado_em) VALUES (?,?,?,?,?,?,?,?,?)');
+$vend = $como('vendedor');
 
 // 3. Vendas dos últimos 90 dias (domingo fechado; sábado mais movimentado; hoje só até a hora atual)
 $pesos = [];
@@ -91,6 +134,11 @@ for ($d = 90; $d >= 0; $d--) {
     $dia = date('Y-m-d', strtotime("-$d days"));
     $sem = (int) date('w', strtotime($dia));
     if ($sem === 0) continue;
+    // abre o caixa do dia antes das vendas
+    $como('vendedor');
+    $caixaDia = Caixa::abrir($sem === 6 ? '150,00' : '100,00');
+    $pdo->prepare('UPDATE caixas SET aberto_em = ? WHERE id = ?')->execute(["$dia 07:55:00", $caixaDia]);
+    $ultimaAuditoria("$dia 07:55:00");
     $n = $sem === 6 ? mt_rand(6, 10) : mt_rand(2, 7);
     $horas = [];
     for ($k = 0; $k < $n; $k++) $horas[] = sprintf('%s %02d:%02d:%02d', $dia, mt_rand(8, 18), mt_rand(0, 59), mt_rand(0, 59));
@@ -108,6 +156,7 @@ for ($d = 90; $d >= 0; $d--) {
         $u = $como(mt_rand(1, 5) === 1 ? 'admin' : 'vendedor');
         $forma = $formas[array_rand($formas)];
         $pag = ['forma' => $forma];
+        if (mt_rand(1, 2) === 1) $pag['cliente_id'] = $idsClientes[min(mt_rand(0, count($idsClientes) - 1), mt_rand(0, count($idsClientes) - 1))]; // metade com cliente; os primeiros compram mais
         if (mt_rand(1, 10) === 1) { $pag['desconto_tipo'] = 'percentual'; $pag['desconto'] = (string) [5, 10][mt_rand(0, 1)]; }
         if ($forma === 'dinheiro') $pag['recebido'] = ''; // ajustado abaixo pelo total
         try {
@@ -122,6 +171,42 @@ for ($d = 90; $d >= 0; $d--) {
         $pdo->prepare('UPDATE movimentacoes_estoque SET criado_em = ? WHERE venda_id = ?')->execute([$quando, $v['id']]);
         $ultimaAuditoria($quando);
         $vendas++; $vendasIds[$v['id']] = $quando;
+    }
+    // banho e tosa dos últimos 30 dias: pagos no fim do atendimento (um em dez faltou)
+    if ($d >= 1 && $d <= 30) {
+        $hora = strtotime("$dia 08:00");
+        for ($k = mt_rand(1, 4); $k > 0; $k--) {
+            $pet = $petsCao[mt_rand(0, count($petsCao) - 1)];
+            $sv = $servicoDo($pet);
+            $ini = date('Y-m-d H:i', $hora); $fim = date('Y-m-d H:i', $hora + $sv['duracao_min'] * 60);
+            $hora += ($sv['duracao_min'] + 30) * 60;
+            if (substr($fim, 11) > '19:00') break;
+            $faltou = mt_rand(1, 10) === 1;
+            $insere->execute([$pet['cliente_id'], $pet['id'], $sv['id'], $ini, $fim, $sv['preco'], $faltou ? 'faltou' : 'pronto', $vend['id'], date('Y-m-d H:i:s', strtotime("$dia -3 days 10:00"))]);
+            if ($faltou) continue;
+            $aid = (int) $pdo->lastInsertId();
+            $como('vendedor');
+            $v = Venda::registrar((int) $vend['id'], [], ['forma' => ['pix', 'credito', 'debito', 'dinheiro'][mt_rand(0, 3)], 'agendamentos' => [$aid]]);
+            $pdo->prepare('UPDATE vendas SET criado_em = ? WHERE id = ?')->execute(["$fim:00", $v['id']]);
+            $ultimaAuditoria("$fim:00");
+        }
+    }
+    // sábado: sangria do meio do dia para o banco
+    $como('vendedor');
+    if ($sem === 6 && Caixa::resumo(Caixa::aberto())['esperado'] >= 250) {
+        Caixa::movimentar('sangria', '200,00', 'Depósito no banco');
+        $pdo->prepare('UPDATE caixa_movimentos SET criado_em = ? WHERE id = (SELECT MAX(id) FROM caixa_movimentos)')->execute(["$dia 13:00:00"]);
+        $ultimaAuditoria("$dia 13:00:00");
+    }
+    // fecha o caixa do dia (hoje fica aberto); de vez em quando a contagem não bate
+    if ($d > 0) {
+        $pdo->prepare('UPDATE caixas SET fechado_em = ? WHERE id = ?')->execute(["$dia 19:05:00", $caixaDia]);
+        $esperado = Caixa::resumo(Caixa::buscar($caixaDia))['esperado'];
+        $dif = mt_rand(1, 8) === 1 ? [-2.5, -10.0, 1.0, 0.5][mt_rand(0, 3)] : 0.0;
+        $pdo->prepare('UPDATE caixas SET fechado_por = ?, contado = ?, esperado = ?, diferenca = ?, observacao = ? WHERE id = ?')
+            ->execute([$vend['id'], $esperado + $dif, $esperado, $dif, $dif ? ($dif < 0 ? 'Troco dado a mais' : 'Cliente deixou o troco') : null, $caixaDia]);
+        Auditoria::registrar('caixa_fechado', "Caixa #$caixaDia: contado " . moeda($esperado + $dif) . ', esperado ' . moeda($esperado));
+        $ultimaAuditoria("$dia 19:05:00");
     }
     // Reposição no meio do período (entrada com fornecedor e lote novos)
     if ($d === 45) {
@@ -143,9 +228,12 @@ $depois = function (int $vid, array $tipos) use ($pdo, $vendasIds, $ultimaAudito
     $q = date('Y-m-d H:i:s', strtotime($vendasIds[$vid]) + 7200);
     $pdo->prepare("UPDATE movimentacoes_estoque SET criado_em = ? WHERE venda_id = ? AND tipo IN ('" . implode("','", $tipos) . "')")->execute([$q, $vid]);
     $pdo->prepare('UPDATE devolucoes SET criado_em = ? WHERE venda_id = ?')->execute([$q, $vid]);
-    $pdo->prepare('UPDATE vendas SET cancelado_em = ? WHERE id = ? AND cancelado_em IS NOT NULL')->execute([$q, $vid]);
+    $pdo->prepare('UPDATE vendas SET cancelado_em = ?, cancelado_caixa_id = NULL WHERE id = ? AND cancelado_em IS NOT NULL')->execute([$q, $vid]);
+    $pdo->prepare('UPDATE devolucoes SET caixa_id = NULL WHERE venda_id = ?')->execute([$vid]); // estorno de dias passados: não sai da gaveta de hoje
     $ultimaAuditoria($q);
 };
+// estorno em dinheiro exige caixa aberto: um caixa provisório só para estes estornos de dias passados (some no fim)
+$caixaProvisorio = Caixa::aberto() ? 0 : ($pdo->exec('INSERT INTO caixas (aberto_por, troco_inicial) VALUES (' . (int) $admin['id'] . ', 0)') ? (int) $pdo->lastInsertId() : 0);
 foreach ([$antigas[10], $antigas[120], $antigas[200]] as $vid) {
     Venda::cancelar($vid, $admin, 'Cliente desistiu da compra no caixa');
     $depois($vid, ['cancelamento']);
@@ -159,6 +247,7 @@ $vid = $antigas[90]; // devolução da venda inteira
 $v = Venda::buscar($vid);
 Venda::devolver($vid, $admin, array_column(array_map(fn($i) => ['id' => $i['id'], 'q' => $i['quantidade']], $v['itens']), 'q', 'id'), 'Produto trocado por outro tamanho');
 $depois($vid, ['devolucao']);
+if ($caixaProvisorio) $pdo->prepare('DELETE FROM caixas WHERE id = ?')->execute([$caixaProvisorio]);
 
 // 5. Estoque para os alertas: lotes vencendo em 5, 12 e 25 dias, um já vencido, um produto zerado e dois abaixo do mínimo
 $como('estoque');
@@ -176,7 +265,52 @@ foreach ([[$ids[3], 2], [$ids[11], 3]] as [$pid, $fica]) { // abaixo do mínimo
 $l = $lotesDe($ids[8])[0];
 Estoque::baixa((int) $l['id'], 2, 'perda', 'Não encontrado na prateleira');
 
-// 6. Despesas dos três meses anteriores e do mês atual (até hoje)
+// 6. Banho e tosa de hoje (em andamento) e da próxima semana (marcada pelas regras da agenda)
+// hoje: um já pago de manhã, um em atendimento, um pronto esperando o dono, e os da tarde marcados
+$hoje = date('Y-m-d');
+if (date('w') !== '0') {
+    foreach ([['08:00', 'pronto'], ['09:30', 'em_atendimento'], ['11:00', 'pronto'], ['14:00', 'agendado'], ['16:00', 'agendado']] as $i => [$h, $st]) {
+        $pet = $petsCao[$i * 2 % count($petsCao)];
+        $sv = $servicoDo($pet);
+        $ini = "$hoje $h"; $fim = date('Y-m-d H:i', strtotime($ini) + $sv['duracao_min'] * 60);
+        $insere->execute([$pet['cliente_id'], $pet['id'], $sv['id'], $ini, $fim, $sv['preco'], $st, $vend['id'], date('Y-m-d H:i:s', strtotime('-2 days'))]);
+        if ($i === 0) Venda::registrar((int) $vend['id'], [], ['forma' => 'pix', 'agendamentos' => [(int) $pdo->lastInsertId()]]);
+    }
+}
+// próximos 7 dias, pelas regras da agenda (horário ocupado é pulado)
+for ($d = 1; $d <= 7; $d++) {
+    $dia = date('Y-m-d', strtotime("+$d days"));
+    if (date('w', strtotime($dia)) === '0') continue;
+    foreach (['08:30', '10:30', '13:30', '15:30'] as $h) {
+        if (mt_rand(1, 3) === 1) continue;
+        $pet = $petsCao[mt_rand(0, count($petsCao) - 1)];
+        try { Agenda::agendar(['pet_id' => $pet['id'], 'servico_id' => $servicoDo($pet)['id'], 'data' => $dia, 'hora' => $h, 'observacao' => mt_rand(1, 4) === 1 ? 'Dono busca às 17h' : '']); }
+        catch (DomainException $e) { }
+    }
+}
+
+// Carteirinha: vacina anual e vermífugo a cada 3 meses de cada cão e gato. A data da aplicação
+// varia por pet, então uns vencem nesta semana, um venceu há pouco e os outros estão em dia.
+$como('vendedor');
+$haDias = fn(string $rel) => date('Y-m-d', strtotime($rel));
+foreach ($pdo->query("SELECT p.id, p.cliente_id, p.especie FROM pets p WHERE p.especie <> 'outro' ORDER BY p.id")->fetchAll() as $i => $pet) {
+    $vacina = $pet['especie'] === 'gato' ? 'V4 felina' : 'V10';
+    $doses = [
+        ['vacina', $vacina, $haDias('-' . (200 + 9 * $i) . ' days'), '+1 year'],
+        ['vacina', 'Antirrábica', $haDias('-' . (150 + 11 * $i) . ' days'), '+1 year'],
+    ];
+    // vermífugo: o de 3 meses atrás foi renovado (fica "já renovada") e o atual vence em dias diferentes por pet
+    $doses[] = ['vermifugo', 'Drontal', $haDias('-' . (110 + 6 * $i) . ' days'), '+90 days'];
+    $doses[] = ['vermifugo', 'Drontal', $haDias('-' . (20 + 6 * $i) . ' days'), '+90 days'];
+    if ($i % 3 === 0) $doses[] = ['antipulgas', 'Bravecto', $haDias('-' . (30 + 5 * $i) . ' days'), '+84 days'];
+    foreach ($doses as [$tipo, $nome, $aplicada, $prox]) {
+        Cliente::salvarDose(['cliente_id' => $pet['cliente_id'], 'pet_id' => $pet['id'], 'tipo' => $tipo, 'nome' => $nome, 'aplicada_em' => $aplicada,
+            'proxima_em' => date('Y-m-d', strtotime("$aplicada $prox")), 'observacao' => $i % 4 === 1 && $tipo === 'vacina' ? 'Aplicada na clínica Vet Amigo' : '']);
+        $ultimaAuditoria("$aplicada 10:00:00");
+    }
+}
+
+// 7. Despesas dos três meses anteriores e do mês atual (até hoje)
 $como('financeiro');
 $fin = (int) $porPerfil['financeiro']['id'];
 for ($m = 3; $m >= 0; $m--) {
@@ -202,7 +336,7 @@ for ($m = 3; $m >= 0; $m--) {
 $erradas = $pdo->query('SELECT p.nome FROM produtos p WHERE p.estoque <> (SELECT COALESCE(SUM(quantidade),0) FROM lotes WHERE produto_id = p.id)')->fetchAll(PDO::FETCH_COLUMN);
 if ($erradas) { echo 'ERRO: estoque diferente dos lotes em ' . implode(', ', $erradas) . "\n"; exit(1); }
 $conta = fn(string $sql) => $pdo->query($sql)->fetchColumn();
-printf("Pronto: %d produtos, %d lotes, %d vendas (%d canceladas, %d com devolução), %d despesas, %d registros de auditoria.\n",
-    $conta('SELECT COUNT(*) FROM produtos'), $conta('SELECT COUNT(*) FROM lotes'), $conta('SELECT COUNT(*) FROM vendas'),
+printf("Pronto: %d agendamentos, %d clientes, %d pets (%d doses na carteirinha, %d vencendo em %d dias), %d produtos, %d lotes, %d vendas (%d canceladas, %d com devolução), %d despesas, %d registros de auditoria.\n",
+    $conta('SELECT COUNT(*) FROM agendamentos'), $conta('SELECT COUNT(*) FROM clientes'), $conta('SELECT COUNT(*) FROM pets'), $conta('SELECT COUNT(*) FROM pet_doses'), count(Cliente::dosesAVencer((int) config('doses_aviso_dias'))), config('doses_aviso_dias'), $conta('SELECT COUNT(*) FROM produtos'), $conta('SELECT COUNT(*) FROM lotes'), $conta('SELECT COUNT(*) FROM vendas'),
     $conta("SELECT COUNT(*) FROM vendas WHERE status='cancelada'"), $conta('SELECT COUNT(*) FROM vendas WHERE valor_devolvido > 0'),
     $conta('SELECT COUNT(*) FROM despesas'), $conta('SELECT COUNT(*) FROM auditoria'));
