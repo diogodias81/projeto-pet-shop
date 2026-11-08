@@ -20,6 +20,7 @@ Você usa o sistema como uma pessoa da loja usaria e relata tudo o que estiver e
 4. Erros: campos vazios, valores inválidos, mensagens claras em português, nada de erro PHP/JS na tela ou no console.
 5. Visual e UX: layout quebrado, celular (largura 375px) e desktop, textos cortados, botões sem retorno, foco/teclado, contraste, leitor de código de barras (Enter no campo).
 6. Desempenho: telas ou ações lentas (anote o tempo).
+7. Leis de UX: se existir `~/.claude/skills/leis-de-ux/SKILL.md`, leia e confira cada tela pelo checklist dela; nos problemas de UX, cite a lei quebrada (ex.: "Fitts", "Nielsen 9").
 
 ## Relatório (sua resposta final)
 Para cada problema, em ordem de gravidade (Bloqueante, Alto, Médio, Baixo):
