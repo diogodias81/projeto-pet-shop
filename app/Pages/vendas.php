@@ -14,10 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   try {
 
-    $itens = json_decode(
-      $_POST['itens'] ?? '[]',
-      true
-    ) ?: [];
+    $itensJson = is_string($_POST['itens'] ?? null) ? $_POST['itens'] : '[]';
+    if (strlen($itensJson) > Venda::MAX_ITENS_BYTES) throw new DomainException('Carrinho grande demais: no máximo ' . Venda::MAX_ITENS . ' linhas.');
+    $itens = json_decode($itensJson, true);
+    if (!is_array($itens)) $itens = [];
 
     $res = Venda::registrar(
       usuario()['id'],
@@ -57,8 +57,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // devolve o carrinho: o cliente está no caixa, não dá para passar tudo de novo
     $_SESSION['form_venda'] = array_intersect_key(
       $_POST,
-      array_flip(['itens', 'desconto_tipo', 'desconto', 'forma', 'recebido'])
+      array_flip(['itens', 'desconto_tipo', 'desconto', 'forma', 'recebido', 'cliente_id'])
     );
+    // carrinho grande demais não volta para a tela (a página ficaria do tamanho do que foi enviado)
+    if (!is_string($_SESSION['form_venda']['itens'] ?? '') || strlen($_SESSION['form_venda']['itens'] ?? '') > Venda::MAX_ITENS_BYTES) unset($_SESSION['form_venda']['itens']);
+    // só os primeiros serviços: a lista volta para a tela e cada id vira uma consulta
+    $_SESSION['form_venda']['agendamentos'] = implode(',', array_slice(Venda::idsAgendamentos($_POST['agendamentos'] ?? ''), 0, Venda::MAX_SERVICOS));
   }
 
   redirect('vendas');
@@ -68,6 +72,28 @@ $antigo = $_SESSION['form_venda'] ?? [];
 unset($_SESSION['form_venda']);
 
 $produtos = Produto::listar();
+
+// Serviços da agenda a cobrar: ?agendamento=ID (vem da Agenda) ou de volta depois de um erro
+$servicos = [];
+foreach (array_slice(Venda::idsAgendamentos($antigo['agendamentos'] ?? ($_GET['agendamento'] ?? '')), 0, Venda::MAX_SERVICOS) as $aid) {
+  $a = Agenda::buscar($aid);
+  if (!$a) continue;
+  $qual = "{$a['servico']} de {$a['pet']}";
+  if (!$a['dono_ativo']) flash("$qual não entrou na venda: o pet ou o cliente foi excluído.", 'alerta');
+  elseif ($a['venda_id']) flash("$qual já foi pago na venda #{$a['venda_id']}: não entrou na venda.", 'alerta');
+  elseif (!Agenda::aCobrar($a)) flash("$qual não entrou na venda (está " . mb_strtolower(Agenda::STATUS[$a['status']]) . ').', 'alerta');
+  // uma venda é de um cliente só: serviço de outro dono fica para outra venda
+  elseif ($servicos && (int) $a['cliente_id'] !== (int) $servicos[0]['cliente_id']) flash("$qual é de {$a['cliente']}, não de {$servicos[0]['cliente']}: cobre em outra venda.", 'alerta');
+  else $servicos[] = $a;
+}
+$servicosTotal = round(array_sum(array_column($servicos, 'preco')), 2);
+
+// Cliente opcional: lista para escolher pelo nome/telefone; ?cliente=ID vem da ficha do cliente (ou o dono do pet do serviço)
+$clientes = Cliente::listar();
+if ($servicos && empty($antigo['cliente_id']) && empty($_GET['cliente'])) $_GET['cliente'] = $servicos[0]['cliente_id'];
+$rotuloCliente = fn(array $c) => $c['nome'] . ' · ' . Cliente::formatarTelefone($c['telefone']);
+$clienteAtual = (int) ($antigo['cliente_id'] ?? ($_GET['cliente'] ?? 0));
+$clienteAtual = array_values(array_filter($clientes, fn($c) => (int) $c['id'] === $clienteAtual))[0] ?? null;
 
 // Catálogo para a pesquisa rápida no navegador (só o que pode ser vendido)
 $catalogo = array_values(array_map(
@@ -91,7 +117,23 @@ $esgotados = array_values(array_map(
   array_filter($produtos, fn($p) => $p['vendavel'] <= 0)
 ));
 
+$caixaAberto = Caixa::aberto();
+
 ?>
+
+<?php if (!$caixaAberto): ?>
+  <section class="alert alert-warning caixa-fechado d-print-none" role="alert">
+    <span><i class="bi bi-lock" aria-hidden="true"></i> <strong>O caixa está fechado.</strong> Abra com o troco da gaveta para vender.</span>
+    <form autocomplete="off" method="post" action="index.php?page=caixa" class="caixa-fechado-form">
+      <?= csrf_campo() ?>
+      <input type="hidden" name="acao" value="abrir">
+      <input type="hidden" name="voltar" value="vendas">
+      <?php if ($servicos): // volta com os serviços da agenda depois de abrir o caixa ?><input type="hidden" name="agendamento" value="<?= e(implode(',', array_column($servicos, 'id'))) ?>"><?php endif; ?>
+      <input name="troco" required inputmode="decimal" placeholder="Troco, ex.: 100,00" aria-label="Troco inicial (R$)">
+      <button class="btn btn-primary btn-sm"><i class="bi bi-unlock" aria-hidden="true"></i> Abrir caixa</button>
+    </form>
+  </section>
+<?php endif; ?>
 
 <form
     method="post"
@@ -99,6 +141,9 @@ $esgotados = array_values(array_map(
     id="form-venda"
     class="pdv"
     data-desconto-max="<?= $descontoMax ?>"
+    data-servicos-total="<?= $servicosTotal ?>"
+    data-servicos-qtd="<?= count($servicos) ?>"
+    <?= $caixaAberto ? '' : 'data-caixa-fechado' ?>
     data-usuario="<?= (int) usuario()['id'] ?>">
 
     <?= csrf_campo() ?>
@@ -121,6 +166,24 @@ $esgotados = array_values(array_map(
       <h2>Itens da venda</h2>
       <a class="btn btn-light btn-sm d-print-none" href="index.php?page=historico"><i class="bi bi-clock-history" aria-hidden="true"></i> Histórico</a>
     </div>
+
+    <?php if ($servicos): ?>
+      <input type="hidden" name="agendamentos" value="<?= e(implode(',', array_column($servicos, 'id'))) ?>">
+      <ul class="pdv-servicos">
+        <?php foreach ($servicos as $a): ?>
+          <li>
+            <span class="pet-emoji" aria-hidden="true">✂️</span>
+            <span class="pet-texto">
+              <strong><?= e($a['servico']) ?> — <?= e($a['pet']) ?></strong>
+              <small><?= e($a['cliente']) ?> · agendado para <?= date('d/m H:i', strtotime($a['inicio'])) ?></small>
+            </span>
+            <strong class="text-nowrap"><?= moeda($a['preco']) ?></strong>
+            <?php $outros = array_diff(array_column($servicos, 'id'), [$a['id']]); ?>
+            <a class="btn btn-light btn-sm btn-quadrado" href="index.php?page=vendas<?= $outros ? '&amp;agendamento=' . e(implode(',', $outros)) : '' ?>" title="Tirar da venda" aria-label="Tirar <?= e($a['servico']) ?> de <?= e($a['pet']) ?> da venda"><i class="bi bi-x-lg" aria-hidden="true"></i></a>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+    <?php endif; ?>
 
     <div class="pesquisa">
 
@@ -186,6 +249,30 @@ $esgotados = array_values(array_map(
       <h2>Pagamento</h2>
 
       <div class="pdv-campos">
+
+        <label>
+          Cliente <small>(opcional)</small>
+
+          <input
+            id="v-cliente-busca"
+            list="v-clientes-lista"
+            type="search"
+            maxlength="140"
+            placeholder="Nome ou telefone"
+            autocomplete="off"
+            data-cliente-inicial="<?= $clienteAtual ? (int) $clienteAtual['id'] : '' ?>"
+            value="<?= $clienteAtual ? e($rotuloCliente($clienteAtual)) : '' ?>">
+
+          <input type="hidden" name="cliente_id" id="v-cliente" value="<?= $clienteAtual ? (int) $clienteAtual['id'] : '' ?>">
+
+          <datalist id="v-clientes-lista">
+            <?php foreach ($clientes as $c): ?>
+              <option value="<?= e($rotuloCliente($c)) ?>" data-id="<?= (int) $c['id'] ?>"></option>
+            <?php endforeach; ?>
+          </datalist>
+
+          <small><a href="index.php?page=clientes&amp;novo=1&amp;voltar=vendas">Cadastrar cliente novo</a></small>
+        </label>
 
         <label>
           Desconto

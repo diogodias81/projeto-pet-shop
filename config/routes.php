@@ -19,6 +19,24 @@ return [
         ['admin', 'vendedor', 'financeiro']
     ],
 
+    // Clientes e pets (?id= abre a ficha do cliente)
+    'clientes' => [
+        'Clientes',
+        ['admin', 'vendedor']
+    ],
+
+    // Abertura, sangria/reforço e fechamento do caixa (financeiro só consulta)
+    'caixa' => [
+        'Caixa',
+        ['admin', 'vendedor', 'financeiro']
+    ],
+
+    // Banho e tosa (serviços: só o admin altera)
+    'agenda' => [
+        'Agenda',
+        ['admin', 'vendedor']
+    ],
+
     // Comprovante de venda: rótulo null = não aparece no menu
     'comprovante' => [
         null,

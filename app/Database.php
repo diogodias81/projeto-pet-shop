@@ -292,6 +292,187 @@ class Database
             );
 
 
+            -- Clientes da loja e os pets de cada um. Exclusão lógica (ativo = 0): o histórico de compras fica.
+            CREATE TABLE IF NOT EXISTS clientes (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                nome TEXT NOT NULL,
+
+                telefone TEXT NOT NULL,
+
+                email TEXT,
+
+                endereco TEXT,
+
+                observacao TEXT,
+
+                ativo INTEGER NOT NULL DEFAULT 1,
+
+                criado_em TEXT NOT NULL
+                    DEFAULT (datetime('now', 'localtime'))
+            );
+
+
+            CREATE TABLE IF NOT EXISTS pets (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                cliente_id INTEGER NOT NULL
+                    REFERENCES clientes(id),
+
+                nome TEXT NOT NULL,
+
+                especie TEXT NOT NULL
+                    CHECK (especie IN ('cao', 'gato', 'outro')),
+
+                raca TEXT,
+
+                porte TEXT,
+
+                nascimento TEXT,
+
+                observacao TEXT,
+
+                ativo INTEGER NOT NULL DEFAULT 1,
+
+                criado_em TEXT NOT NULL
+                    DEFAULT (datetime('now', 'localtime'))
+            );
+
+
+            -- Carteirinha do pet: vacinas, vermífugos e antipulgas. Datas em 'AAAA-MM-DD'.
+            CREATE TABLE IF NOT EXISTS pet_doses (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                pet_id INTEGER NOT NULL
+                    REFERENCES pets(id),
+
+                tipo TEXT NOT NULL
+                    CHECK (tipo IN ('vacina', 'vermifugo', 'antipulgas')),
+
+                nome TEXT NOT NULL,
+
+                aplicada_em TEXT NOT NULL,
+
+                proxima_em TEXT,
+
+                observacao TEXT,
+
+                usuario_id INTEGER REFERENCES usuarios(id),
+
+                criado_em TEXT NOT NULL
+                    DEFAULT (datetime('now', 'localtime'))
+            );
+
+            -- Banho e tosa: serviços oferecidos e a agenda. Horários em 'AAAA-MM-DD HH:MM'.
+            CREATE TABLE IF NOT EXISTS servicos (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                nome TEXT NOT NULL,
+
+                preco REAL NOT NULL CHECK (preco > 0),
+
+                duracao_min INTEGER NOT NULL CHECK (duracao_min > 0),
+
+                ativo INTEGER NOT NULL DEFAULT 1
+            );
+
+
+            CREATE TABLE IF NOT EXISTS agendamentos (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                cliente_id INTEGER NOT NULL REFERENCES clientes(id),
+
+                pet_id INTEGER NOT NULL REFERENCES pets(id),
+
+                servico_id INTEGER NOT NULL REFERENCES servicos(id),
+
+                inicio TEXT NOT NULL,
+
+                fim TEXT NOT NULL,
+
+                -- preço do serviço no dia em que foi marcado
+                preco REAL NOT NULL,
+
+                status TEXT NOT NULL DEFAULT 'agendado'
+                    CHECK (status IN ('agendado', 'em_atendimento', 'pronto', 'pago', 'faltou', 'cancelado')),
+
+                observacao TEXT,
+
+                venda_id INTEGER REFERENCES vendas(id),
+
+                usuario_id INTEGER REFERENCES usuarios(id),
+
+                criado_em TEXT NOT NULL
+                    DEFAULT (datetime('now', 'localtime'))
+            );
+
+
+            -- Serviços cobrados numa venda (não mexem no estoque; custo zero no lucro)
+            CREATE TABLE IF NOT EXISTS venda_servicos (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                venda_id INTEGER NOT NULL REFERENCES vendas(id),
+
+                agendamento_id INTEGER REFERENCES agendamentos(id),
+
+                descricao TEXT NOT NULL,
+
+                preco REAL NOT NULL
+            );
+
+
+            -- Caixa da loja (um aberto por vez): troco inicial, sangrias/reforços e a conferência do dinheiro no fechamento
+            CREATE TABLE IF NOT EXISTS caixas (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                aberto_em TEXT NOT NULL
+                    DEFAULT (datetime('now', 'localtime')),
+
+                aberto_por INTEGER REFERENCES usuarios(id),
+
+                troco_inicial REAL NOT NULL CHECK (troco_inicial >= 0),
+
+                fechado_em TEXT,
+
+                fechado_por INTEGER REFERENCES usuarios(id),
+
+                -- dinheiro contado na gaveta, o que o sistema esperava e a diferença (contado - esperado)
+                contado REAL,
+
+                esperado REAL,
+
+                diferenca REAL,
+
+                observacao TEXT
+            );
+
+
+            CREATE TABLE IF NOT EXISTS caixa_movimentos (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                caixa_id INTEGER NOT NULL REFERENCES caixas(id),
+
+                tipo TEXT NOT NULL CHECK (tipo IN ('sangria', 'reforco')),
+
+                valor REAL NOT NULL CHECK (valor > 0),
+
+                motivo TEXT NOT NULL,
+
+                usuario_id INTEGER REFERENCES usuarios(id),
+
+                criado_em TEXT NOT NULL
+                    DEFAULT (datetime('now', 'localtime'))
+            );
+
+
             -- Etapa 4: despesas da loja (aluguel, energia, salários...)
             CREATE TABLE IF NOT EXISTS despesas (
 
@@ -344,6 +525,15 @@ class Database
                 'cancelado_em' => 'TEXT',
                 'cancelado_por' => 'INTEGER REFERENCES usuarios(id)',
                 'motivo_cancelamento' => 'TEXT',
+                // opcional: venda sem cliente continua valendo
+                'cliente_id' => 'INTEGER REFERENCES clientes(id)',
+                // caixa aberto na hora da venda e na hora do cancelamento (de onde saiu o estorno em dinheiro)
+                'caixa_id' => 'INTEGER REFERENCES caixas(id)',
+                'cancelado_caixa_id' => 'INTEGER REFERENCES caixas(id)',
+            ],
+            'devolucoes' => [
+                // caixa aberto na hora da devolução (de onde saiu o dinheiro devolvido)
+                'caixa_id' => 'INTEGER REFERENCES caixas(id)',
             ],
             // 1 = entrou com a senha inicial e precisa trocá-la antes de usar o sistema
             'usuarios' => [
@@ -427,6 +617,40 @@ class Database
 
             CREATE INDEX IF NOT EXISTS idx_venda_item_lotes_item
                 ON venda_item_lotes (venda_item_id);
+
+            CREATE INDEX IF NOT EXISTS idx_vendas_cliente
+                ON vendas (cliente_id);
+
+            CREATE INDEX IF NOT EXISTS idx_pets_cliente
+                ON pets (cliente_id);
+
+            CREATE INDEX IF NOT EXISTS idx_agendamentos_inicio
+                ON agendamentos (inicio);
+
+            CREATE INDEX IF NOT EXISTS idx_agendamentos_cliente
+                ON agendamentos (cliente_id);
+
+            CREATE INDEX IF NOT EXISTS idx_venda_servicos_venda
+                ON venda_servicos (venda_id);
+
+            CREATE INDEX IF NOT EXISTS idx_vendas_caixa
+                ON vendas (caixa_id);
+
+            CREATE INDEX IF NOT EXISTS idx_vendas_cancelado_caixa
+                ON vendas (cancelado_caixa_id);
+
+            CREATE INDEX IF NOT EXISTS idx_devolucoes_caixa
+                ON devolucoes (caixa_id);
+
+            CREATE INDEX IF NOT EXISTS idx_pet_doses_pet
+                ON pet_doses (pet_id);
+
+            CREATE INDEX IF NOT EXISTS idx_pet_doses_proxima
+                ON pet_doses (proxima_em);
+
+            -- garante um caixa aberto por vez mesmo com duas abas abrindo ao mesmo tempo
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_caixas_um_aberto
+                ON caixas ((fechado_em IS NULL)) WHERE fechado_em IS NULL;
         ');
 
 

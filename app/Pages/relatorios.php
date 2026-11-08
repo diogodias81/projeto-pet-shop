@@ -14,6 +14,9 @@ $produtos = Relatorio::maisVendidos(1000, $de, $ate);
 
 $top = array_slice($produtos, 0, 10);
 
+$servicos = Relatorio::servicos($de, $ate);
+$receitaServicos = array_sum(array_column($servicos, 'receita'));
+
 $despesasCat = Despesa::porCategoria($de, $ate);
 
 $movs = Relatorio::movimentacoes($de, $ate);
@@ -71,7 +74,7 @@ $acoesTopo = '<button type="button" class="btn btn-light" data-imprimir><i class
 </section>
 
 <section class="kpis kpis-4">
-    <div class="kpi kpi-principal"><span><i class="bi bi-cash-stack" aria-hidden="true"></i> Faturamento</span><strong><?= moeda($r['faturamento']) ?></strong></div>
+    <div class="kpi kpi-principal"><span><i class="bi bi-cash-stack" aria-hidden="true"></i> Faturamento</span><strong><?= moeda($r['faturamento']) ?></strong><?php if ($receitaServicos > 0): ?><small>produtos <?= moeda($r['faturamento'] - $receitaServicos) ?> · banho e tosa <?= moeda($receitaServicos) ?></small><?php endif; ?></div>
     <div class="kpi"><span><i class="bi bi-bag-check" aria-hidden="true"></i> Vendas realizadas</span><strong><?= $r['vendas'] ?></strong></div>
     <div class="kpi"><span><i class="bi bi-receipt" aria-hidden="true"></i> Ticket médio</span><strong><?= moeda($r['ticket']) ?></strong></div>
     <div class="kpi"><span><i class="bi bi-box-seam" aria-hidden="true"></i> Custo dos vendidos</span><strong><?= moeda($r['custo']) ?></strong></div>
@@ -122,6 +125,22 @@ $acoesTopo = '<button type="button" class="btn btn-light" data-imprimir><i class
     <?php endif; ?>
 
 </section>
+
+<?php if ($servicos): ?>
+<section class="card card-body mb-3" data-recolher>
+    <h2>Banho e tosa</h2>
+    <div class="table-responsive"><table class="table table-hover align-middle">
+        <thead><tr><th>Serviço</th><th class="num">Atendimentos</th><th class="num">Receita</th></tr></thead>
+        <tbody>
+            <?php foreach ($servicos as $s): ?>
+                <tr><td><?= e($s['nome']) ?></td><td class="num"><?= (int) $s['qtd'] ?></td><td class="num"><?= moeda($s['receita']) ?></td></tr>
+            <?php endforeach; ?>
+        </tbody>
+        <tfoot><tr><th>Total</th><th class="num"><?= array_sum(array_column($servicos, 'qtd')) ?></th><th class="num"><?= moeda($receitaServicos) ?></th></tr></tfoot>
+    </table></div>
+    <p class="nota">Serviço entra no lucro bruto sem custo (shampoo, energia e mão de obra não são descontados): a margem total fica maior que a real. Devoluções de produtos não mexem nos serviços.</p>
+</section>
+<?php endif; ?>
 
 <section class="grade">
 

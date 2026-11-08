@@ -8,6 +8,11 @@ class Auditoria {
         'estoque_entrada' => 'Entrada de estoque', 'estoque_baixa' => 'Baixa de estoque',
         'usuario_criado' => 'Usuário criado', 'usuario_alterado' => 'Usuário alterado', 'usuario_excluido' => 'Usuário excluído', 'usuario_desativado' => 'Usuário desativado', 'usuario_reativado' => 'Usuário reativado','senha_alterada' => 'Senha alterada', 'senha_redefinida' => 'Senha redefinida', 'senha_bloqueada' => 'Troca de senha bloqueada',
         'categoria_criada' => 'Categoria criada', 'categoria_excluida' => 'Categoria excluída',
+        'cliente_criado' => 'Cliente cadastrado', 'cliente_alterado' => 'Cliente alterado', 'cliente_excluido' => 'Cliente excluído',
+        'pet_criado' => 'Pet cadastrado', 'pet_alterado' => 'Pet alterado', 'pet_excluido' => 'Pet excluído', 'dose_registrada' => 'Carteirinha: dose registrada', 'dose_excluida' => 'Carteirinha: dose excluída',
+        'agendamento_criado' => 'Agendamento', 'agendamento_status' => 'Agendamento: situação',
+        'servico_criado' => 'Serviço cadastrado', 'servico_alterado' => 'Serviço alterado', 'servico_desativado' => 'Serviço desativado', 'servico_reativado' => 'Serviço reativado',
+        'caixa_aberto' => 'Abertura de caixa', 'caixa_sangria' => 'Sangria', 'caixa_reforco' => 'Reforço de caixa', 'caixa_fechado' => 'Fechamento de caixa',
         'despesa_criada' => 'Despesa registrada', 'despesa_alterada' => 'Despesa alterada', 'despesa_excluida' => 'Despesa excluída',
     ];
 

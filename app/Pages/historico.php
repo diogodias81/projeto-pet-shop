@@ -15,8 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (($_POST['acao'] ?? '') === 'cancelar') {
 
       Venda::cancelar($id, $eu, $_POST['motivo'] ?? '');
-
-      flash("Venda #$id cancelada. Os itens voltaram ao estoque.");
+      $vc = Venda::buscar($id);
+      flash("Venda #$id cancelada." . ($vc['itens'] ? ' Os itens voltaram ao estoque.' : '') . ($vc['servicos'] ? ' Os serviços voltaram para a agenda sem pagamento.' : ''));
     } else {
 
       $valor = Venda::devolver(
@@ -153,6 +153,17 @@ if (isset($_GET['ver'])) {
 
             <?php endforeach; ?>
 
+            <?php foreach ($venda['servicos'] as $sv): // serviço não se devolve: para estornar, cancele a venda ?>
+              <tr>
+                <td><i class="bi bi-scissors icone-suave" aria-hidden="true"></i> <?= e($sv['descricao']) ?></td>
+                <td class="num">1</td>
+                <td class="num">—</td>
+                <td class="num"><?= moeda($sv['preco']) ?></td>
+                <td class="num"><?= moeda($sv['preco']) ?></td>
+                <?php if ($podeAlterar && $restam > 0): ?><td class="num"><small class="icone-suave">serviço</small></td><?php endif; ?>
+              </tr>
+            <?php endforeach; ?>
+
           </tbody>
 
         </table></div>
@@ -229,6 +240,11 @@ if (isset($_GET['ver'])) {
 
         <dt>Vendedor</dt>
         <dd><?= e($venda['vendedor'] ?? '—') ?></dd>
+
+        <?php if ($venda['cliente']): ?>
+          <dt>Cliente</dt>
+          <dd><?php if (temPerfil(['admin', 'vendedor'])): ?><a href="index.php?page=clientes&amp;id=<?= (int) $venda['cliente_id'] ?>"><?= e($venda['cliente']) ?></a><?php else: ?><?= e($venda['cliente']) ?><?php endif; ?></dd>
+        <?php endif; ?>
 
         <dt>Pagamento</dt>
         <dd><i class="bi bi-<?= $iconePagamento[$venda['forma_pagamento']] ?? 'wallet2' ?>" aria-hidden="true"></i> <?= e(Venda::FORMAS[$venda['forma_pagamento']] ?? '—') ?></dd>
@@ -519,7 +535,7 @@ $linkStatus = fn(string $s) => 'index.php?' . e(http_build_query(['page' => 'his
               </span>
             </td>
 
-            <td class="itens-venda" title="<?= e($v['itens']) ?>"><?= e($v['itens']) ?></td>
+            <td class="itens-venda" title="<?= e($v['itens']) ?>"><?= e($v['itens']) ?><?php if ($v['cliente']): ?><small class="d-block icone-suave"><i class="bi bi-person-heart" aria-hidden="true"></i> <?= e($v['cliente']) ?></small><?php endif; ?></td>
 
             <td class="text-nowrap">
               <i class="bi bi-<?= $iconePagamento[$v['forma_pagamento']] ?? 'wallet2' ?> icone-suave" aria-hidden="true"></i>

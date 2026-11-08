@@ -1,3 +1,17 @@
+// Agenda: com a data de hoje, os horários que já passaram ficam desabilitados no seletor
+
+document.querySelectorAll('select[name="hora"][data-hoje]').forEach(sel => {
+    const data = sel.form.querySelector('input[name="data"]');
+    const atualizar = () => {
+        const hoje = data && data.value === sel.dataset.hoje;
+        sel.querySelectorAll('option[value]:not([value=""])').forEach(op => { op.disabled = hoje && op.value < sel.dataset.agora; });
+        if (sel.selectedOptions[0]?.disabled) sel.value = '';
+    };
+    data?.addEventListener('change', atualizar);
+    atualizar();
+});
+
+
 // <form data-confirmar="Mensagem">
 
 document.querySelectorAll('form[data-confirmar]').forEach(form => {
@@ -123,6 +137,18 @@ if (matchMedia('(max-width: 640px)').matches) {
 document.querySelectorAll('[data-imprimir]').forEach(btn => {
 
     btn.addEventListener('click', () => window.print());
+});
+
+// <button data-imprimir-cupom="80|58">: imprime o comprovante na largura do papel da impressora térmica (o CSS faz o resto)
+
+document.querySelectorAll('[data-imprimir-cupom]').forEach(btn => {
+
+    btn.addEventListener('click', () => {
+        const classe = 'cupom-' + (btn.dataset.imprimirCupom === '58' ? '58' : '80');
+        document.body.classList.add('cupom', classe);
+        window.addEventListener('afterprint', () => document.body.classList.remove('cupom', classe), { once: true });
+        window.print();
+    });
 });
 
 
@@ -681,6 +707,25 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
     const descontoMax = parseFloat(form.dataset.descontoMax);
 
+    // Serviços de banho e tosa vindos da agenda (já somados pelo servidor; não mudam aqui)
+    const servicosTotal = parseFloat(form.dataset.servicosTotal || '0') || 0;
+
+    const nServicos = parseInt(form.dataset.servicosQtd || '0', 10) || 0;
+
+    // Cliente opcional: o texto escolhido na lista vira o id escondido; texto que não está na lista bloqueia (não vende "sem cliente" sem querer)
+    const clienteBusca = document.getElementById('v-cliente-busca');
+
+    const clienteId = document.getElementById('v-cliente');
+
+    const opcoesCliente = [...document.querySelectorAll('#v-clientes-lista option')];
+
+    const lerCliente = () => {
+
+        const op = opcoesCliente.find(o => o.value === clienteBusca.value.trim());
+
+        clienteId.value = op ? op.dataset.id : '';
+    };
+
     const $ = id => document.getElementById(id);
 
 
@@ -1028,7 +1073,7 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
     function calcular() {
 
-        const subtotal = centavos(itens.reduce((s, i) => s + i.produto.preco * i.quantidade, 0));
+        const subtotal = centavos(itens.reduce((s, i) => s + i.produto.preco * i.quantidade, 0) + servicosTotal);
 
         // Texto inválido (NaN) conta como 0 nos totais e vira a mensagem de problema abaixo
         const descLido = numero(descInput.value);
@@ -1068,6 +1113,14 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
         } else if (forma.value === 'dinheiro' && recebido.value.trim() && pago < total) {
 
             problema = 'O valor recebido é menor que o total.';
+
+        } else if ('caixaFechado' in form.dataset) {
+
+            problema = 'O caixa está fechado: abra o caixa acima para vender.';
+
+        } else if (clienteBusca.value.trim() && !clienteId.value) {
+
+            problema = 'Escolha o cliente na lista (ou apague o campo para vender sem cliente).';
         }
 
 
@@ -1089,7 +1142,7 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
         $('v-total').textContent = moeda(Math.max(c.total, 0));
 
         // Barra do celular com o total
-        const nItens = itens.reduce((soma, it) => soma + Number(it.quantidade), 0);
+        const nItens = itens.reduce((soma, it) => soma + Number(it.quantidade), 0) + nServicos;
         $('v-barra').hidden = nItens === 0;
         $('v-barra-total').textContent = $('v-total').textContent;
         $('v-barra-itens').textContent = nItens + (nItens === 1 ? ' item' : ' itens');
@@ -1108,10 +1161,12 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
         erro.textContent = c.problema;
 
-        finalizar.disabled = itens.length === 0 || !!c.problema || !forma.value;
+        const vazioCarrinho = itens.length === 0 && nServicos === 0;
+
+        finalizar.disabled = vazioCarrinho || !!c.problema || !forma.value;
 
         // Diz por que o botão está desabilitado (o problema, se houver, já aparece em vermelho)
-        motivo.textContent = c.problema ? '' : itens.length === 0 ? 'Adicione um produto para finalizar.' : !forma.value ? 'Escolha a forma de pagamento para finalizar.' : '';
+        motivo.textContent = c.problema ? '' : vazioCarrinho ? 'Adicione um produto para finalizar.' : !forma.value ? 'Escolha a forma de pagamento para finalizar.' : '';
 
         motivo.hidden = !motivo.textContent;
     }
@@ -1250,7 +1305,7 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
         rotularTabela(tbody.closest('table'));
 
-        vazio.style.display = itens.length ? 'none' : '';
+        vazio.style.display = itens.length || nServicos ? 'none' : '';
 
         sincronizar();
     }
@@ -1270,6 +1325,8 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
     [descTipo, forma].forEach(el => el.addEventListener('change', atualizarTotais));
 
+    clienteBusca.addEventListener('input', () => { lerCliente(); atualizarTotais(); });
+
 
     // ---- carrinho guardado no navegador ----
     // Recarregar, sair da tela ou a sessão expirar (30 min) não pode fazer o caixa ler tudo de novo
@@ -1286,13 +1343,14 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
             localStorage.setItem(chave, JSON.stringify({
                 itens: JSON.parse(hidden.value || '[]'),
                 desconto_tipo: descTipo.value, desconto: descInput.value, forma: forma.value, recebido: recebido.value,
+                cliente: clienteBusca.value,
                 em: Date.now(),
             }));
 
         } catch (e) { /* navegador sem armazenamento (modo privado): segue sem guardar */ }
     };
 
-    [descInput, recebido].forEach(el => el.addEventListener('input', guardar));
+    [descInput, recebido, clienteBusca].forEach(el => el.addEventListener('input', guardar));
 
     [descTipo, forma].forEach(el => el.addEventListener('change', guardar));
 
@@ -1318,6 +1376,8 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
                 descInput.value = String(salvo.desconto || '');
                 if ([...forma.options].some(o => o.value === salvo.forma)) forma.value = salvo.forma;
                 recebido.value = String(salvo.recebido || '');
+                // cliente vindo da ficha (?cliente=) tem prioridade sobre o guardado
+                if (!clienteBusca.dataset.clienteInicial) { clienteBusca.value = String(salvo.cliente || ''); lerCliente(); }
 
                 recuperado = true;
             }

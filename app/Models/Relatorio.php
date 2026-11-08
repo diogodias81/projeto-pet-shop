@@ -56,6 +56,15 @@ class Relatorio {
         return $st->fetchAll();
     }
 
+    /** Banho e tosa no período (vendas concluídas): atendimentos e receita já com o desconto da venda. Serviço não tem custo cadastrado. */
+    public static function servicos(string $de, string $ate): array {
+        $st = Database::pdo()->prepare("SELECT s.nome, COUNT(*) AS qtd, SUM(vs.preco * CASE WHEN v.subtotal > 0 THEN v.total / v.subtotal ELSE 1 END) AS receita
+            FROM venda_servicos vs JOIN vendas v ON v.id = vs.venda_id JOIN agendamentos a ON a.id = vs.agendamento_id JOIN servicos s ON s.id = a.servico_id
+            WHERE v.status = 'concluida' AND v.criado_em BETWEEN ? AND ? || ' 23:59:59' GROUP BY s.id ORDER BY receita DESC");
+        $st->execute([$de, $ate]);
+        return $st->fetchAll();
+    }
+
     /** Faturamento por dia no período; acima de 62 dias agrupa por mês. [rótulo => total], períodos sem venda valem zero. */
     public static function serie(string $de, string $ate): array {
         $porMes = (strtotime($ate) - strtotime($de)) / 86400 > 62;

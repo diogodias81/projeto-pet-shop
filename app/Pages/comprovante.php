@@ -49,6 +49,15 @@ if ($sucesso) {
     <i class="bi bi-printer" aria-hidden="true"></i> Imprimir / Salvar PDF
   </button>
 
+  <?php $largura = (int) config('cupom_largura_mm') === 58 ? 58 : 80; ?>
+  <button
+    type="button"
+    class="btn btn-light"
+    data-imprimir-cupom="<?= $largura ?>"
+    title="Para a impressora de cupom (papel de <?= $largura ?> mm): escolha ela na janela de impressão">
+    <i class="bi bi-receipt-cutoff" aria-hidden="true"></i> Imprimir cupom (<?= $largura ?> mm)
+  </button>
+
   <?php if (temPerfil(['admin', 'vendedor'])): ?>
 
     <a
@@ -111,6 +120,11 @@ if ($sucesso) {
     <dt>Vendedor</dt>
     <dd><?= e($venda['vendedor'] ?? '—') ?></dd>
 
+    <?php if ($venda['cliente']): ?>
+      <dt>Cliente</dt>
+      <dd><?= e($venda['cliente']) ?></dd>
+    <?php endif; ?>
+
   </dl>
 
   <div class="table-responsive"><table class="table table-hover align-middle">
@@ -150,6 +164,15 @@ if ($sucesso) {
 
         </tr>
 
+      <?php endforeach; ?>
+
+      <?php foreach ($venda['servicos'] as $sv): ?>
+        <tr>
+          <td><?= e($sv['descricao']) ?></td>
+          <td class="num">1</td>
+          <td class="num"><?= moeda($sv['preco']) ?></td>
+          <td class="num"><?= moeda($sv['preco']) ?></td>
+        </tr>
       <?php endforeach; ?>
 
     </tbody>

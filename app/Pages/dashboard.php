@@ -54,6 +54,15 @@ $gereEstoque = podeGerirEstoque();
 if ($vencidos) $tarefas[] = ['erro', 'exclamation-octagon', $vencidos . ($vencidos > 1 ? ' lotes vencidos' : ' lote vencido'), $gereEstoque ? 'Retire da prateleira e dê baixa no estoque.' : 'Avise o responsável pelo estoque para retirar da prateleira.', '#alertas'];
 if ($vencendo) $tarefas[] = ['alerta', 'hourglass-split', $vencendo . ($vencendo > 1 ? ' lotes vencem' : ' lote vence') . ' em até ' . min($prazos) . ' dias', 'Priorize na venda ou faça uma promoção.', '#alertas'];
 if ($alertasBaixo) $tarefas[] = ['alerta', 'box-seam', count($alertasBaixo) . (count($alertasBaixo) > 1 ? ' produtos precisam' : ' produto precisa') . ' de reposição', $gereEstoque ? 'Estoque no mínimo ou abaixo: hora de pedir ao fornecedor.' : 'Estoque no mínimo ou abaixo: avise quem faz as compras.', '#alertas'];
+// Próximas doses de vacina/vermífugo: só quem atende clientes (a tela Clientes é de admin e vendedor)
+$avisoDoses = (int) config('doses_aviso_dias');
+$doses = temPerfil(['admin', 'vendedor']) ? Cliente::dosesAVencer($avisoDoses) : [];
+if ($doses) {
+    $vencidas = count(array_filter($doses, fn($d) => $d['dias'] < 0));
+    $aVencer = count($doses) - $vencidas;
+    $partes = array_filter([$vencidas ? $vencidas . ($vencidas > 1 ? ' doses vencidas' : ' dose vencida') : '', $aVencer ? $aVencer . ($aVencer > 1 ? ' vencem' : ' vence') . " em até $avisoDoses dias" : '']);
+    $tarefas[] = ['alerta', 'shield-plus', 'Carteirinha: ' . implode(' e ', $partes), 'Vacina, vermífugo ou antipulgas. Lembre os donos pelo WhatsApp.', '#doses'];
+}
 
 $hora = (int) date('G');
 $saudacao = $hora < 12 ? 'Bom dia' : ($hora < 18 ? 'Boa tarde' : 'Boa noite');
@@ -116,6 +125,8 @@ $variacao = function (?float $pct): string {
         <?php endforeach; ?>
     </section>
 </div>
+
+<?php require BASE_PATH . '/app/Views/doses.php'; ?>
 
 <section class="card card-body mb-3">
     <div class="card-titulo card-titulo-quebra">

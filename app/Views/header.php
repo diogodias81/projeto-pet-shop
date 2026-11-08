@@ -5,7 +5,7 @@ $rotas = require BASE_PATH . '/config/routes.php';
 $atual = $_GET['page'] ?? '';
 
 $icones = [
-    'dashboard' => 'speedometer2', 'vendas' => 'cart3', 'historico' => 'receipt',
+    'dashboard' => 'speedometer2', 'vendas' => 'cart3', 'historico' => 'receipt', 'clientes' => 'person-heart', 'agenda' => 'calendar-week', 'caixa' => 'cash-coin',
     'produtos' => 'box-seam', 'estoque' => 'boxes', 'categorias' => 'tags',
     'despesas' => 'wallet2', 'relatorios' => 'bar-chart-line', 'usuarios' => 'people',
     'auditoria' => 'shield-check',
@@ -43,7 +43,7 @@ $item = function (string $chave, string $classe) use ($menu, $icones, $atual, $n
 // Menu agrupado por assunto (só entram os grupos com algum item que o perfil vê)
 $grupos = array_filter(array_map(
     fn($chaves) => array_values(array_filter($chaves, fn($c) => isset($menu[$c]))),
-    ['Operação' => ['dashboard', 'vendas', 'historico'], 'Catálogo' => ['produtos', 'estoque', 'categorias'],
+    ['Operação' => ['dashboard', 'vendas', 'caixa', 'agenda', 'historico', 'clientes'], 'Catálogo' => ['produtos', 'estoque', 'categorias'],
      'Gestão' => ['despesas', 'relatorios'], 'Administração' => ['usuarios', 'auditoria']]
 ));
 
