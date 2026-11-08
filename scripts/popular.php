@@ -232,8 +232,8 @@ $depois = function (int $vid, array $tipos) use ($pdo, $vendasIds, $ultimaAudito
     $pdo->prepare('UPDATE devolucoes SET caixa_id = NULL WHERE venda_id = ?')->execute([$vid]); // estorno de dias passados: não sai da gaveta de hoje
     $ultimaAuditoria($q);
 };
-// estorno em dinheiro exige caixa aberto: um caixa provisório só para estes estornos de dias passados (some no fim)
-$caixaProvisorio = Caixa::aberto() ? 0 : ($pdo->exec('INSERT INTO caixas (aberto_por, troco_inicial) VALUES (' . (int) $admin['id'] . ', 0)') ? (int) $pdo->lastInsertId() : 0);
+// estorno em dinheiro exige caixa aberto com dinheiro: um caixa provisório (troco alto) só para estes estornos de dias passados (some no fim)
+$caixaProvisorio = Caixa::aberto() ? 0 : ($pdo->exec('INSERT INTO caixas (aberto_por, troco_inicial) VALUES (' . (int) $admin['id'] . ', 100000)') ? (int) $pdo->lastInsertId() : 0);
 foreach ([$antigas[10], $antigas[120], $antigas[200]] as $vid) {
     Venda::cancelar($vid, $admin, 'Cliente desistiu da compra no caixa');
     $depois($vid, ['cancelamento']);
