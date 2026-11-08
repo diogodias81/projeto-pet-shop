@@ -584,6 +584,9 @@ tbody tr:nth-last-child(-n+2):not(:nth-child(-n+2)) .menu-acoes-painel { top: au
 .campo-senha input { width: 100%; padding-right: 2.75rem !important; }
 .revelar { position: absolute; right: .35rem; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border: 0; border-radius: 8px; background: none; color: var(--suave); }
 .revelar:hover { background: var(--neutro-2); color: var(--tinta); }
+.aviso-caps { display: block; margin-top: -.5rem; color: var(--alerta); font-size: .82rem; font-weight: 600; }
+.aviso-caps::before { content: "\F33A"; font-family: "bootstrap-icons"; margin-right: .3rem; font-weight: normal; }
+.aviso-caps:empty { display: none; }
 
 /* ---- PDV no celular: barra fixa com o total ---- */
 .pdv-barra { position: fixed; z-index: 1040; left: .75rem; right: .75rem; bottom: calc(var(--barra) + env(safe-area-inset-bottom) + .6rem); display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .6rem .6rem .6rem 1.1rem; border-radius: 18px; background: var(--tinta); color: #fff; text-decoration: none; box-shadow: 0 12px 30px rgba(31, 58, 61, .3); animation: surgir .25s ease-out; }

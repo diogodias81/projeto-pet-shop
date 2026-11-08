@@ -193,6 +193,22 @@ document.querySelectorAll('input[data-revelar]').forEach(input => {
         btn.setAttribute('aria-label', mostrar ? 'Ocultar senha' : 'Mostrar senha');
         btn.innerHTML = '<i class="bi bi-eye' + (mostrar ? '-slash' : '') + '" aria-hidden="true"></i>';
     });
+
+    // Aviso de Caps Lock ligado: senha errada por letra maiúscula conta tentativa no bloqueio do login
+    const caps = document.createElement('small');
+    caps.className = 'aviso-caps';
+    caps.id = (input.id || input.name) + '-caps-' + Math.random().toString(36).slice(2, 7);
+    caps.setAttribute('aria-live', 'polite');
+    (input.closest('label') || caixa).after(caps);
+    input.setAttribute('aria-describedby', ((input.getAttribute('aria-describedby') || '') + ' ' + caps.id).trim());
+
+    const conferirCaps = ev => {
+        const ligado = ev.getModifierState && ev.getModifierState('CapsLock');
+        caps.textContent = ligado ? 'Caps Lock está ligado' : '';
+    };
+    input.addEventListener('keydown', conferirCaps);
+    input.addEventListener('keyup', conferirCaps);
+    input.addEventListener('blur', () => { caps.textContent = ''; });
 });
 
 
