@@ -67,6 +67,36 @@ document.querySelectorAll('input[data-filtrar-select]').forEach(input => {
 });
 
 
+// Baixa de estoque: a quantidade não passa do que o lote escolhido tem (o servidor confere de novo)
+document.querySelectorAll('select[name="lote_id"]').forEach(lote => {
+    const qtd = lote.form?.querySelector('input[name="quantidade"]');
+    if (!qtd) return;
+    const limitar = () => { const max = lote.selectedOptions[0]?.dataset.max; if (max) qtd.max = max; else qtd.removeAttribute('max'); };
+    lote.addEventListener('change', limitar);
+    limitar();
+});
+
+
+// Agendar: escolhido o pet, sugere o serviço do porte dele ("Banho porte M") enquanto a pessoa não escolheu outro
+document.querySelectorAll('select[name="pet_id"]').forEach(pet => {
+    const servico = pet.form?.querySelector('select[name="servico_id"]');
+    if (!servico) return;
+    let sugerido = !servico.value;
+    const sugerir = () => {
+        const porte = pet.selectedOptions[0]?.dataset.porte;
+        if (!sugerido) return;
+        // pet sem porte: tira a sugestão do pet anterior (o peixe não fica com "Banho porte G")
+        const op = porte && [...servico.options].find(o => new RegExp('porte\\s+' + porte + '\\b', 'i').test(o.textContent));
+        servico.value = op ? op.value : '';
+        servico.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    servico.addEventListener('change', ev => { if (ev.isTrusted) sugerido = !servico.value; });
+    pet.addEventListener('change', sugerir);
+    pet.form.addEventListener('input', ev => { if (ev.target.dataset.filtrarSelect) sugerir(); }); // a busca de pet escolhe sozinha quando sobra um
+    sugerir();
+});
+
+
 // <form data-confirmar="Mensagem">
 
 document.querySelectorAll('form[data-confirmar]').forEach(form => {
@@ -213,9 +243,11 @@ function rotularTabela(tabela) {
 
     const nomes = [...tabela.querySelectorAll('thead th')].map(th => th.textContent.trim());
 
-    tabela.querySelectorAll('tbody tr').forEach(tr => {
+    tabela.querySelectorAll('tbody tr, tfoot tr').forEach(tr => {
 
-        [...tr.children].forEach((td, i) => td.setAttribute('data-label', nomes[i] || ''));
+        // conta colunas, não células: no rodapé "Total" ocupa várias (colspan) e o valor ganhava o nome da coluna errada
+        let coluna = 0;
+        [...tr.children].forEach(td => { td.setAttribute('data-label', nomes[coluna] || ''); coluna += td.colSpan || 1; });
     });
 }
 
@@ -1224,7 +1256,26 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
         motivo.textContent = c.problema ? '' : vazioCarrinho ? 'Adicione um produto para finalizar.' : !forma.value ? 'Escolha a forma de pagamento para finalizar.' : '';
 
         motivo.hidden = !motivo.textContent;
+
+        mostrarCampoAtivo(); // a caixa do Total cresce (troco, erro) e podia cobrir o campo em que se digita
     }
+
+
+    // Computador: Total e Finalizar ficam presos ao pé da tela (.pdv-fim); o campo com foco rola para cima deles
+    const fim = document.querySelector('.pdv-fim');
+
+    function mostrarCampoAtivo() {
+
+        const campo = document.activeElement;
+
+        if (!fim || !campo || !campo.closest('.pdv-campos') || getComputedStyle(fim).position !== 'sticky') return;
+
+        const cobre = campo.getBoundingClientRect().bottom + 12 - fim.getBoundingClientRect().top;
+
+        if (cobre > 0) window.scrollBy(0, cobre);
+    }
+
+    form.addEventListener('focusin', mostrarCampoAtivo);
 
 
     function renderizar() {
@@ -1378,6 +1429,12 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
 
     [descInput, recebido].forEach(el => el.addEventListener('input', atualizarTotais));
 
+    // "20" vira "20,00" ao sair do campo (mesmo formato do total); texto inválido fica como está para a mensagem de erro
+    recebido.addEventListener('change', () => {
+        const v = numero(recebido.value);
+        if (recebido.value.trim() !== '' && !Number.isNaN(v) && v >= 0) { recebido.value = v.toFixed(2).replace('.', ','); atualizarTotais(); guardar(); }
+    });
+
     [descTipo, forma].forEach(el => el.addEventListener('change', atualizarTotais));
 
     clienteBusca.addEventListener('input', () => { lerCliente(); atualizarTotais(); });
@@ -1446,8 +1503,15 @@ document.querySelectorAll('input[data-sem-enter]').forEach(input => {
         if (finalizar.disabled) { ev.preventDefault(); return; }
 
         finalizar.disabled = true; // evita venda em dobro com clique duplo
+
+        finalizar.textContent = 'Finalizando…'; // a gravação pode levar alguns segundos
     });
 
+
+    // Barra do celular some enquanto o Pagamento já está na tela (seta "Pagamento ↓" ali não leva a lugar nenhum)
+    if ('IntersectionObserver' in window) {
+        new IntersectionObserver(([e]) => $('v-barra').classList.toggle('pdv-barra-oculta', e.intersectionRatio >= .25), { threshold: [0, .25] }).observe($('pdv-pagamento'));
+    }
 
     // Barra do celular: rola até o pagamento sem pôr #pdv-pagamento no endereço
     // (o fragmento ia junto no redirecionamento para o comprovante)

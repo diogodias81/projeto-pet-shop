@@ -40,7 +40,9 @@ if (isset($_GET['exportar'])) {
 
     match ($_GET['exportar']) {
         'vendas' => exportarCsv('vendas' . $sufixo, ['Venda', 'Data', 'Vendedor', 'Pagamento', 'Itens', 'Subtotal', 'Desconto', 'Devolvido', 'Total líquido'],
-            array_map(fn($v) => [$v['id'], dataBr($v['criado_em']), $v['vendedor'], Venda::FORMAS[$v['forma_pagamento']] ?? $v['forma_pagamento'], $v['itens'], $n2($v['subtotal']), $n2($v['desconto']), $n2($v['valor_devolvido']), $n2($v['liquido'])], array_values($vendas))),
+            array_map(fn($v) => [$v['id'], dataBr($v['criado_em']), $v['vendedor'], Venda::FORMAS[$v['forma_pagamento']] ?? $v['forma_pagamento'], $v['itens'], $n2($v['subtotal']), $n2($v['desconto']), $n2($v['valor_devolvido']), $n2($v['liquido'])], array_values($vendas))
+            // última linha com as somas: quem confere no Excel não precisa somar à mão
+            + [count($vendas) => ['Total', '', '', '', count($vendas) . (count($vendas) === 1 ? ' venda' : ' vendas'), ...array_map(fn($c) => $n2(array_sum(array_column($vendas, $c))), ['subtotal', 'desconto', 'valor_devolvido', 'liquido'])]]),
         'produtos' => exportarCsv('rentabilidade' . $sufixo, ['Produto', 'Unidades', 'Receita', 'Custo', 'Lucro bruto', 'Margem %', 'Acréscimo sobre o custo %'],
             array_map(fn($p) => [$p['nome'], $p['qtd'], $n2($p['receita']), $n2($p['custo']), $n2($p['lucro']), $p['margem'] === null ? '' : $n2($p['margem']), $p['acrescimo'] === null ? '' : $n2($p['acrescimo'])], $produtos)),
         'despesas' => exportarCsv('despesas' . $sufixo, ['Data', 'Descrição', 'Categoria', 'Valor', 'Registrada por'],

@@ -445,7 +445,7 @@ $linkCat = fn(int $cat) => 'index.php?page=produtos' . ($cat ? '&amp;cat=' . $ca
             <td class="num c-estoque">
 
               <span
-                class="selo <?= $baixo ? 'selo-alerta' : 'selo-ok' ?>">
+                class="selo <?= $p['estoque'] <= 0 ? 'selo-erro' : ($baixo ? 'selo-alerta' : 'selo-ok') ?>"<?= $p['estoque'] <= 0 ? ' title="Sem estoque"' : '' ?>>
                 <?= $p['estoque'] ?>
               </span>
 

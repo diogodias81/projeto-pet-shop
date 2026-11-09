@@ -53,7 +53,7 @@ class Cliente {
 
     /** Todos os pets ativos com o dono, para escolher na agenda */
     public static function petsAtivos(): array {
-        return Database::pdo()->query('SELECT p.id, p.nome, p.especie, p.cliente_id, c.nome AS cliente FROM pets p JOIN clientes c ON c.id = p.cliente_id
+        return Database::pdo()->query('SELECT p.id, p.nome, p.especie, p.porte, p.cliente_id, c.nome AS cliente FROM pets p JOIN clientes c ON c.id = p.cliente_id
             WHERE p.ativo = 1 AND c.ativo = 1 ORDER BY c.nome COLLATE NOCASE, p.nome COLLATE NOCASE')->fetchAll();
     }
 

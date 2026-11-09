@@ -6,11 +6,15 @@ if (PHP_SAPI !== 'cli') exit("Só pela linha de comando.\n");
 $real = dirname(__DIR__);
 // BASE_PATH aponta para uma pasta temporária: o config real monta o db_path a partir dela
 // sobras de rodadas antigas (no Windows o banco aberto não é apagado no fim); mais de 1 hora para não pegar uma rodada em andamento
-foreach (glob(sys_get_temp_dir() . '/petshop-teste-*', GLOB_ONLYDIR) ?: [] as $velha) {
-    if (filemtime($velha) > time() - 3600) continue;
-    foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($velha, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST) as $f) $f->isDir() ? @rmdir($f->getPathname()) : @unlink($f->getPathname());
-    @rmdir($velha);
-}
+// Nunca segue link/junção (apagaria a pasta para onde aponta). No Windows is_link() não vê junção:
+// "pasta de verdade" é a que tem realpath igual ao próprio caminho; link é apagado ele mesmo, sem entrar.
+$pastaReal = fn(string $pai, string $nome) => is_dir("$pai/$nome") && !is_link("$pai/$nome") && realpath("$pai/$nome") === realpath($pai) . DIRECTORY_SEPARATOR . $nome;
+$apagar = function (string $d) use (&$apagar, $pastaReal): void {
+    foreach (array_diff(scandir($d) ?: [], ['.', '..']) as $n) $pastaReal($d, $n) ? $apagar("$d/$n") : (@unlink("$d/$n") || @rmdir("$d/$n"));
+    @rmdir($d);
+};
+foreach (glob(sys_get_temp_dir() . '/petshop-teste-*', GLOB_ONLYDIR) ?: [] as $velha)
+    if ($pastaReal(sys_get_temp_dir(), basename($velha)) && filemtime($velha) <= time() - 3600) $apagar($velha);
 $tmp = sys_get_temp_dir() . '/petshop-teste-' . getmypid() . '-' . bin2hex(random_bytes(4)); // só o PID se repete no Windows e caía numa pasta antiga, com o banco de outra rodada
 mkdir("$tmp/config", 0700, true);
 file_put_contents("$tmp/config/config.php", '<?php return require ' . var_export("$real/config/config.php", true) . ';');
@@ -95,8 +99,14 @@ try {
     Usuario::criar(['nome' => 'Caixa Um', 'email' => 'caixa1@teste.com', 'senha' => 'senha123', 'perfil' => 'vendedor']);
     $caixa = (int) $pdo->query("SELECT id FROM usuarios WHERE email = 'caixa1@teste.com'")->fetchColumn();
     // Senha definitiva (primeiro acesso e "Minha senha") recusa as óbvias; a provisória do admin continua livre
-    foreach (['senha123', 'Senha123', '123456', 'PETSHOP', '999999', 'caixa1', 'caixa1@teste.com'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($caixa, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa a senha óbvia ' . json_encode($fraca));
-    ok(recusa(fn() => Usuario::alterarSenha($caixa, 'senha123', '12345678', '12345678'), 'fácil de adivinhar'), 'minha senha recusa 12345678');
+    foreach (['senha123', 'Senha123', '123456', 'PETSHOP', '999999', 'caixa1', 'caixa1@teste.com', ' 123456', '123456 ', '123 456', " caixa1\t"] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($caixa, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa a senha óbvia ' . json_encode($fraca));
+    ok(recusa(fn() => Usuario::alterarSenha($caixa, 'senha123', ' 12345678 ', ' 12345678 '), 'fácil de adivinhar'), 'minha senha recusa " 12345678 " (espaços em volta)');
+    // Palavra óbvia, parte do e-mail ou nome do usuário ("Caixa Um") com números/símbolos em volta
+    foreach (['admin1', 'Senha@2026', 'petshop2026', 'caixa.1!', 'Caixa2026'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($caixa, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa palavra óbvia/nome com números ' . json_encode($fraca));
+    // Nome com acento e pedaços do e-mail: "joao123" para João, "silva2026" para joao.silva@
+    Usuario::criar(['nome' => 'João Conceição', 'email' => 'joao.silva@teste.com', 'senha' => 'provisoria9', 'perfil' => 'vendedor']);
+    $joao = (int) $pdo->query("SELECT id FROM usuarios WHERE email = 'joao.silva@teste.com'")->fetchColumn();
+    foreach (['joao123', 'JOÃO2026', 'conceicao1', 'silva2026', 'joaosilva!'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($joao, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa nome sem acento/pedaço do e-mail ' . json_encode($fraca));
     Usuario::trocarSenha($caixa, 'banho do rex 2x', 'banho do rex 2x');
     ok((int) $pdo->query("SELECT trocar_senha FROM usuarios WHERE id = $caixa")->fetchColumn() === 0, 'trocar senha aceita uma frase que não é óbvia');
     Usuario::editar($caixa, ['nome' => 'Caixa Um Silva', 'email' => 'Caixa.Silva@Teste.com', 'perfil' => 'financeiro']);
@@ -425,9 +435,7 @@ try {
     $falhas++;
 } finally {
     // apaga a pasta temporária inteira (banco de teste incluído); no Windows o banco ainda aberto fica, e a próxima rodada apaga
-    $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($tmp, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST);
-    foreach ($it as $f) $f->isDir() ? @rmdir($f->getPathname()) : @unlink($f->getPathname());
-    @rmdir($tmp);
+    $apagar($tmp);
 }
 
 echo $falhas ? "\n$falhas teste(s) falharam.\n" : "\nTodos os testes passaram.\n";

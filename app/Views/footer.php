@@ -30,7 +30,7 @@
         <div class="offcanvas-body">
 
             <nav class="menu-mais-grade" aria-label="Todas as opções">
-                <?php foreach (array_keys($menu) as $chave): ?>
+                <?php foreach (array_merge(...array_values($grupos)) as $chave): // mesma ordem do menu lateral ?>
                     <?= $item($chave, 'menu-mais-item') ?>
                 <?php endforeach; ?>
             </nav>

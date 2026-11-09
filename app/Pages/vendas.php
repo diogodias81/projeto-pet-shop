@@ -330,8 +330,6 @@ $caixaAberto = Caixa::aberto();
             value="<?= e($antigo['recebido'] ?? '') ?>">
         </label>
 
-        <p class="alert alert-danger" id="v-erro" role="alert" hidden></p>
-
       </div>
 
 
@@ -353,6 +351,9 @@ $caixaAberto = Caixa::aberto();
         <dd id="v-troco" hidden>R$ 0,00</dd>
 
       </dl>
+
+      <!-- Erro junto do Finalizar: no notebook a caixa do Total cobria a mensagem e o botão ficava cinza sem motivo à vista -->
+      <p class="alert alert-danger" id="v-erro" role="alert" hidden></p>
 
       <button
         class="btn btn-primary"

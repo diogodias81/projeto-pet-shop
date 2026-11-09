@@ -1,6 +1,7 @@
 <?php
 class Usuario {
-    const PERFIS = ['admin' => 'Administrador', 'vendedor' => 'Vendedor', 'estoque' => 'Resp. estoque', 'financeiro' => 'Financeiro'];
+    // Ordem dos cartões em Usuários: o perfil de mais poder por último (era o primeiro e o mais fácil de marcar sem querer)
+    const PERFIS = ['vendedor' => 'Vendedor', 'estoque' => 'Resp. estoque', 'financeiro' => 'Financeiro', 'admin' => 'Administrador'];
 
     /** Hash de uma senha aleatória: conferido quando o e-mail não existe, para o tempo de resposta não revelar quais e-mails existem */
     private const HASH_FALSO = '$2y$12$7kxjyA9bt0SzYxF3LNi.YO1T9hhXVqZMvf3u6MRT6FJQNI8oK1AuS';
@@ -73,14 +74,26 @@ class Usuario {
     /** Senha definitiva (a que o próprio usuário escolhe): não aceita as que um invasor tenta primeiro */
     private static function validarSenhaDefinitiva(string $senha, int $id): void {
         self::validarSenha($senha);
-        $s = mb_strtolower($senha);
-        $st = Database::pdo()->prepare('SELECT email FROM usuarios WHERE id = ?');
+        // compara sem espaços (" 123456", "123 456"); a senha gravada continua exatamente a digitada
+        $s = mb_strtolower(preg_replace('/\s+/u', '', $senha) ?? trim($senha));
+        $st = Database::pdo()->prepare('SELECT email, nome FROM usuarios WHERE id = ?');
         $st->execute([$id]);
-        $email = mb_strtolower((string) $st->fetchColumn());
+        $u = $st->fetch() ?: ['email' => '', 'nome' => ''];
         $st->closeCursor(); // ver autenticar
-        // um caractere repetido (aaaaaa, 999999) ou a parte do e-mail antes do @ (maria@... -> "maria")
-        if (in_array($s, self::SENHAS_OBVIAS, true) || preg_match('/^(.)\1*$/su', $s) || ($email !== '' && in_array($s, [$email, strstr($email, '@', true)], true)))
-            throw new DomainException('Essa senha é fácil de adivinhar (é das primeiras que um invasor tenta). Escolha outra, por exemplo uma frase curta como "banho do rex 2x".');
+        $email = mb_strtolower((string) $u['email']);
+        // Só as letras, sem acento: "admin1", "Senha@2026", "maria.uc99" e "João2026" viram "admin", "senha", "mariauc" e "joao"
+        $acentos = ['á' => 'a', 'à' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a', 'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e', 'í' => 'i', 'ì' => 'i', 'î' => 'i', 'ï' => 'i',
+            'ó' => 'o', 'ò' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o', 'ú' => 'u', 'ù' => 'u', 'û' => 'u', 'ü' => 'u', 'ç' => 'c', 'ñ' => 'n'];
+        $letras = fn(string $t): string => preg_replace('/[^\p{L}]+/u', '', strtr(mb_strtolower($t), $acentos)) ?? '';
+        $l = $letras($senha);
+        // palavras que um invasor tenta: as da lista, a parte do e-mail antes do @ (inteira e cada pedaço: joao.uc -> joaouc, joao)
+        // e cada nome do usuário; pedaços com 3+ letras
+        $local = (string) strstr($email, '@', true);
+        $palavras = array_merge(array_map($letras, self::SENHAS_OBVIAS), [$letras($local)],
+            array_filter(array_map($letras, preg_split('/[^\p{L}]+/u', $local . ' ' . $u['nome']) ?: []), fn($p) => mb_strlen($p) >= 3));
+        // um caractere repetido (aaaaaa, 999999), da lista, o e-mail, ou só uma dessas palavras com números/símbolos em volta
+        if (in_array($s, self::SENHAS_OBVIAS, true) || preg_match('/^(.)\1*$/su', $s) || ($email !== '' && $s === $email) || ($l !== '' && in_array($l, $palavras, true)))
+            throw new DomainException('Essa senha é fácil de adivinhar (lista de senhas comuns, ou seu nome ou e-mail com números). Escolha outra: uma frase curta com palavras que só você associa funciona bem.');
     }
     /** Primeiro acesso com a senha inicial: o usuário escolhe a própria antes de usar o sistema */
     public static function trocarSenha(int $id, string $senha, string $confirmacao): void {
@@ -93,7 +106,7 @@ class Usuario {
         if (password_verify($senha, $hash)) throw new DomainException('A nova senha deve ser diferente da senha provisória.');
         Database::pdo()->prepare('UPDATE usuarios SET senha_hash = ?, trocar_senha = 0, sessao_versao = sessao_versao + 1 WHERE id = ?')->execute([password_hash($senha, PASSWORD_DEFAULT), $id]);
         self::manterSessaoAtual($id);
-        Auditoria::registrar('senha_alterada');
+        Auditoria::registrar('senha_alterada', 'Primeiro acesso: trocou a senha provisória');
     }
     /** A senha mudou e o bootstrap derruba as sessões com a versão antiga; a sessão de quem fez a troca continua */
     private static function manterSessaoAtual(int $id): void {
@@ -137,7 +150,7 @@ class Usuario {
         if ($nova === $atual) throw new DomainException('A nova senha deve ser diferente da atual.');
         $pdo->prepare('UPDATE usuarios SET senha_hash = ?, sessao_versao = sessao_versao + 1 WHERE id = ?')->execute([password_hash($nova, PASSWORD_DEFAULT), $id]);
         self::manterSessaoAtual($id);
-        Auditoria::registrar('senha_alterada');
+        Auditoria::registrar('senha_alterada', 'Pela tela "Minha senha"');
     }
     /** Admin define uma senha provisória (ex.: o usuário esqueceu a dele); o usuário troca no próximo acesso */
     public static function redefinirSenha(int $id, string $senha): void {

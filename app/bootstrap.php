@@ -15,10 +15,13 @@ spl_autoload_register(function (string $classe): void {
 
 ini_set('display_errors', config('debug') ? '1' : '0');
 
+// X-Forwarded-Proto: o app só escuta em 127.0.0.1, então quem manda o cabeçalho é o proxy HTTPS da frente (README).
+// Forjado num acesso HTTP só deixa o cookie Secure/HSTS (o navegador ignora HSTS em HTTP): endurece, não abre nada.
+$https = ($_SERVER['HTTPS'] ?? 'off') !== 'off' || strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
 session_start([
     'cookie_httponly' => true,
     'cookie_samesite' => 'Lax',
-    'cookie_secure' => ($_SERVER['HTTPS'] ?? 'off') !== 'off',
+    'cookie_secure' => $https,
     'use_strict_mode' => true,
     // O PHP não pode apagar o arquivo da sessão antes do prazo de inatividade (padrão dele: 24 min)
     'gc_maxlifetime' => config('sessao_inatividade_min') * 60,
@@ -38,6 +41,7 @@ header_remove('X-Powered-By');
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: same-origin');
+if ($https) header('Strict-Transport-Security: max-age=31536000');
 // câmera só para o próprio sistema: leitor de código de barras (app.js, data-camera)
 header('Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=()');
 header("Content-Security-Policy: default-src 'self'; img-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");

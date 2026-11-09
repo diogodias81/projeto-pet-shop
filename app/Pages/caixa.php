@@ -63,16 +63,16 @@ $mostrarResumo = function (array $c, array $r, bool $esperado) use ($rotuloForma
       <?php if (!$r['formas']): ?>
         <p class="vazio">Nenhuma venda neste caixa.</p>
       <?php else: ?>
-        <table class="table align-middle">
+        <div class="table-responsive"><table class="table align-middle">
           <thead><tr><th>Forma</th><th class="num">Vendas</th><th class="num">Cancelado/devolvido</th><th class="num">Líquido</th></tr></thead>
           <tbody>
             <?php foreach ($rotuloForma as $f => $rot): if (!isset($r['formas'][$f])) continue; ?>
               <?php $fm = $r['formas'][$f]; ?>
-              <tr><td><?= e($rot) ?></td><td class="num"><?= $fm['qtd'] ?> venda(s)</td><td class="num"><?= $fm['estornado'] > 0 ? '− ' . moeda($fm['estornado']) : '—' ?></td><td class="num"><strong><?= moeda($fm['total'] - $fm['estornado']) ?></strong></td></tr>
+              <tr><td><?= e($rot) ?></td><td class="num"><?= $fm['qtd'] ?> <?= (int) $fm['qtd'] === 1 ? 'venda' : 'vendas' ?></td><td class="num"><?= $fm['estornado'] > 0 ? '− ' . moeda($fm['estornado']) : '—' ?></td><td class="num"><strong><?= moeda($fm['total'] - $fm['estornado']) ?></strong></td></tr>
             <?php endforeach; ?>
           </tbody>
-          <tfoot><tr><th>Total</th><th class="num"><?= $qtdVendas ?> venda(s)</th><th class="num"><?= $totalEstornado > 0 ? '− ' . moeda($totalEstornado) : '—' ?></th><th class="num"><?= moeda($totalVendas - $totalEstornado) ?></th></tr></tfoot>
-        </table>
+          <tfoot><tr><th>Total</th><th class="num"><?= $qtdVendas ?> <?= (int) $qtdVendas === 1 ? 'venda' : 'vendas' ?></th><th class="num"><?= $totalEstornado > 0 ? '− ' . moeda($totalEstornado) : '—' ?></th><th class="num"><?= moeda($totalVendas - $totalEstornado) ?></th></tr></tfoot>
+        </table></div>
         <p class="nota"><i class="bi bi-info-circle" aria-hidden="true"></i> PIX e cartões ficam só para conferir com a maquininha e o banco. Cancelado/devolvido: das vendas deste caixa, mesmo que o estorno tenha sido depois.</p>
       <?php endif; ?>
     </section>

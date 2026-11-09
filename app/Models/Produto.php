@@ -124,6 +124,13 @@ class Produto {
         if (function_exists('imagecreatefromstring')) {
             $img = @imagecreatefromstring((string)file_get_contents($f['tmp_name']));
             if (!$img) throw new DomainException('A foto deve ser JPG, PNG ou WEBP.');
+            // A maior foto na tela tem 72 px: guardar até 4000 px só deixava a lista de produtos pesada
+            if (max($largura, $altura) > 600) {
+                // max(1, …): numa foto de 1 x 4000 o lado menor arredondava para 0 e o imagescale derrubava o cadastro
+                $escala = 600 / max($largura, $altura);
+                $menor = imagescale($img, max(1, (int) round($largura * $escala)), max(1, (int) round($altura * $escala)));
+                if ($menor) { imagedestroy($img); $img = $menor; }
+            }
             imagesavealpha($img, true);
             $ok = match ($ext) { 'jpg' => imagejpeg($img, $destino, 85), 'png' => imagepng($img, $destino), 'webp' => imagewebp($img, $destino, 85) };
         } else {

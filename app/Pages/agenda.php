@@ -111,7 +111,7 @@ $rotuloPasso = ['em_atendimento' => ['Iniciar', 'play-fill', 'btn-primary'], 'pr
         <option value="">Escolha…</option>
         <?php $dono = null; foreach ($pets as $p): ?>
           <?php if ($dono !== $p['cliente_id']): ?><?= $dono !== null ? '</optgroup>' : '' ?><optgroup label="<?= e($p['cliente']) ?>"><?php $dono = $p['cliente_id']; endif; ?>
-          <option value="<?= $p['id'] ?>" <?= $petEscolhido === (int) $p['id'] ? 'selected' : '' ?>><?= Cliente::ICONES_ESPECIE[$p['especie']] ?? '' ?> <?= e($p['nome']) ?> (<?= e($p['cliente']) ?>)</option>
+          <option value="<?= $p['id'] ?>" data-porte="<?= e((string) $p['porte']) ?>" <?= $petEscolhido === (int) $p['id'] ? 'selected' : '' ?>><?= Cliente::ICONES_ESPECIE[$p['especie']] ?? '' ?> <?= e($p['nome']) ?> (<?= e($p['cliente']) ?>)</option>
         <?php endforeach; ?>
         <?= $dono !== null ? '</optgroup>' : '' ?>
       </select>
@@ -213,7 +213,7 @@ $rotuloPasso = ['em_atendimento' => ['Iniciar', 'play-fill', 'btn-primary'], 'pr
                 <small><?= e($a['servico']) ?> · <?= moeda($a['preco']) ?><?= $a['raca'] ? ' · ' . e($a['raca']) : '' ?></small>
                 <small>
                   <a href="index.php?page=clientes&amp;id=<?= (int) $a['cliente_id'] ?>"><?= e($a['cliente']) ?></a>
-                  · <a href="tel:+55<?= e($a['telefone']) ?>"><?= e(Cliente::formatarTelefone($a['telefone'])) ?></a>
+                  · <a class="text-nowrap" href="tel:+55<?= e($a['telefone']) ?>"><?= e(Cliente::formatarTelefone($a['telefone'])) ?></a>
                 </small>
                 <?php if ($a['pet_obs']): ?><small class="pet-obs"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> <?= e($a['pet_obs']) ?></small><?php endif; ?>
                 <?php if ($a['observacao']): ?><small><i class="bi bi-chat-left-text" aria-hidden="true"></i> <?= e($a['observacao']) ?></small><?php endif; ?>
@@ -227,7 +227,7 @@ $rotuloPasso = ['em_atendimento' => ['Iniciar', 'play-fill', 'btn-primary'], 'pr
             <?php foreach ($passos as $passo): ?>
               <?php [$rotulo, $icone, $classe] = $rotuloPasso[$a['status'] === 'pronto' ? 'voltar' : $passo];
               if ($a['status'] === 'em_atendimento' && $passo === 'agendado') $rotulo = 'Voltar para agendado'; ?>
-              <form method="post"<?= in_array($passo, ['faltou', 'cancelado'], true) ? ' data-confirmar="Marcar ' . e($a['pet']) . ' como ' . mb_strtolower(Agenda::STATUS[$passo]) . '?"' : '' ?>>
+              <form method="post"<?= in_array($passo, ['faltou', 'cancelado'], true) ? ' class="acao-destrutiva" data-confirmar="Marcar ' . e($a['pet']) . ' como ' . mb_strtolower(Agenda::STATUS[$passo]) . '?"' : '' ?>>
                 <?= csrf_campo() ?>
                 <input type="hidden" name="acao" value="status">
                 <input type="hidden" name="id" value="<?= $a['id'] ?>">

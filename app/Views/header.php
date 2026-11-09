@@ -117,7 +117,7 @@ $sair = '<form method="post" action="index.php?page=logout" class="m-0">' . csrf
         <div class="lateral-usuario">
             <span class="avatar" aria-hidden="true"><?= e($iniciais) ?></span>
             <div class="lateral-quem">
-                <strong><?= e($u['nome']) ?></strong>
+                <strong title="<?= e($u['nome']) ?>"><?= e($u['nome']) ?></strong>
                 <small><?= e($perfilNome) ?></small>
             </div>
             <a class="btn-icone<?= $atual === 'minha_senha' ? ' active' : '' ?>" href="index.php?page=minha_senha" title="Minha senha" aria-label="Minha senha"<?= $atual === 'minha_senha' ? ' aria-current="page"' : '' ?>><i class="bi bi-key" aria-hidden="true"></i></a>

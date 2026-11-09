@@ -193,7 +193,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
         <select name="lote_id" required>
           <option value="">Escolha…</option>
           <?php foreach (Estoque::lotes() as $l): ?>
-            <option value="<?= $l['id'] ?>"<?= $sel($antigoBaixa, 'lote_id', $l['id']) ?>>
+            <option value="<?= $l['id'] ?>" data-max="<?= (int) $l['quantidade'] ?>"<?= $sel($antigoBaixa, 'lote_id', $l['id']) ?>>
               <?= e($l['produto']) ?> · lote <?= e($l['codigo']) ?> · <?= $l['quantidade'] ?> un.<?= $l['validade'] ? ' · val. ' . date('d/m/Y', strtotime($l['validade'])) : '' ?><?= Estoque::situacao($l['validade']) === 'vencido' ? ' (VENCIDO)' : '' ?>
             </option>
           <?php endforeach; ?>
@@ -311,8 +311,8 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
           <td>
 
             <span
-              class="selo <?= $baixo ? 'selo-alerta' : 'selo-ok' ?>">
-              <?= $baixo ? 'Repor' : 'Normal' ?>
+              class="selo <?= $p['estoque'] <= 0 ? 'selo-erro' : ($baixo ? 'selo-alerta' : 'selo-ok') ?>">
+              <?= $p['estoque'] <= 0 ? 'Sem estoque' : ($baixo ? 'Repor' : 'Normal') ?>
             </span>
 
           </td>

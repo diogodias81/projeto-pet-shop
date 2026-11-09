@@ -73,8 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
         Olá, <?= e(usuario()['nome']) ?>. Você entrou com uma senha provisória (a inicial ou a definida pelo administrador): escolha a sua para continuar.
       </p>
 
-      <p class="text-body-secondary small mb-0">
-        Pelo menos 6 caracteres. Senhas óbvias (123456, senha123, seu e-mail) são recusadas.
+      <p class="text-body-secondary small mb-0" id="senha-ajuda">
+        Pelo menos 6 caracteres. São recusadas as senhas comuns (123456, senha123) e seu nome ou e-mail, mesmo com números; evite também datas.
       </p>
     </div>
 
@@ -94,6 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
       <input
         type="password"
         name="senha"
+        aria-describedby="senha-ajuda"
         minlength="6"
         maxlength="1024"
         autocomplete="new-password"
