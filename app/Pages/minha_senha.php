@@ -34,7 +34,7 @@ $subtituloTopo = 'Troque a senha que você usa para entrar no sistema.';
     <span class="icone-redondo" aria-hidden="true"><i class="bi bi-shield-lock"></i></span>
     <div>
       <h2>Alterar senha</h2>
-      <p class="card-sub">Use pelo menos 6 caracteres. Evite datas e nomes fáceis de adivinhar.</p>
+      <p class="card-sub">Use pelo menos 6 caracteres. Senhas óbvias (123456, senha123, seu e-mail) são recusadas; evite também datas e nomes.</p>
     </div>
   </div>
 

@@ -88,6 +88,11 @@ try {
     // 7. Editar usuário: e-mail único, próprio perfil travado, nunca sem admin ativo
     Usuario::criar(['nome' => 'Caixa Um', 'email' => 'caixa1@teste.com', 'senha' => 'senha123', 'perfil' => 'vendedor']);
     $caixa = (int) $pdo->query("SELECT id FROM usuarios WHERE email = 'caixa1@teste.com'")->fetchColumn();
+    // Senha definitiva (primeiro acesso e "Minha senha") recusa as óbvias; a provisória do admin continua livre
+    foreach (['senha123', 'Senha123', '123456', 'PETSHOP', '999999', 'caixa1', 'caixa1@teste.com'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($caixa, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa a senha óbvia ' . json_encode($fraca));
+    ok(recusa(fn() => Usuario::alterarSenha($caixa, 'senha123', '12345678', '12345678'), 'fácil de adivinhar'), 'minha senha recusa 12345678');
+    Usuario::trocarSenha($caixa, 'banho do rex 2x', 'banho do rex 2x');
+    ok((int) $pdo->query("SELECT trocar_senha FROM usuarios WHERE id = $caixa")->fetchColumn() === 0, 'trocar senha aceita uma frase que não é óbvia');
     Usuario::editar($caixa, ['nome' => 'Caixa Um Silva', 'email' => 'Caixa.Silva@Teste.com', 'perfil' => 'financeiro']);
     $c = Usuario::buscar($caixa);
     ok($c['nome'] === 'Caixa Um Silva' && $c['email'] === 'caixa.silva@teste.com' && $c['perfil'] === 'financeiro', 'editar usuário muda nome, e-mail (minúsculo) e perfil');

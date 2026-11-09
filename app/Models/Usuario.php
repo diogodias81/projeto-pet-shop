@@ -65,9 +65,26 @@ class Usuario {
         if (trim($senha) === '') throw new DomainException('A senha não pode ser só espaços.');
         if (mb_strlen($senha) < 6 || mb_strlen($senha) > 1024) throw new DomainException('A senha deve ter entre 6 e 1024 caracteres.');
     }
+    /** Senhas das listas de vazamentos que são tentadas primeiro (comparadas em minúsculas) */
+    private const SENHAS_OBVIAS = ['123456', '1234567', '12345678', '123456789', '1234567890', '654321', '123123', '112233', '121212', '102030',
+        '000000', '111111', '666666', '888888', 'abc123', 'abcdef', 'qwerty', 'qwerty123', 'asdfgh', 'password', 'senha', 'senha1', 'senha12',
+        'senha123', 'senha1234', 'mudar123', 'trocar123', 'admin', 'admin123', 'teste', 'teste123', 'petshop', 'petshop123', 'pet123', 'brasil',
+        'iloveyou', 'amor123', 'flamengo', 'corinthians', 'palmeiras', 'gremio', 'vasco'];
+    /** Senha definitiva (a que o próprio usuário escolhe): não aceita as que um invasor tenta primeiro */
+    private static function validarSenhaDefinitiva(string $senha, int $id): void {
+        self::validarSenha($senha);
+        $s = mb_strtolower($senha);
+        $st = Database::pdo()->prepare('SELECT email FROM usuarios WHERE id = ?');
+        $st->execute([$id]);
+        $email = mb_strtolower((string) $st->fetchColumn());
+        $st->closeCursor(); // ver autenticar
+        // um caractere repetido (aaaaaa, 999999) ou a parte do e-mail antes do @ (maria@... -> "maria")
+        if (in_array($s, self::SENHAS_OBVIAS, true) || preg_match('/^(.)\1*$/su', $s) || ($email !== '' && in_array($s, [$email, strstr($email, '@', true)], true)))
+            throw new DomainException('Essa senha é fácil de adivinhar (é das primeiras que um invasor tenta). Escolha outra, por exemplo uma frase curta como "banho do rex 2x".');
+    }
     /** Primeiro acesso com a senha inicial: o usuário escolhe a própria antes de usar o sistema */
     public static function trocarSenha(int $id, string $senha, string $confirmacao): void {
-        self::validarSenha($senha);
+        self::validarSenhaDefinitiva($senha, $id);
         if ($senha !== $confirmacao) throw new DomainException('A confirmação não confere com a nova senha.');
         $st = Database::pdo()->prepare('SELECT senha_hash FROM usuarios WHERE id = ?');
         $st->execute([$id]);
@@ -115,7 +132,7 @@ class Usuario {
         $st->closeCursor(); // ver autenticar
         if (mb_strlen($atual) > 1024 || !password_verify($atual, $hash)) throw new DomainException('A senha atual está incorreta.');
         $pdo->prepare('DELETE FROM tentativas_login WHERE email = ?')->execute([$chave]);
-        self::validarSenha($nova);
+        self::validarSenhaDefinitiva($nova, $id);
         if ($nova !== $confirmacao) throw new DomainException('A confirmação não confere com a nova senha.');
         if ($nova === $atual) throw new DomainException('A nova senha deve ser diferente da atual.');
         $pdo->prepare('UPDATE usuarios SET senha_hash = ?, sessao_versao = sessao_versao + 1 WHERE id = ?')->execute([password_hash($nova, PASSWORD_DEFAULT), $id]);

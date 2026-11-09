@@ -72,6 +72,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
       <p class="text-body-secondary mb-0">
         Olá, <?= e(usuario()['nome']) ?>. Você entrou com uma senha provisória (a inicial ou a definida pelo administrador): escolha a sua para continuar.
       </p>
+
+      <p class="text-body-secondary small mb-0">
+        Pelo menos 6 caracteres. Senhas óbvias (123456, senha123, seu e-mail) são recusadas.
+      </p>
     </div>
 
     <?php if ($erro): ?>
