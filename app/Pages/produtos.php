@@ -312,7 +312,7 @@ $linkCat = fn(int $cat) => 'index.php?page=produtos' . ($cat ? '&amp;cat=' . $ca
         name="q"
         value="<?= e($busca) ?>"
         aria-label="Pesquisar"
-        placeholder="Buscar por nome ou código de barras">
+        placeholder="Nome ou código">
     </label>
 
     <button class="btn btn-light">
@@ -341,7 +341,7 @@ $linkCat = fn(int $cat) => 'index.php?page=produtos' . ($cat ? '&amp;cat=' . $ca
 
   <?php else: ?>
 
-    <div class="table-responsive"><table class="table table-hover align-middle">
+    <div class="table-responsive"><table class="table table-hover align-middle" id="tabela-produtos">
 
       <thead>
 
@@ -407,7 +407,7 @@ $linkCat = fn(int $cat) => 'index.php?page=produtos' . ($cat ? '&amp;cat=' . $ca
               </span>
             </td>
 
-            <td>
+            <td class="c-cat">
               <?php if ($p['categoria']): ?>
                 <span class="selo selo-neutro"><?= e($p['categoria']) ?></span>
               <?php else: ?>
@@ -417,13 +417,13 @@ $linkCat = fn(int $cat) => 'index.php?page=produtos' . ($cat ? '&amp;cat=' . $ca
 
             <?php if ($gerencia): ?>
 
-              <td class="num">
+              <td class="num c-custo">
                 <?= $p['preco_custo'] > 0 ? moeda($p['preco_custo']) : '—' ?>
               </td>
 
             <?php endif; ?>
 
-            <td class="num">
+            <td class="num c-preco">
               <strong><?= moeda($p['preco']) ?></strong>
             </td>
 
@@ -431,7 +431,7 @@ $linkCat = fn(int $cat) => 'index.php?page=produtos' . ($cat ? '&amp;cat=' . $ca
 
               <?php $margem = Produto::margem($p); ?>
 
-              <td class="num <?= $margem !== null && $margem < 0 ? 'negativo' : '' ?>">
+              <td class="num c-lucro <?= $margem !== null && $margem < 0 ? 'negativo' : '' ?>">
                 <?php if ($margem === null): ?>
                   —
                 <?php else: ?>
@@ -442,7 +442,7 @@ $linkCat = fn(int $cat) => 'index.php?page=produtos' . ($cat ? '&amp;cat=' . $ca
 
             <?php endif; ?>
 
-            <td class="num">
+            <td class="num c-estoque">
 
               <span
                 class="selo <?= $baixo ? 'selo-alerta' : 'selo-ok' ?>">

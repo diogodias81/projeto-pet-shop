@@ -651,6 +651,7 @@ tbody tr:nth-last-child(-n+2):not(:nth-child(-n+2)) .menu-acoes-painel { top: au
   .filtro-datas label { flex: 1 1 0; min-width: 0; }
   .filtro-datas input { width: 100%; }
   .filtro-datas .btn { flex-basis: 100%; }
+  .filtro-datas:not(:has(> label ~ label)) .btn { flex-basis: auto; } /* Agenda: uma data só, Ir e Hoje cabem na mesma linha */
   .busca-barra label { max-width: none; }
   .itens-venda { max-width: none; }
   .pagina-acoes { width: 100%; }
@@ -691,6 +692,18 @@ tbody tr:nth-last-child(-n+2):not(:nth-child(-n+2)) .menu-acoes-painel { top: au
   #v-tabela tbody td:nth-child(4) { color: var(--suave); font-size: .8rem; overflow: hidden; text-overflow: ellipsis; } /* unitário ao lado da quantidade: com 2+ unidades só o subtotal confundia */
   #v-tabela tbody td:nth-child(4)::before { content: "× "; float: none; margin: 0; font-size: inherit; }
   #v-tabela tbody td:nth-child(5) { text-align: right; font-weight: 600; }
+  /* Produtos compactos (~300px por cartão viraram ~170): nome; Preço, Estoque e ações; Custo e Lucro. Categoria já está nos filtros acima */
+  #tabela-produtos tbody tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem .75rem; align-items: start; }
+  #tabela-produtos tbody td { padding: 0; text-align: left !important; }
+  #tabela-produtos tbody td::before { float: none; display: block; margin: 0 0 .1rem; }
+  #tabela-produtos tbody td:first-child { grid-column: 1 / -1; padding-bottom: .15rem; }
+  #tabela-produtos .c-cat { display: none !important; }
+  #tabela-produtos .c-preco { grid-row: 2; grid-column: 1; }
+  #tabela-produtos .c-estoque { grid-row: 2; grid-column: 2; }
+  #tabela-produtos td.acoes { grid-row: 2; grid-column: 3; align-self: center; text-align: right !important; }
+  #tabela-produtos td.acoes::before { content: none; }
+  #tabela-produtos .c-custo { grid-column: 1; }
+  #tabela-produtos .c-lucro { grid-column: 2 / -1; }
 }
 
 /* Gráfico: valor curto em cima de cada barra; com muitas barras (mês inteiro) só aparece ao passar o mouse */
@@ -770,7 +783,7 @@ small.busca-aviso { display: block; width: 0; min-width: 100%; margin: .25rem 0 
 .semana-dia.hoje { border-color: var(--primaria); }
 .semana-dia.active { background: var(--primaria); border-color: var(--primaria); color: #fff; }
 .semana-dia.active small { color: rgba(255, 255, 255, .85); }
-.semana-qtd { min-height: .95rem; font-size: .68rem; font-weight: 700; color: var(--primaria-esc); }
+.semana-qtd { min-height: .95rem; font-size: .68rem; font-weight: 700; color: var(--primaria-esc); white-space: nowrap; }
 .semana-dia.active .semana-qtd { color: #fff; }
 .agenda-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: .7rem; }
 .agenda-item { display: grid; grid-template-columns: 4.2rem minmax(0, 1fr) auto; gap: .9rem; align-items: center; padding: .8rem .9rem; border: 1px solid var(--borda); border-radius: 14px; }
@@ -789,6 +802,7 @@ small.busca-aviso { display: block; width: 0; min-width: 100%; margin: .25rem 0 
 @media (max-width: 575.98px) {
   .semana { flex-wrap: nowrap; width: 100%; justify-content: space-between; gap: .15rem; }
   .semana-dia { min-width: 0; flex: 1; padding: .3rem .1rem; }
+  .semana-qtd span { display: block; font-size: .6rem; font-weight: 600; } /* chip de ~32px: "pets" embaixo do número */
   .semana .btn-quadrado { flex: none; width: 1.9rem; padding-inline: 0; }
 }
 .opcoes-2 { grid-template-columns: repeat(2, 1fr); }

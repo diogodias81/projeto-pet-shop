@@ -171,7 +171,7 @@ $rotuloPasso = ['em_atendimento' => ['Iniciar', 'play-fill', 'btn-primary'], 'pr
         <a class="semana-dia<?= $d === $dia ? ' active' : '' ?><?= $d === $hoje ? ' hoje' : '' ?>" href="<?= $link(['dia' => $d]) ?>"<?= $d === $dia ? ' aria-current="date"' : '' ?>>
           <small><?= $diasSemana[(int) date('w', strtotime($d))] ?></small>
           <strong><?= date('d', strtotime($d)) ?></strong>
-          <span class="semana-qtd"><?= ($porDia[$d] ?? 0) ?: '' ?></span>
+          <span class="semana-qtd"><?php $q = (int) ($porDia[$d] ?? 0); echo $q ? $q . ' <span>' . ($q === 1 ? 'pet' : 'pets') . '</span>' : ''; ?></span>
         </a>
       <?php endforeach; ?>
       <a class="btn btn-light btn-quadrado" href="<?= $link(['dia' => date('Y-m-d', strtotime("$dia +7 days"))]) ?>" title="Próxima semana" aria-label="Próxima semana"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>

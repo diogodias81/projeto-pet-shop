@@ -197,7 +197,7 @@ $caixaAberto = Caixa::aberto();
           id="v-busca"
           data-camera
           aria-label="Produto"
-          placeholder="Leia o código de barras ou digite o nome"
+          placeholder="Código de barras ou nome"
           autocomplete="off"
           autofocus
           role="combobox"
