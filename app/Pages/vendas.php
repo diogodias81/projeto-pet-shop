@@ -335,6 +335,9 @@ $caixaAberto = Caixa::aberto();
       </div>
 
 
+      <!-- Total e Finalizar: no computador ficam presos ao pé da tela (notebook de 768px cortava o botão) -->
+      <div class="pdv-fim">
+
       <dl class="resumo-venda">
 
         <dt>Subtotal</dt>
@@ -360,6 +363,8 @@ $caixaAberto = Caixa::aberto();
       </button>
 
       <p class="nota" id="v-motivo" aria-live="polite">Adicione um produto para finalizar.</p>
+
+      </div>
 
   </aside>
 
