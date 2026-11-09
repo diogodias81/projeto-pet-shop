@@ -5,7 +5,13 @@ if (PHP_SAPI !== 'cli') exit("Só pela linha de comando.\n");
 
 $real = dirname(__DIR__);
 // BASE_PATH aponta para uma pasta temporária: o config real monta o db_path a partir dela
-$tmp = sys_get_temp_dir() . '/petshop-teste-' . getmypid();
+// sobras de rodadas antigas (no Windows o banco aberto não é apagado no fim); mais de 1 hora para não pegar uma rodada em andamento
+foreach (glob(sys_get_temp_dir() . '/petshop-teste-*', GLOB_ONLYDIR) ?: [] as $velha) {
+    if (filemtime($velha) > time() - 3600) continue;
+    foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($velha, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST) as $f) $f->isDir() ? @rmdir($f->getPathname()) : @unlink($f->getPathname());
+    @rmdir($velha);
+}
+$tmp = sys_get_temp_dir() . '/petshop-teste-' . getmypid() . '-' . bin2hex(random_bytes(4)); // só o PID se repete no Windows e caía numa pasta antiga, com o banco de outra rodada
 mkdir("$tmp/config", 0700, true);
 file_put_contents("$tmp/config/config.php", '<?php return require ' . var_export("$real/config/config.php", true) . ';');
 define('BASE_PATH', $tmp);
@@ -418,10 +424,10 @@ try {
     echo 'ERRO - ' . get_class($e) . ': ' . $e->getMessage() . "\n";
     $falhas++;
 } finally {
-    // apaga a pasta temporária inteira (banco de teste incluído)
+    // apaga a pasta temporária inteira (banco de teste incluído); no Windows o banco ainda aberto fica, e a próxima rodada apaga
     $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($tmp, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST);
-    foreach ($it as $f) $f->isDir() ? rmdir($f->getPathname()) : unlink($f->getPathname());
-    rmdir($tmp);
+    foreach ($it as $f) $f->isDir() ? @rmdir($f->getPathname()) : @unlink($f->getPathname());
+    @rmdir($tmp);
 }
 
 echo $falhas ? "\n$falhas teste(s) falharam.\n" : "\nTodos os testes passaram.\n";
