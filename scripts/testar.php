@@ -165,6 +165,11 @@ try {
     ok(count(Venda::listar(['de' => '2001-03-10', 'ate' => '2001-03-10'])) === 2, 'histórico do dia traz as 2 vendas do primeiro ao último segundo');
     $plano = implode(' ', $pdo->query("EXPLAIN QUERY PLAN SELECT SUM(total) FROM vendas WHERE criado_em BETWEEN '2001-03-10' AND '2001-03-10' || ' 23:59:59'")->fetchAll(PDO::FETCH_COLUMN, 3));
     ok(str_contains($plano, 'idx_vendas_data'), 'filtro por período usa o índice de datas');
+    $usa = fn(string $sql, string $idx) => str_contains(implode(' ', $pdo->query("EXPLAIN QUERY PLAN $sql")->fetchAll(PDO::FETCH_COLUMN, 3)), $idx);
+    ok($usa('SELECT * FROM caixa_movimentos WHERE caixa_id = 1 ORDER BY id', 'idx_caixa_movimentos_caixa')
+        && $usa("SELECT COUNT(*) FROM agendamentos WHERE pet_id = 1 AND status IN ('agendado','pago') AND inicio < '2001-03-10 10:00' AND fim > '2001-03-10 09:00'", 'idx_agendamentos_pet')
+        && $usa('UPDATE agendamentos SET status = status WHERE venda_id = 1', 'idx_agendamentos_venda'),
+        'caixa, choque de horário do pet e cobrança da agenda usam índice (sem ler a tabela inteira)');
     $fontes = implode(array_map('file_get_contents', glob("$real/app/Models/*.php")));
     ok(!preg_match('/date\(\w*\.?criado_em\)/', $fontes), 'nenhuma consulta volta a usar date(criado_em), que ignora o índice');
 

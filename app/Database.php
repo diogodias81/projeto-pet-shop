@@ -648,6 +648,16 @@ class Database
             CREATE INDEX IF NOT EXISTS idx_pet_doses_proxima
                 ON pet_doses (proxima_em);
 
+            -- sangrias/reforços do caixa, choque de horário do pet e agendamentos cobrados numa venda
+            CREATE INDEX IF NOT EXISTS idx_caixa_movimentos_caixa
+                ON caixa_movimentos (caixa_id);
+
+            CREATE INDEX IF NOT EXISTS idx_agendamentos_pet
+                ON agendamentos (pet_id, inicio);
+
+            CREATE INDEX IF NOT EXISTS idx_agendamentos_venda
+                ON agendamentos (venda_id);
+
             -- garante um caixa aberto por vez mesmo com duas abas abrindo ao mesmo tempo
             CREATE UNIQUE INDEX IF NOT EXISTS idx_caixas_um_aberto
                 ON caixas ((fechado_em IS NULL)) WHERE fechado_em IS NULL;
