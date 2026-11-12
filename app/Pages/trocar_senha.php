@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
       </p>
 
       <p class="text-body-secondary small mb-0" id="senha-ajuda">
-        Pelo menos 6 caracteres. São recusadas as senhas comuns (123456, senha123) e seu nome ou e-mail, mesmo com números; evite também datas.
+        Pelo menos <?= Usuario::SENHA_MIN ?> caracteres (uma frase curta funciona bem). São recusadas as senhas comuns (123456, senha123) e seu nome ou e-mail, mesmo com números; evite também datas.
       </p>
     </div>
 
@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
         type="password"
         name="senha"
         aria-describedby="senha-ajuda"
-        minlength="6"
+        minlength="<?= Usuario::SENHA_MIN ?>"
         maxlength="1024"
         autocomplete="new-password"
         data-revelar
@@ -109,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
       <input
         type="password"
         name="confirmacao"
-        minlength="6"
+        minlength="<?= Usuario::SENHA_MIN ?>"
         maxlength="1024"
         autocomplete="new-password"
         data-revelar

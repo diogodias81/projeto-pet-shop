@@ -34,7 +34,7 @@ $subtituloTopo = 'Troque a senha que você usa para entrar no sistema.';
     <span class="icone-redondo" aria-hidden="true"><i class="bi bi-shield-lock"></i></span>
     <div>
       <h2>Alterar senha</h2>
-      <p class="card-sub" id="senha-ajuda">Pelo menos 6 caracteres. São recusadas as senhas comuns (123456, senha123) e seu nome ou e-mail, mesmo com números; evite também datas.</p>
+      <p class="card-sub" id="senha-ajuda">Pelo menos <?= Usuario::SENHA_MIN ?> caracteres (uma frase curta funciona bem). São recusadas as senhas comuns (123456, senha123) e seu nome ou e-mail, mesmo com números; evite também datas.</p>
     </div>
   </div>
 
@@ -62,7 +62,7 @@ $subtituloTopo = 'Troque a senha que você usa para entrar no sistema.';
         type="password"
         name="senha"
         aria-describedby="senha-ajuda"
-        minlength="6"
+        minlength="<?= Usuario::SENHA_MIN ?>"
         maxlength="1024"
         autocomplete="new-password"
         data-revelar
@@ -75,7 +75,7 @@ $subtituloTopo = 'Troque a senha que você usa para entrar no sistema.';
       <input
         type="password"
         name="confirmacao"
-        minlength="6"
+        minlength="<?= Usuario::SENHA_MIN ?>"
         maxlength="1024"
         autocomplete="new-password"
         data-revelar

@@ -136,12 +136,12 @@ $perfilAtual = $antigo['perfil'] ?? $editando['perfil'] ?? '';
       <?php if (!$editando): ?>
       <label>
         Senha provisória
-        <small>Mínimo de 6 caracteres<?= $antigo ? ' · digite de novo' : '' ?></small>
+        <small>Mínimo de <?= Usuario::SENHA_MIN ?> caracteres<?= $antigo ? ' · digite de novo' : '' ?></small>
 
         <input
           type="password"
           name="senha"
-          minlength="6"
+          minlength="<?= Usuario::SENHA_MIN ?>"
           maxlength="1024"
           autocomplete="new-password"
           data-revelar
@@ -269,9 +269,9 @@ $perfilAtual = $antigo['perfil'] ?? $editando['perfil'] ?? '';
                     <input
                       type="password"
                       name="senha"
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Mínimo <?= Usuario::SENHA_MIN ?> caracteres"
                       aria-label="Senha provisória para <?= e($u['nome']) ?>"
-                      minlength="6"
+                      minlength="<?= Usuario::SENHA_MIN ?>"
                       maxlength="1024"
                       autocomplete="new-password"
                       data-revelar

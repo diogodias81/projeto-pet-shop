@@ -1,6 +1,7 @@
 <?php
 class Usuario {
     // Ordem dos cartões em Usuários: o perfil de mais poder por último (era o primeiro e o mais fácil de marcar sem querer)
+    const SENHA_MIN = 12;
     const PERFIS = ['vendedor' => 'Vendedor', 'estoque' => 'Resp. estoque', 'financeiro' => 'Financeiro', 'admin' => 'Administrador'];
 
     /** Hash de uma senha aleatória: conferido quando o e-mail não existe, para o tempo de resposta não revelar quais e-mails existem */
@@ -71,7 +72,8 @@ class Usuario {
     /** Conta caracteres (não bytes), igual ao minlength/maxlength do formulário */
     private static function validarSenha(string $senha): void {
         if (trim($senha) === '') throw new DomainException('A senha não pode ser só espaços.');
-        if (mb_strlen($senha) < 6 || mb_strlen($senha) > 1024) throw new DomainException('A senha deve ter entre 6 e 1024 caracteres.');
+        // 12 = mínimo do OWASP ASVS (V2.1.1); vale para senhas novas, as já gravadas continuam entrando
+        if (mb_strlen($senha) < self::SENHA_MIN || mb_strlen($senha) > 1024) throw new DomainException('A senha deve ter entre ' . self::SENHA_MIN . ' e 1024 caracteres.');
     }
     /** Senhas das listas de vazamentos que são tentadas primeiro (comparadas em minúsculas) */
     private const SENHAS_OBVIAS = ['123456', '1234567', '12345678', '123456789', '1234567890', '654321', '123123', '112233', '121212', '102030',

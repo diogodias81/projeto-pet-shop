@@ -96,17 +96,20 @@ try {
     ok(recusa(fn() => Usuario::redefinirSenha((int) $admin['id'], 'outra123'), 'Minha senha'), 'admin não redefine a própria senha sem a atual');
 
     // 7. Editar usuário: e-mail único, próprio perfil travado, nunca sem admin ativo
-    Usuario::criar(['nome' => 'Caixa Um', 'email' => 'caixa1@teste.com', 'senha' => 'senha123', 'perfil' => 'vendedor']);
+    Usuario::criar(['nome' => 'Caixa Um', 'email' => 'caixa1@teste.com', 'senha' => 'provisoria123', 'perfil' => 'vendedor']);
+    // Mínimo de 12 caracteres (OWASP ASVS V2.1.1) para a senha provisória e para a definitiva
+    ok(recusa(fn() => Usuario::criar(['nome' => 'Curta', 'email' => 'curta@teste.com', 'senha' => 'senha12345!', 'perfil' => 'vendedor']), 'entre 12 e 1024'), 'senha provisória com 11 caracteres é recusada');
     $caixa = (int) $pdo->query("SELECT id FROM usuarios WHERE email = 'caixa1@teste.com'")->fetchColumn();
     // Senha definitiva (primeiro acesso e "Minha senha") recusa as óbvias; a provisória do admin continua livre
-    foreach (['senha123', 'Senha123', '123456', 'PETSHOP', '999999', 'caixa1', 'caixa1@teste.com', ' 123456', '123456 ', '123 456', " caixa1\t"] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($caixa, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa a senha óbvia ' . json_encode($fraca));
-    ok(recusa(fn() => Usuario::alterarSenha($caixa, 'senha123', ' 12345678 ', ' 12345678 '), 'fácil de adivinhar'), 'minha senha recusa " 12345678 " (espaços em volta)');
+    ok(recusa(fn() => Usuario::trocarSenha($caixa, 'Rex#banho9!', 'Rex#banho9!'), 'entre 12 e 1024'), 'senha definitiva com 11 caracteres é recusada');
+    foreach (['  senha123  ', 'Senha123!!!!', '999999999999', 'aaaaaaaaaaaa', 'PETSHOP 2026', 'caixa1@teste.com', '1234567890  ', '1234 5678 90', " caixa1\t2026!"] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($caixa, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa a senha óbvia ' . json_encode($fraca));
+    ok(recusa(fn() => Usuario::alterarSenha($caixa, 'provisoria123', '   12345678   ', '   12345678   '), 'fácil de adivinhar'), 'minha senha recusa "   12345678   " (espaços em volta)');
     // Palavra óbvia, parte do e-mail ou nome do usuário ("Caixa Um") com números/símbolos em volta
-    foreach (['admin1', 'Senha@2026', 'petshop2026', 'caixa.1!', 'Caixa2026'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($caixa, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa palavra óbvia/nome com números ' . json_encode($fraca));
+    foreach (['admin1234567', 'Senha@2026!!', 'petshop20262026', 'caixa.1!2026', 'Caixa2026!!!'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($caixa, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa palavra óbvia/nome com números ' . json_encode($fraca));
     // Nome com acento e pedaços do e-mail: "joao123" para João, "silva2026" para joao.silva@
-    Usuario::criar(['nome' => 'João Conceição', 'email' => 'joao.silva@teste.com', 'senha' => 'provisoria9', 'perfil' => 'vendedor']);
+    Usuario::criar(['nome' => 'João Conceição', 'email' => 'joao.silva@teste.com', 'senha' => 'provisoria99', 'perfil' => 'vendedor']);
     $joao = (int) $pdo->query("SELECT id FROM usuarios WHERE email = 'joao.silva@teste.com'")->fetchColumn();
-    foreach (['joao123', 'JOÃO2026', 'conceicao1', 'silva2026', 'joaosilva!'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($joao, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa nome sem acento/pedaço do e-mail ' . json_encode($fraca));
+    foreach (['joao12345678', 'JOÃO20262026', 'conceicao123', 'silva2026!!!', 'joaosilva!!!'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($joao, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa nome sem acento/pedaço do e-mail ' . json_encode($fraca));
     Usuario::trocarSenha($caixa, 'banho do rex 2x', 'banho do rex 2x');
     ok((int) $pdo->query("SELECT trocar_senha FROM usuarios WHERE id = $caixa")->fetchColumn() === 0, 'trocar senha aceita uma frase que não é óbvia');
     Usuario::editar($caixa, ['nome' => 'Caixa Um Silva', 'email' => 'Caixa.Silva@Teste.com', 'perfil' => 'financeiro']);
@@ -117,7 +120,7 @@ try {
     Usuario::editar((int) $admin['id'], ['nome' => 'Admin Renomeado', 'email' => $admin['email'], 'perfil' => 'admin']);
     ok(Usuario::buscar((int) $admin['id'])['nome'] === 'Admin Renomeado', 'admin muda o próprio nome');
     // outro admin logado tenta rebaixar o único admin: recusa
-    Usuario::criar(['nome' => 'Admin Dois', 'email' => 'admin2@teste.com', 'senha' => 'senha123', 'perfil' => 'admin']);
+    Usuario::criar(['nome' => 'Admin Dois', 'email' => 'admin2@teste.com', 'senha' => 'provisoria123', 'perfil' => 'admin']);
     $admin2 = (int) $pdo->query("SELECT id FROM usuarios WHERE email = 'admin2@teste.com'")->fetchColumn();
     Usuario::definirAtivo($admin2, false);
     $_SESSION['user'] = ['id' => $admin2];
@@ -132,7 +135,7 @@ try {
     $_SESSION = [];
 
     // 7b. Nome com no máximo 100 caracteres (500 mil caracteres enchiam usuarios, auditoria e vendas)
-    ok(recusa(fn() => Usuario::criar(['nome' => str_repeat('A', 101), 'email' => 'longo@teste.com', 'senha' => 'senha123', 'perfil' => 'vendedor']), '100 caracteres'), 'criar usuário recusa nome com 101 caracteres');
+    ok(recusa(fn() => Usuario::criar(['nome' => str_repeat('A', 101), 'email' => 'longo@teste.com', 'senha' => 'provisoria123', 'perfil' => 'vendedor']), '100 caracteres'), 'criar usuário recusa nome com 101 caracteres');
     ok(recusa(fn() => Usuario::editar($caixa, ['nome' => str_repeat('é', 101), 'email' => 'caixa.silva@teste.com', 'perfil' => 'financeiro']), '100 caracteres'), 'editar usuário recusa nome com 101 caracteres');
     Usuario::editar($caixa, ['nome' => str_repeat('é', 100), 'email' => 'caixa.silva@teste.com', 'perfil' => 'financeiro']);
     ok(Usuario::buscar($caixa)['nome'] === str_repeat('é', 100), 'nome com 100 caracteres (acentuados) é aceito');

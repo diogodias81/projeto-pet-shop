@@ -7,7 +7,7 @@ Para repetir, use os comandos indicados em cada seção, a partir da pasta do pr
 | Exp. | O que mede | Resultado | Meta | Situação |
 |---|---|---|---|---|
 | E1 | Corretude das regras | 230 de 230 testes aprovados | 100% | Atingida |
-| E2 | Segurança | 19 de 19 verificações automáticas; ASVS N1: 14 itens atendem, 3 parciais, 1 não atende | – | Feito; há melhorias |
+| E2 | Segurança | 19 de 19 verificações automáticas; ASVS N1: 15 itens atendem, 3 parciais (após a correção do V2.1.1) | – | Feito; HTTPS pendente |
 | E3 | Desempenho | p95 entre 369 e 482 ms nas 11 telas | p95 < 1 s | Atingida |
 | E4 | Usabilidade | Material pronto; falta aplicar com 5 participantes | SUS ≥ 68 | Pendente |
 | E5 | Backup | Restauração íntegra; 21 de 21 tabelas iguais; 0,04 s | Sem perda | Atingida |
@@ -46,7 +46,7 @@ Resultado: **19 ok, 0 falhas.** O script conferiu:
 
 | Requisito | Situação | Evidência no sistema |
 |---|---|---|
-| V2.1.1 Senha com pelo menos 12 caracteres | **Não atende** | O mínimo hoje é 6 caracteres (`Usuario::validarSenha`) |
+| V2.1.1 Senha com pelo menos 12 caracteres | Atende (corrigido) | Não atendia na primeira rodada (mínimo de 6). Passou a 12 em 12/11/2026 (`Usuario::SENHA_MIN`), no servidor e nos formulários, com teste em `scripts/testar.php` |
 | Senhas vazadas ou comuns recusadas | Parcial | Recusa uma lista local de senhas comuns, o nome e o e-mail; não consulta uma base de senhas vazadas |
 | Sem regras de composição obrigatórias | Atende | Não exige maiúscula, símbolo etc.; orienta usar uma frase |
 | V2.2.1 Proteção contra força bruta | Atende | Bloqueio de 15 min após 5 erros por e-mail e IP, ou 100 erros por IP |
@@ -66,8 +66,8 @@ Resultado: **19 ok, 0 falhas.** O script conferiu:
 | V12 Envio de arquivos | Atende | Tipo conferido pelo conteúdo (finfo), tamanho limitado, imagem regravada, pasta sem PHP |
 
 **Melhorias apontadas pelo experimento:**
-1. Subir o tamanho mínimo da senha para 12 caracteres (V2.1.1).
-2. Instalar o HTTPS antes de acessar o sistema de outros aparelhos (V9.1.1). Com isso o cookie passa a ser marcado Secure.
+1. Senha mínima de 12 caracteres (V2.1.1): **feita** no mesmo dia. As senhas já gravadas continuam valendo; a regra vale para as próximas trocas.
+2. Instalar o HTTPS antes de acessar o sistema de outros aparelhos (V9.1.1). Com isso o cookie passa a ser marcado Secure. **Pendente.**
 
 ## E3 – Desempenho
 
