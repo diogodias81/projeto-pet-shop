@@ -224,6 +224,19 @@ try {
     try { Usuario::autenticar('x@petshop.com', 'errada', '127.0.0.1'); $erro = ''; } catch (Throwable $e) { $erro = $e->getMessage(); }
     $pdo->exec('DROP TRIGGER erro_simulado');
     ok(str_contains($erro, 'erro simulado'), 'erro que desfaz a transação não é escondido pelo rollBack');
+
+    // 13b. Hash de senha com custo antigo é regravado no login; o hash falso (e-mail que não existe) tem o custo atual
+    $hashFalso = (new ReflectionClassConstant('Usuario', 'HASH_FALSO'))->getValue();
+    ok(!password_needs_rehash($hashFalso, PASSWORD_DEFAULT), 'HASH_FALSO tem o mesmo custo do padrão do PHP (tempo igual para e-mail que existe e que não existe)');
+    $pdo->prepare("INSERT INTO usuarios (nome, email, senha_hash, perfil) VALUES ('Antigo', 'antigo@petshop.com', ?, 'vendedor')")
+        ->execute([password_hash('Cachorro#Quente9', PASSWORD_BCRYPT, ['cost' => 4])]);
+    $logado = Usuario::autenticar('antigo@petshop.com', 'Cachorro#Quente9', '127.0.0.9');
+    $novoHash = $pdo->query("SELECT senha_hash FROM usuarios WHERE email = 'antigo@petshop.com'")->fetchColumn();
+    ok($logado && !password_needs_rehash($novoHash, PASSWORD_DEFAULT) && password_verify('Cachorro#Quente9', $novoHash), 'login com hash de custo antigo regrava a senha com o custo atual');
+    ok(Usuario::autenticar('antigo@petshop.com', 'Cachorro#Quente9', '127.0.0.9') !== null, 'a mesma senha continua entrando depois de regravada');
+    ok(Usuario::autenticar('antigo@petshop.com', 'errada', '127.0.0.9') === null && $pdo->query("SELECT senha_hash FROM usuarios WHERE email = 'antigo@petshop.com'")->fetchColumn() === $novoHash, 'senha errada não mexe no hash');
+    $pdo->exec("UPDATE usuarios SET ativo = 0 WHERE email = 'antigo@petshop.com'");
+
     $fontes = implode(array_map('file_get_contents', glob("$real/app/Models/*.php")));
     ok(!preg_match('/(?<!inTransaction\(\)\) )\$pdo->rollBack\(\)/', $fontes), 'nenhum rollBack sem conferir inTransaction()');
 

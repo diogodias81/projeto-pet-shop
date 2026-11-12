@@ -56,6 +56,13 @@ class Usuario {
             // Só quem sabe a senha descobre que a conta foi desativada
             if (!$u['ativo']) throw new DomainException('Este usuário foi desativado. Fale com o administrador.');
             $pdo->prepare('DELETE FROM tentativas_login WHERE email = ? AND ip = ?')->execute([$chave, $ip]);
+            // Hash de custo mais baixo que o padrão do PHP (atualização do PHP, senha antiga): regrava com o custo atual.
+            // Além de mais forte, o login de quem existe volta a levar o mesmo tempo do HASH_FALSO (sem revelar e-mails).
+            // Não mexe na sessao_versao: é a mesma senha, ninguém precisa ser deslogado.
+            if (password_needs_rehash($u['senha_hash'], PASSWORD_DEFAULT)) {
+                $u['senha_hash'] = password_hash($senha, PASSWORD_DEFAULT);
+                $pdo->prepare('UPDATE usuarios SET senha_hash = ? WHERE id = ?')->execute([$u['senha_hash'], $u['id']]);
+            }
             Auditoria::registrar('login', $u['email'], $u);
             return $u;
         }
