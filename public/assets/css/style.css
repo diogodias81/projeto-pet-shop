@@ -341,8 +341,8 @@ section.card > h2 > .btn:first-of-type { margin-left: auto; }
   .lateral-nav { gap: .45rem; }
   .lateral .nav-link { padding-block: .26rem; }
   .lateral-usuario { position: sticky; bottom: 0; margin-bottom: .75rem; padding: .45rem .5rem; box-shadow: 0 .75rem 0 var(--painel); }
-  /* 843px de menu em 657 de tela: sem os títulos (o espaço entre grupos continua separando) e usuário numa linha só */
-  .lateral-titulo { display: none; }
+  /* 843px de menu em 657 de tela: títulos compactos (o menu rola e o usuário fica preso embaixo) e usuário numa linha só */
+  .lateral-titulo { padding-bottom: .1rem; font-size: .62rem; }
   .lateral-quem { grid-column: 2; }
   .lateral-quem strong { display: block; white-space: nowrap; text-overflow: ellipsis; } /* "Administra/dor" quebrava no meio */
   .lateral-usuario > .btn-icone, .lateral-usuario > form { grid-row: 1; }
