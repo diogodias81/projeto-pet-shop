@@ -186,7 +186,7 @@ Para o período escolhido:
 ### Usuários, senhas e auditoria
 
 * **Usuários** (só administrador): criar, editar, **redefinir senha**, **desativar** (perde o acesso na hora e o histórico fica) e reativar. O sistema nunca deixa ficar sem nenhum administrador ativo.
-* **Senhas:** troca obrigatória da senha provisória; login bloqueado por alguns minutos após muitas tentativas erradas; aviso de **Caps Lock ligado**; sessão encerrada após 30 minutos sem uso.
+* **Senhas:** pelo menos 12 caracteres, recusando as óbvias (123456, nome, e-mail); troca obrigatória da senha provisória; login bloqueado por alguns minutos após muitas tentativas erradas; aviso de **Caps Lock ligado**; sessão encerrada após 30 minutos sem uso.
 * **Auditoria** (só administrador): registro de quem fez o quê e quando: logins, vendas, cancelamentos, devoluções, caixa, estoque, clientes, agenda, carteirinha e alterações de usuários.
 
 ### Backup
