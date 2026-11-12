@@ -1,0 +1,21 @@
+ok    - CSP com default-src 'self' e frame-ancestors 'none'
+ok    - X-Content-Type-Options: nosniff
+ok    - X-Frame-Options: DENY
+ok    - Referrer-Policy definido
+ok    - Permissions-Policy limita câmera ao próprio site
+ok    - Cookie de sessão HttpOnly e SameSite=Lax
+ok    - Servidor não revela versão (Apache/PHP)
+ok    - Pasta storage (banco e backups) bloqueada
+ok    - Sem listagem de pastas em uploads
+ok    - Sem login, telas internas mandam para o login
+ok    - Login sem token CSRF é recusado
+ok    - Login troca o identificador da sessão (fixação)
+ok    - Vendedor recebe 403 na tela usuarios
+ok    - Vendedor recebe 403 na tela auditoria
+ok    - Vendedor recebe 403 na tela relatorios
+ok    - Vendedor recebe 403 na tela despesas
+ok    - Vendedor recebe 403 na tela dashboard
+ok    - Sair só por POST (link de outro site não desloga)
+ok    - POST sem token CSRF numa tela logada é recusado
+
+Verificações: 19 ok, 0 falha(s)

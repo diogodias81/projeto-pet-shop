@@ -1,0 +1,15 @@
+Repetições por tela: 30 (mais 1 de aquecimento) - 12/11/2026 16:21
+
+| Tela                               | Média ms | Mediana | p95 ms | Máx ms |
+|------------------------------------|---------:|--------:|-------:|-------:|
+| Dashboard (mês atual)             |     384 |     377 |     409 |     548 |
+| Dashboard (90 dias)                |     399 |     400 |     425 |     430 |
+| Relatórios (90 dias)              |     435 |     429 |     482 |     491 |
+| Histórico de vendas (90 dias)     |     378 |     372 |     411 |     413 |
+| Caixa                              |     356 |     351 |     375 |     466 |
+| Despesas                           |     348 |     349 |     369 |     374 |
+| Vendas (PDV)                       |     367 |     364 |     393 |     398 |
+| Clientes                           |     354 |     353 |     381 |     383 |
+| Agenda (hoje)                      |     353 |     351 |     393 |     437 |
+| Produtos                           |     372 |     373 |     394 |     397 |
+| Estoque                            |     382 |     383 |     405 |     406 |

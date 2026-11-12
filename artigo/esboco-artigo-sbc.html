@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Esboço do artigo - PetShop Gestão</title>
+<style>
+  /* Formato do template SBC: A4, Times 12, título 16 negrito, seções 13 negrito, parágrafo com recuo de 1,27 cm */
+  @page { size: A4; margin: 3.5cm 3cm 2.5cm 3cm; }
+  html, body { background: #fff; color: #000; }
+  body { font-family: "Times New Roman", Times, serif; font-size: 12pt; line-height: 1.2; margin: 0; }
+  h1.titulo { font-size: 16pt; font-weight: bold; text-align: center; margin: 0 0 12pt; }
+  .autores { text-align: center; font-weight: bold; margin: 0 0 6pt; }
+  .afiliacao { text-align: center; margin: 0; }
+  .email { text-align: center; font-family: "Courier New", monospace; font-size: 10pt; margin: 4pt 0 18pt; }
+  .resumo { margin: 0 0.8cm 12pt; text-align: justify; font-style: italic; }
+  .resumo b { font-style: italic; }
+  .chaves { margin: 0 0.8cm 18pt; text-align: justify; }
+  h2 { font-size: 13pt; font-weight: bold; margin: 12pt 0 6pt; page-break-after: avoid; }
+  h3 { font-size: 12pt; font-weight: bold; margin: 12pt 0 6pt; page-break-after: avoid; }
+  p { text-align: justify; text-indent: 1.27cm; margin: 0 0 6pt; }
+  p.sem-recuo { text-indent: 0; }
+  ul, ol { margin: 0 0 6pt; padding-left: 1.6cm; text-align: justify; }
+  li { margin-bottom: 3pt; }
+  table { border-collapse: collapse; margin: 6pt auto 4pt; font-size: 10pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #000; padding: 2pt 4pt; vertical-align: top; text-align: left; }
+  th { font-weight: bold; }
+  td.c, th.c { text-align: center; }
+  .legenda { font-size: 10pt; text-align: center; margin: 4pt 0 12pt; }
+  .legenda b { font-weight: bold; }
+  figure { margin: 6pt 0; text-align: center; page-break-inside: avoid; }
+  .refs p { text-indent: -0.5cm; padding-left: 0.5cm; margin-bottom: 6pt; }
+  .nota { font-size: 10pt; border: 1px dashed #666; padding: 4pt 6pt; margin: 0 0 12pt; text-indent: 0; }
+</style>
+</head>
+<body>
+
+<h1 class="titulo">PetShop Gestão: um sistema web de baixo custo para a gestão integrada de vendas, estoque, caixa e serviços em pet shops de pequeno porte</h1>
+
+<p class="autores">&nbsp;</p>
+<p class="afiliacao">Curso de Análise e Desenvolvimento de Sistemas – UNAMA Alcindo Cacela</p>
+<p class="afiliacao">Belém – PA – Brasil</p>
+<p class="email">04180820@sempreunama.com.br</p>
+
+<p class="nota"><b>Esboço do artigo – Parte 1 (versão preliminar, 12/11/2026).</b> Documento de planejamento: as seções de avaliação descrevem experimentos planejados, ainda não executados; os resultados citados são do desenvolvimento até esta data.</p>
+
+<p class="resumo"><b>Abstract.</b> Small pet shops usually manage sales, stock, cash and grooming appointments with notebooks, spreadsheets or several disconnected tools, which leads to stock losses due to expired products, cash discrepancies and scheduling conflicts. This paper presents PetShop Gestão, a low-cost web system that runs on the store's own computer (PHP, SQLite and Docker) and integrates point of sale, batch and expiry-date stock control, blind cash counting, customer and pet records, a grooming schedule and financial reports, with role-based access, auditing and encrypted daily backups. The evaluation plan combines automated tests of business rules, a security review based on OWASP ASVS, performance measurements and a usability test with the System Usability Scale (SUS).</p>
+
+<p class="resumo"><b>Resumo.</b> Pet shops de pequeno porte costumam controlar vendas, estoque, caixa e agenda de banho e tosa com cadernos, planilhas ou ferramentas separadas, o que gera perdas por produtos vencidos, diferenças de caixa e choques de horário. Este artigo apresenta o PetShop Gestão, um sistema web de baixo custo executado no próprio computador da loja (PHP, SQLite e Docker), que integra ponto de venda, estoque por lote e validade, caixa com contagem às cegas, cadastro de clientes e pets, agenda de banho e tosa e relatórios financeiros, com perfis de acesso, auditoria e backup diário cifrado. O plano de avaliação combina testes automatizados das regras de negócio, revisão de segurança baseada no OWASP ASVS, medições de desempenho e teste de usabilidade com a escala SUS.</p>
+
+<p class="chaves"><b>Palavras-chave:</b> sistema de informação; pequenas empresas; pet shop; ponto de venda; controle de estoque; usabilidade; segurança web.</p>
+
+<h2>1. Introdução</h2>
+
+<p>O comércio de produtos e serviços para animais de estimação é formado, em grande parte, por lojas pequenas, administradas pelo próprio dono e por poucos funcionários. No dia a dia, essas lojas precisam vender produtos (rações, medicamentos, acessórios), controlar o estoque, inclusive a validade de itens perecíveis, fechar o caixa e organizar serviços com hora marcada, como banho e tosa. É comum que essas atividades sejam controladas com cadernos, planilhas e mensagens soltas no celular, ou com sistemas comerciais pagos por mensalidade, que exigem conexão constante com a internet e nem sempre se ajustam à rotina de uma loja pequena.</p>
+
+<p>Essa fragmentação traz problemas concretos: produtos vencem na prateleira sem que ninguém perceba; o valor contado na gaveta não bate com as vendas do dia e não se sabe por quê; dois banhos são marcados no mesmo horário; o dono não sabe qual produto dá lucro de verdade nem quanto sobrou no mês depois das despesas. Também há riscos de segurança e de perda de dados: senhas compartilhadas entre funcionários, ausência de registro de quem cancelou uma venda e falta de cópia de segurança dos dados.</p>
+
+<p>Trabalhos anteriores mostram que sistemas integrados ajudam pequenas empresas a organizar seus processos [Ramos Jr. et al. 2009] e que a usabilidade é um critério decisivo na escolha de um sistema por microempresas [Dos Santos et al. 2014]. No segmento de pet shops, há soluções acadêmicas voltadas principalmente à agenda e ao estoque [Imakawa e Santos 2023], mas faltam propostas que integrem, em uma única ferramenta de baixo custo, a venda, o caixa, o estoque com validade e os serviços, com atenção explícita à segurança e à usabilidade.</p>
+
+<p>Este trabalho propõe e avalia o <b>PetShop Gestão</b>, um sistema web desenvolvido para esse cenário. O restante do artigo está organizado assim: a Seção 2 apresenta a pergunta de pesquisa e os objetivos; a Seção 3, a fundamentação teórica; a Seção 4, os trabalhos relacionados; a Seção 5, a metodologia; a Seção 6, a solução proposta; a Seção 7, o plano de experimentos; e a Seção 8, as considerações finais e os próximos passos.</p>
+
+<h2>2. Pergunta de Pesquisa e Objetivos</h2>
+
+<p class="sem-recuo"><b>Pergunta de pesquisa:</b> um sistema web de baixo custo, executado no computador da própria loja, consegue integrar vendas, caixa, estoque com controle de validade e serviços de banho e tosa de um pet shop de pequeno porte, com usabilidade aceitável para funcionários sem formação em informática e aderência aos requisitos básicos de segurança de aplicações web?</p>
+
+<p class="sem-recuo"><b>Objetivo geral:</b> desenvolver e avaliar um sistema web integrado de gestão para pet shops de pequeno porte, com foco em corretude das regras de negócio, segurança e usabilidade.</p>
+
+<p class="sem-recuo"><b>Objetivos específicos:</b></p>
+<ol>
+  <li>Levantar os processos de um pet shop pequeno (venda, caixa, estoque, serviços, despesas) e transformá-los em requisitos e regras de negócio.</li>
+  <li>Implementar um ponto de venda integrado ao estoque por lote, que retire primeiro o lote que vence antes e impeça a venda de produto vencido.</li>
+  <li>Implementar o controle de caixa com contagem às cegas e a agenda de banho e tosa integrada à cobrança.</li>
+  <li>Aplicar controles de segurança (perfis de acesso, proteção de senhas, auditoria, cabeçalhos de segurança e backup cifrado) e verificá-los com base no OWASP ASVS.</li>
+  <li>Avaliar o sistema por testes automatizados, medições de desempenho e teste de usabilidade com usuários reais, usando a escala SUS.</li>
+</ol>
+
+<h2>3. Fundamentação Teórica</h2>
+
+<h3>3.1. Sistemas de informação em pequenas empresas</h3>
+<p>Sistemas integrados de gestão (ERP) reúnem em uma única base de dados os processos de venda, compra, estoque e finanças. Em pequenas empresas, a adoção desses sistemas esbarra no custo, na complexidade e na dependência de consultoria; por isso, soluções mais simples, de baixo custo de implantação, tendem a ser mais adequadas [Ramos Jr. et al. 2009; Dos Santos et al. 2014]. A qualidade desse tipo de software pode ser analisada pelas características do modelo ISO/IEC 25010, como adequação funcional, usabilidade, confiabilidade, segurança e eficiência de desempenho [ISO/IEC 2011].</p>
+
+<h3>3.2. Ponto de venda, estoque por lote e controle de caixa</h3>
+<p>O ponto de venda (PDV) registra a venda, aplica descontos e formas de pagamento e dá baixa no estoque. Em produtos perecíveis, como rações e medicamentos veterinários, o estoque precisa ser controlado por lote e data de validade; a saída segue a regra <i>primeiro a vencer, primeiro a sair</i> (FEFO, <i>First Expired, First Out</i>), que reduz perdas por vencimento. No controle de caixa, a contagem às cegas é uma prática em que o operador informa o valor contado na gaveta sem ver o valor esperado, o que evita o ajuste do número contado e torna as diferenças visíveis.</p>
+
+<h3>3.3. Usabilidade</h3>
+<p>A ISO 9241-11 define usabilidade como a medida em que um sistema pode ser usado por usuários específicos para alcançar objetivos com eficácia, eficiência e satisfação em um contexto de uso [ISO 2018]. As heurísticas de Nielsen [Nielsen 1994] e as leis de UX [Yablonski 2020] (como a Lei de Fitts, sobre o tamanho e a distância dos alvos, e a Lei de Hick, sobre o número de opções) orientam o projeto das telas. A satisfação será medida pela <i>System Usability Scale</i> (SUS) [Brooke 1996], questionário de 10 itens cuja pontuação média de referência é 68 [Bangor et al. 2008].</p>
+
+<h3>3.4. Segurança de aplicações web</h3>
+<p>O OWASP Top 10 [OWASP 2021a] lista as falhas mais comuns em aplicações web, como controle de acesso quebrado, falhas de criptografia e injeção. O <i>Application Security Verification Standard</i> (ASVS) [OWASP 2021b] transforma essas preocupações em requisitos verificáveis, organizados em níveis; o nível 1 é o mínimo recomendado para qualquer aplicação. Para o armazenamento de senhas, recomenda-se uma função de <i>hash</i> lenta e com custo ajustável, como o bcrypt [Provos e Mazières 1999]. Como o sistema guarda dados pessoais de clientes (nome e telefone), também deve observar a Lei Geral de Proteção de Dados [Brasil 2018].</p>
+
+<h3>3.5. Tecnologias de implantação</h3>
+<p>O SQLite é um banco de dados embutido, que dispensa um servidor separado e guarda tudo em um único arquivo, o que simplifica a instalação e a cópia de segurança em cenários de baixa concorrência [Gaffney et al. 2022]. Contêineres Docker empacotam a aplicação com suas dependências e garantem o mesmo ambiente no desenvolvimento e na loja [Merkel 2014].</p>
+
+<h2>4. Trabalhos Relacionados</h2>
+
+<p>A busca inicial foi feita no Google Acadêmico, na SBC OpenLib (SOL) e em repositórios institucionais, com os termos “pet shop”, “sistema de gestão”, “pequena empresa” e “ERP”. Foram selecionados, até o momento, três trabalhos:</p>
+
+<ul>
+  <li><b>Ramos Jr. et al. (2009)</b> estudam a implantação de um sistema integrado baseado na internet em uma pequena empresa, por meio de entrevistas, e destacam o baixo custo de implantação como fator de sucesso. O trabalho não trata de um segmento específico nem de PDV.</li>
+  <li><b>Dos Santos et al. (2014)</b> avaliam ERPs de código aberto para uma microempresa e escolhem o OpenERP, principalmente pela usabilidade, implantando os módulos de estoque, compras e vendas. A solução é genérica e exige adaptação.</li>
+  <li><b>Imakawa e Santos (2023)</b> apresentam o PETMAIS, software web em HTML, CSS e PHP para pet shops, desenvolvido com SCRUM, com agenda de clientes e gerenciador de estoque. O resumo não menciona controle de caixa, validade por lote nem avaliação com usuários.</li>
+</ul>
+
+<p>A Tabela 1 compara esses trabalhos com a proposta deste artigo e com duas alternativas comuns na prática (planilhas e sistemas comerciais por assinatura).</p>
+
+<table>
+  <tr><th>Solução</th><th class="c">PDV</th><th class="c">Caixa</th><th class="c">Estoque por lote e validade</th><th class="c">Agenda banho e tosa</th><th class="c">Perfis e auditoria</th><th class="c">Custo / execução</th><th class="c">Avaliação</th></tr>
+  <tr><td>Ramos Jr. et al. 2009</td><td class="c">n.i.</td><td class="c">n.i.</td><td class="c">n.i.</td><td class="c">–</td><td class="c">n.i.</td><td class="c">baixo / web</td><td class="c">estudo de caso</td></tr>
+  <tr><td>Dos Santos et al. 2014</td><td class="c">✔</td><td class="c">n.i.</td><td class="c">n.i.</td><td class="c">–</td><td class="c">n.i.</td><td class="c">livre / adaptação</td><td class="c">comparação de usabilidade</td></tr>
+  <tr><td>Imakawa e Santos 2023</td><td class="c">n.i.</td><td class="c">n.i.</td><td class="c">parcial</td><td class="c">✔</td><td class="c">n.i.</td><td class="c">n.i.</td><td class="c">n.i.</td></tr>
+  <tr><td>Planilhas / caderno</td><td class="c">–</td><td class="c">manual</td><td class="c">manual</td><td class="c">manual</td><td class="c">–</td><td class="c">baixo / local</td><td class="c">–</td></tr>
+  <tr><td>Sistemas comerciais SaaS</td><td class="c">✔</td><td class="c">✔</td><td class="c">varia</td><td class="c">✔</td><td class="c">varia</td><td class="c">mensalidade / internet</td><td class="c">–</td></tr>
+  <tr><td><b>PetShop Gestão (proposta)</b></td><td class="c">✔</td><td class="c">✔ (às cegas)</td><td class="c">✔ (FEFO)</td><td class="c">✔</td><td class="c">✔</td><td class="c">baixo / local</td><td class="c">testes, OWASP, SUS</td></tr>
+</table>
+<p class="legenda"><b>Tabela 1. Comparação preliminar com trabalhos relacionados</b> (n.i. = não informado no resumo; a leitura completa dos textos está em andamento).</p>
+
+<p>O diferencial da proposta está na integração de venda, caixa, estoque com validade e serviços em uma só base, executada localmente, sem mensalidade, e na avaliação explícita de segurança e de usabilidade. A busca será ampliada com outros trabalhos de conclusão e artigos sobre sistemas para pet shops e clínicas veterinárias.</p>
+
+<h2>5. Metodologia</h2>
+
+<p>A pesquisa segue a abordagem <i>Design Science Research</i> [Hevner et al. 2004], na qual um artefato (o sistema) é construído para resolver um problema real e depois avaliado com métodos rigorosos. Quanto à natureza, é uma pesquisa aplicada, com abordagem quantitativa e qualitativa [Wazlawick 2014]. As etapas são:</p>
+
+<ol>
+  <li><b>Identificação do problema:</b> levantamento da rotina de um pet shop pequeno e definição de 15 requisitos principais (código de barras, lotes com validade, desconto e troco, cancelamento e devolução, alertas de vencimento, despesas, relatórios, auditoria, entre outros).</li>
+  <li><b>Desenvolvimento iterativo e incremental:</b> os requisitos foram divididos em cinco etapas, cada uma planejada, implementada, testada e registrada no controle de versões (Git). Depois vieram clientes e pets, agenda de banho e tosa e controle de caixa. O desenvolvimento contou com o apoio de um assistente de programação baseado em inteligência artificial, sempre com revisão e testes.</li>
+  <li><b>Verificação contínua:</b> a cada mudança, uma suíte de testes automatizados confere as regras de negócio; mudanças importantes passam por uma revisão de segurança e de uso em três etapas (ataque às falhas, correção e uso como usuário comum), com aprovação de cada etapa.</li>
+  <li><b>Avaliação:</b> experimentos de corretude, segurança, desempenho e usabilidade (Seção 7).</li>
+  <li><b>Comunicação:</b> redação do artigo e apresentação dos resultados.</li>
+</ol>
+
+<h2>6. Descrição Preliminar da Solução</h2>
+
+<p>O PetShop Gestão é usado pelo navegador, no computador do balcão ou no celular. A aplicação roda em um contêiner Docker no computador da loja, acessível apenas localmente (ou por um proxy HTTPS, para acesso de outros aparelhos). A Figura 1 resume a arquitetura.</p>
+
+<figure>
+<svg width="440" height="150" viewBox="0 0 440 150" xmlns="http://www.w3.org/2000/svg" font-family="Times New Roman, serif" font-size="11">
+  <rect x="5" y="40" width="100" height="60" fill="#fff" stroke="#000"/>
+  <text x="55" y="65" text-anchor="middle">Navegador</text>
+  <text x="55" y="80" text-anchor="middle">(computador / celular)</text>
+  <line x1="105" y1="70" x2="150" y2="70" stroke="#000" marker-end="url(#seta)"/>
+  <rect x="150" y="10" width="160" height="120" fill="#fff" stroke="#000" stroke-dasharray="4 3"/>
+  <text x="230" y="25" text-anchor="middle" font-style="italic">Contêiner Docker</text>
+  <rect x="165" y="35" width="130" height="40" fill="#fff" stroke="#000"/>
+  <text x="230" y="52" text-anchor="middle">Apache + PHP 8.4</text>
+  <text x="230" y="66" text-anchor="middle">(telas e regras de negócio)</text>
+  <line x1="230" y1="75" x2="230" y2="90" stroke="#000" marker-end="url(#seta)"/>
+  <rect x="180" y="90" width="100" height="30" fill="#fff" stroke="#000"/>
+  <text x="230" y="109" text-anchor="middle">SQLite (1 arquivo)</text>
+  <line x1="310" y1="105" x2="345" y2="105" stroke="#000" marker-end="url(#seta)"/>
+  <rect x="345" y="80" width="90" height="50" fill="#fff" stroke="#000"/>
+  <text x="390" y="100" text-anchor="middle">Backup diário</text>
+  <text x="390" y="115" text-anchor="middle">cifrado (nuvem)</text>
+  <defs><marker id="seta" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+</svg>
+</figure>
+<p class="legenda"><b>Figura 1. Arquitetura do PetShop Gestão</b></p>
+
+<p>O sistema tem quatro perfis de acesso (administrador, vendedor, estoque e financeiro), e cada um vê apenas as telas do seu trabalho. Os módulos são:</p>
+<ul>
+  <li><b>Vendas (PDV):</b> leitura de código de barras (leitor USB ou câmera do celular), busca sem acento, desconto limitado por perfil, pagamento em dinheiro, PIX ou cartão, cálculo de troco, proteção contra venda gravada em dobro e cupom para impressora térmica.</li>
+  <li><b>Caixa:</b> abertura com troco, sangria e reforço, fechamento com contagem às cegas e relatório de diferenças por forma de pagamento.</li>
+  <li><b>Estoque:</b> entradas por lote e validade, baixa automática pelo lote que vence primeiro (FEFO), bloqueio de venda de lote vencido, alertas de vencimento em 30, 15 e 7 dias e de estoque mínimo.</li>
+  <li><b>Clientes e pets:</b> ficha do cliente, pets, histórico de compras e carteirinha de vacinas, vermífugos e antipulgas, com lembrete pelo WhatsApp.</li>
+  <li><b>Agenda de banho e tosa:</b> horários ocupados bloqueados, andamento do atendimento (agendado, em atendimento, pronto), cobrança integrada ao caixa e aviso ao dono.</li>
+  <li><b>Financeiro:</b> painel com faturamento, ticket médio, lucro bruto, despesas e resultado; relatórios de rentabilidade por produto e exportação em CSV.</li>
+  <li><b>Segurança:</b> senhas com bcrypt, bloqueio após tentativas erradas, troca obrigatória da senha provisória, sessão que expira por inatividade, proteção contra CSRF, cabeçalhos de segurança (CSP, HSTS), auditoria de todas as operações e backup diário cifrado com retenção de 30 dias.</li>
+</ul>
+
+<p>Até 12/11/2026, a implementação soma cerca de 12 mil linhas de código próprio (PHP, JavaScript e CSS), registradas em 58 versões no Git, e uma suíte com 230 verificações automatizadas, todas aprovadas.</p>
+
+<h2>7. Plano de Experimentos e Indicadores</h2>
+
+<p>A avaliação será feita em cinco experimentos, resumidos na Tabela 2. Os testes de usabilidade terão cinco participantes, número que costuma revelar a maior parte dos problemas de usabilidade [Nielsen e Landauer 1993], com perfis de vendedor e de administrador, usando uma base de dados de teste (90 dias de vendas simuladas) para não expor dados reais.</p>
+
+<table>
+  <tr><th>Experimento</th><th>Como será feito</th><th>Indicadores e metas</th></tr>
+  <tr><td>E1. Corretude das regras</td><td>Suíte automatizada em banco temporário (lotes, descontos, caixa, agenda, permissões)</td><td>Aprovação de 100% dos testes; nº de regras de negócio cobertas</td></tr>
+  <tr><td>E2. Segurança</td><td>Lista de verificação do OWASP ASVS nível 1 e testes de ataque (acesso indevido, CSRF, XSS, injeção, força bruta no login)</td><td>% dos requisitos ASVS N1 atendidos; vulnerabilidades encontradas e corrigidas por gravidade</td></tr>
+  <tr><td>E3. Desempenho</td><td>Tempo de resposta das telas principais com a base de teste populada; análise do plano das consultas (EXPLAIN QUERY PLAN)</td><td>Tempo de resposta (meta: p95 &lt; 1 s); consultas sem leitura da tabela inteira</td></tr>
+  <tr><td>E4. Usabilidade</td><td>5 participantes executam tarefas: venda com 3 itens e troco, abrir e fechar o caixa, agendar banho, registrar entrada de lote; depois respondem ao SUS</td><td>Taxa de conclusão; tempo por tarefa; nº de erros; nota SUS (meta ≥ 68)</td></tr>
+  <tr><td>E5. Confiabilidade dos dados</td><td>Restauração de um backup em ambiente limpo e verificação de integridade do banco</td><td>Restauração sem perda; verificação de integridade aprovada; tempo para restaurar</td></tr>
+</table>
+<p class="legenda"><b>Tabela 2. Plano de experimentos e indicadores</b></p>
+
+<h2>8. Considerações Finais e Próximos Passos</h2>
+
+<p>Este esboço apresentou o problema, os objetivos, a fundamentação, os trabalhos relacionados, a metodologia e a solução desenvolvida até o momento. Os próximos passos são: ampliar a revisão de trabalhos relacionados; executar os experimentos E2 a E5; analisar os resultados em relação às metas; e discutir as limitações, como a avaliação em uma única loja e a ausência de emissão de nota fiscal.</p>
+
+<h2>Referências</h2>
+<div class="refs">
+<p>Bangor, A., Kortum, P. T. e Miller, J. T. (2008). An empirical evaluation of the System Usability Scale. <i>International Journal of Human-Computer Interaction</i>, 24(6):574–594.</p>
+<p>Brasil (2018). Lei nº 13.709, de 14 de agosto de 2018. Lei Geral de Proteção de Dados Pessoais (LGPD). <i>Diário Oficial da União</i>, Brasília.</p>
+<p>Brooke, J. (1996). SUS: a “quick and dirty” usability scale. In Jordan, P. W., Thomas, B., Weerdmeester, B. A. e McClelland, I. L., editores, <i>Usability Evaluation in Industry</i>, p. 189–194. Taylor &amp; Francis, Londres.</p>
+<p>Dos Santos, L. A. M., Farias, J. S. e Da Silva, L. M. O. (2014). Adaptação e implantação de um ERP open source em uma microempresa: um estudo de caso prático. In <i>Anais do X Simpósio Brasileiro de Sistemas de Informação (SBSI)</i>, p. 423–434, Porto Alegre. SBC. DOI: 10.5753/sbsi.2014.6133.</p>
+<p>Gaffney, K. P., Prammer, M., Brasfield, L., Hipp, D. R., Kennedy, D. e Patel, J. M. (2022). SQLite: past, present, and future. <i>Proceedings of the VLDB Endowment</i>, 15(12):3535–3547.</p>
+<p>Hevner, A. R., March, S. T., Park, J. e Ram, S. (2004). Design science in information systems research. <i>MIS Quarterly</i>, 28(1):75–105.</p>
+<p>Imakawa, E. M. e Santos, P. C. (2023). PETMAIS: software de gestão e administração para comércios veterinários. In <i>Anais da 15ª Jornada Científica e Tecnológica do IFSULDEMINAS</i>, v. 15, n. 3. IFSULDEMINAS.</p>
+<p>ISO (2018). <i>ISO 9241-11:2018 – Ergonomics of human-system interaction – Part 11: Usability: definitions and concepts</i>. International Organization for Standardization, Genebra.</p>
+<p>ISO/IEC (2011). <i>ISO/IEC 25010:2011 – Systems and software engineering – Systems and software Quality Requirements and Evaluation (SQuaRE) – System and software quality models</i>. ISO, Genebra.</p>
+<p>Merkel, D. (2014). Docker: lightweight Linux containers for consistent development and deployment. <i>Linux Journal</i>, 2014(239):2.</p>
+<p>Nielsen, J. (1994). <i>Usability Engineering</i>. Morgan Kaufmann, São Francisco.</p>
+<p>Nielsen, J. e Landauer, T. K. (1993). A mathematical model of the finding of usability problems. In <i>Proceedings of the INTERACT '93 and CHI '93 Conference on Human Factors in Computing Systems</i>, p. 206–213. ACM.</p>
+<p>OWASP (2021a). <i>OWASP Top 10:2021</i>. OWASP Foundation. Disponível em: https://owasp.org/Top10/.</p>
+<p>OWASP (2021b). <i>Application Security Verification Standard 4.0.3</i>. OWASP Foundation. Disponível em: https://owasp.org/www-project-application-security-verification-standard/.</p>
+<p>Provos, N. e Mazières, D. (1999). A future-adaptable password scheme. In <i>Proceedings of the USENIX Annual Technical Conference, FREENIX Track</i>, p. 81–91. USENIX.</p>
+<p>Ramos Jr., M. P., Olivera, B. T., Albuquerque, J. e Coelho, F. S. (2009). Impactos de uma alternativa de sistema integrado para o contexto da pequena empresa. In <i>Anais do V Simpósio Brasileiro de Sistemas de Informação (SBSI)</i>, p. 145–156, Porto Alegre. SBC. DOI: 10.5753/sbsi.2009.6173.</p>
+<p>Wazlawick, R. S. (2014). <i>Metodologia de Pesquisa para Ciência da Computação</i>. 2. ed. Elsevier, Rio de Janeiro.</p>
+<p>Yablonski, J. (2020). <i>Laws of UX: Using Psychology to Design Better Products &amp; Services</i>. O'Reilly Media, Sebastopol.</p>
+</div>
+
+</body>
+</html>

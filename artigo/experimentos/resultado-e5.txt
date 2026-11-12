@@ -1,0 +1,29 @@
+Backup: 2026-11-12_162511
+Restauração em pasta temporária: 0.04 s; integrity_check: ok
+Tamanho do banco restaurado: 0.5 MB; fotos: 0
+
+| Tabela | Linhas no backup | Linhas no banco atual |
+|---|---:|---:|
+| agendamentos | 78 | 78 |
+| auditoria | 829 | 829 |
+| caixa_movimentos | 7 | 7 |
+| caixas | 78 | 78 |
+| categorias | 7 | 7 |
+| clientes | 14 | 14 |
+| despesas | 30 | 30 |
+| devolucoes | 4 | 4 |
+| entradas_estoque | 31 | 31 |
+| lotes | 31 | 31 |
+| movimentacoes_estoque | 1023 | 1023 |
+| pet_doses | 65 | 65 |
+| pets | 16 | 16 |
+| produtos | 21 | 21 |
+| servicos | 6 | 6 |
+| tentativas_login | 0 | 0 |
+| usuarios | 4 | 4 |
+| venda_item_lotes | 976 | 976 |
+| venda_itens | 976 | 976 |
+| venda_servicos | 56 | 56 |
+| vendas | 444 | 444 |
+
+Tabelas iguais: 21 de 21
