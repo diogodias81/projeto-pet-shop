@@ -4,3 +4,5 @@ public/uploads/
 .playwright-mcp/
 .env
 .claude/settings.local.json
+.claude
+.playwright-mcp
