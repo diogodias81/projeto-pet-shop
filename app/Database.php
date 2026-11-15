@@ -658,6 +658,13 @@ class Database
             CREATE INDEX IF NOT EXISTS idx_agendamentos_venda
                 ON agendamentos (venda_id);
 
+            -- lista de compras: venda dos últimos 30 dias e último fornecedor de cada produto
+            CREATE INDEX IF NOT EXISTS idx_movimentacoes_produto_data
+                ON movimentacoes_estoque (produto_id, criado_em);
+
+            CREATE INDEX IF NOT EXISTS idx_entradas_produto
+                ON entradas_estoque (produto_id);
+
             -- garante um caixa aberto por vez mesmo com duas abas abrindo ao mesmo tempo
             CREATE UNIQUE INDEX IF NOT EXISTS idx_caixas_um_aberto
                 ON caixas ((fechado_em IS NULL)) WHERE fechado_em IS NULL;

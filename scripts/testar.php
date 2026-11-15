@@ -180,6 +180,9 @@ try {
         && $usa("SELECT COUNT(*) FROM agendamentos WHERE pet_id = 1 AND status IN ('agendado','pago') AND inicio < '2001-03-10 10:00' AND fim > '2001-03-10 09:00'", 'idx_agendamentos_pet')
         && $usa('UPDATE agendamentos SET status = status WHERE venda_id = 1', 'idx_agendamentos_venda'),
         'caixa, choque de horário do pet e cobrança da agenda usam índice (sem ler a tabela inteira)');
+    ok($usa("SELECT SUM(quantidade) FROM movimentacoes_estoque WHERE produto_id = 1 AND tipo IN ('venda','devolucao') AND criado_em >= '2001-03-01'", 'idx_movimentacoes_produto_data')
+        && $usa("SELECT fornecedor FROM entradas_estoque WHERE produto_id = 1 AND TRIM(fornecedor) <> '' ORDER BY id DESC LIMIT 1", 'idx_entradas_produto'),
+        'lista de compras busca venda e fornecedor de cada produto pelo índice (sem ler todas as movimentações)');
     $fontes = implode(array_map('file_get_contents', glob("$real/app/Models/*.php")));
     ok(!preg_match('/date\(\w*\.?criado_em\)/', $fontes), 'nenhuma consulta volta a usar date(criado_em), que ignora o índice');
 
