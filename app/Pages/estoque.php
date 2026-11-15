@@ -157,10 +157,15 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
       <label>
         Fornecedor
 
+        <?php // sugere os já usados: "distribuidora norte pet" e "Distribuidora Norte Pet" viravam dois pedidos ?>
         <input
           name="fornecedor"
+          list="fornecedores"
           value="<?= e($antigoEntrada['fornecedor'] ?? '') ?>"
           maxlength="100">
+        <datalist id="fornecedores">
+          <?php foreach (Estoque::fornecedores() as $f): ?><option value="<?= e($f) ?>"><?php endforeach; ?>
+        </datalist>
       </label>
 
       <button class="btn btn-primary">
@@ -177,7 +182,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
 
 <?php if ($gerencia): ?>
 
-  <?php $compras = Estoque::listaCompras(); ?>
+  <?php $compras = Estoque::listaCompras(); $chaveForn = fn(array $c): string => mb_strtolower(preg_replace('/\s+/u', ' ', trim((string) ($c['fornecedor'] ?? ''))) ?? ''); ?>
 
   <section class="card card-body mb-3" id="est-compras"<?= $busca === '' ? ' data-recolher' : '' ?>>
 
@@ -196,7 +201,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
         <thead>
           <tr>
             <th>Produto</th>
-            <th class="num">Estoque</th>
+            <th class="num" title="Sem os lotes vencidos, como no caixa">Para vender</th>
             <th class="num">Mínimo</th>
             <th class="num">Vende por semana</th>
             <th class="num">Comprar</th>
@@ -209,7 +214,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
 
           <?php foreach ($compras as $c): ?>
 
-            <tr data-fornecedor="<?= e($c['fornecedor'] ?? '') ?>">
+            <tr data-fornecedor="<?= e($chaveForn($c)) ?>">
               <td data-produto><?= e($c['nome']) ?></td>
               <td class="num"><?= $c['estoque'] ?></td>
               <td class="num"><?= $c['estoque_minimo'] ?></td>
@@ -230,8 +235,10 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
       <div class="d-flex gap-2 flex-wrap">
         <button type="button" class="btn btn-light" data-imprimir-secao="est-compras"><i class="bi bi-printer" aria-hidden="true"></i> Imprimir</button>
         <?php // um pedido por fornecedor: cada um recebe só o que vende (sem fornecedor registrado = "Outros") ?>
-        <?php foreach (array_unique(array_map(fn($c) => (string) ($c['fornecedor'] ?? ''), $compras)) as $forn): ?>
-          <button type="button" class="btn btn-light" data-whatsapp-compras="<?= e($forn) ?>"><i class="bi bi-whatsapp" aria-hidden="true"></i> Pedido<?= $forn !== '' ? ' para ' . e($forn) : ' dos sem fornecedor' ?></button>
+        <?php // agrupa sem diferenciar maiúsculas nem espaços; o botão mostra o primeiro jeito escrito ?>
+        <?php $nomesForn = Estoque::fornecedores(); $pedidos = []; foreach ($compras as $c) $pedidos[$chaveForn($c)] ??= $nomesForn[$chaveForn($c)] ?? trim((string) ($c['fornecedor'] ?? '')); ?>
+        <?php foreach ($pedidos as $chave => $forn): ?>
+          <button type="button" class="btn btn-light" data-whatsapp-compras="<?= e($chave) ?>"><i class="bi bi-whatsapp" aria-hidden="true"></i> Pedido<?= $forn !== '' ? ' para ' . e($forn) : ' dos sem fornecedor' ?></button>
         <?php endforeach; ?>
       </div>
 
@@ -330,7 +337,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
 
       <tr>
         <th>Produto</th>
-        <th class="num">Estoque</th>
+        <th class="num" title="Sem os lotes vencidos, como no caixa">Para vender</th>
         <th class="num">Mínimo</th>
         <th>Situação</th>
       </tr>
@@ -360,9 +367,11 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
 
           <td class="num">
             <span class="nivel">
-              <?= $p['estoque'] ?>
+              <?php // número e barra = o que dá para vender (como o caixa e a lista de compras); vencido aparece à parte ?>
+              <?= $p['vendavel'] ?>
+              <?php if ($p['estoque'] > $p['vendavel']): ?><small class="selo selo-erro" title="Unidades vencidas: retirar"><?= $p['estoque'] - $p['vendavel'] ?> venc.</small><?php endif; ?>
               <?php // barra até 2x o mínimo: cheia = folga confortável ?>
-              <span class="nivel-trilho" aria-hidden="true"><span class="nivel-valor<?= $baixo ? ' baixo' : '' ?>" style="width: <?= min(100, round($p['estoque'] / max(1, $p['estoque_minimo'] * 2) * 100)) ?>%"></span></span>
+              <span class="nivel-trilho" aria-hidden="true"><span class="nivel-valor<?= $baixo ? ' baixo' : '' ?>" style="width: <?= min(100, round($p['vendavel'] / max(1, $p['estoque_minimo'] * 2) * 100)) ?>%"></span></span>
             </span>
           </td>
 
@@ -373,8 +382,8 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
           <td>
 
             <span
-              class="selo <?= $p['estoque'] <= 0 ? 'selo-erro' : ($baixo ? 'selo-alerta' : 'selo-ok') ?>">
-              <?= $p['estoque'] <= 0 ? 'Sem estoque' : ($baixo ? 'Repor' : 'Normal') ?>
+              class="selo <?= $p['vendavel'] <= 0 ? 'selo-erro' : ($baixo ? 'selo-alerta' : 'selo-ok') ?>">
+              <?= $p['vendavel'] <= 0 ? 'Sem estoque' : ($baixo ? 'Repor' : 'Normal') ?>
             </span>
 
           </td>

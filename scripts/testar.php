@@ -98,10 +98,10 @@ try {
     // 7. Editar usuário: e-mail único, próprio perfil travado, nunca sem admin ativo
     Usuario::criar(['nome' => 'Caixa Um', 'email' => 'caixa1@teste.com', 'senha' => 'provisoria123', 'perfil' => 'vendedor']);
     // Mínimo de 12 caracteres (OWASP ASVS V2.1.1) para a senha provisória e para a definitiva
-    ok(recusa(fn() => Usuario::criar(['nome' => 'Curta', 'email' => 'curta@teste.com', 'senha' => 'senha12345!', 'perfil' => 'vendedor']), 'entre 12 e 1024'), 'senha provisória com 11 caracteres é recusada');
+    ok(recusa(fn() => Usuario::criar(['nome' => 'Curta', 'email' => 'curta@teste.com', 'senha' => 'senha12345!', 'perfil' => 'vendedor']), 'entre 12 e 72'), 'senha provisória com 11 caracteres é recusada');
     $caixa = (int) $pdo->query("SELECT id FROM usuarios WHERE email = 'caixa1@teste.com'")->fetchColumn();
     // Senha definitiva (primeiro acesso e "Minha senha") recusa as óbvias; a provisória do admin continua livre
-    ok(recusa(fn() => Usuario::trocarSenha($caixa, 'Rex#banho9!', 'Rex#banho9!'), 'entre 12 e 1024'), 'senha definitiva com 11 caracteres é recusada');
+    ok(recusa(fn() => Usuario::trocarSenha($caixa, 'Rex#banho9!', 'Rex#banho9!'), 'entre 12 e 72'), 'senha definitiva com 11 caracteres é recusada');
     foreach (['  senha123  ', 'Senha123!!!!', '999999999999', 'aaaaaaaaaaaa', 'PETSHOP 2026', 'caixa1@teste.com', '1234567890  ', '1234 5678 90', " caixa1\t2026!", '111111111112', '123456789012', '000000000001', 'qwertyuiop12', '131313131313', 'abcdefghijkl', '987654321098', 'qwertyuiopas', 'asdfghjklçzx', 'qazwsxedcrfv', '102030405060', '135791357913'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($caixa, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa a senha óbvia ' . json_encode($fraca));
     ok(recusa(fn() => Usuario::trocarSenha($caixa, '102030405060', '102030405060'), 'só números'), 'erro diz o motivo: só números');
     ok(recusa(fn() => Usuario::trocarSenha($caixa, 'qwertyuiopas', 'qwertyuiopas'), 'teclas do teclado'), 'erro diz o motivo: sequência do teclado');
@@ -119,6 +119,21 @@ try {
     ok((int) $pdo->query("SELECT trocar_senha FROM usuarios WHERE id = $joao")->fetchColumn() === 0, 'trocar senha aceita frase com letras repetidas/vizinhas');
     Usuario::trocarSenha($caixa, 'banho do rex 2x', 'banho do rex 2x');
     ok((int) $pdo->query("SELECT trocar_senha FROM usuarios WHERE id = $caixa")->fetchColumn() === 0, 'trocar senha aceita uma frase que não é óbvia');
+    // BT-01: nome junto/invertido, nome + pedaço do e-mail, e-mail com algo a mais, troca por números/símbolos, palavra repetida, coluna do teclado, data
+    Usuario::criar(['nome' => 'Maria Silva', 'email' => 'maria@teste.com', 'senha' => 'provisoria77', 'perfil' => 'vendedor']);
+    $maria = (int) $pdo->query("SELECT id FROM usuarios WHERE email = 'maria@teste.com'")->fetchColumn();
+    foreach (['Maria Silva 2026', 'MariaSilva2026', 'silvamaria2026', 'maria@teste.com1', 'P@ssw0rd2026', 'S3nh@2026!!!', 'Fl4m3ng0!!!!', 'Petsh0p!2026', 'Br4s1l2026!!',
+        'flamengoflamengo', 'senhasenha12', 'zaq1xsw2cde3', '01/01/2000ab', '2000-01-01!x'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($maria, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa ' . json_encode($fraca));
+    Usuario::criar(['nome' => 'Revisor Teste UC', 'email' => 'revisor.uc@petshop.com', 'senha' => 'provisoria77', 'perfil' => 'vendedor']);
+    $revisor = (int) $pdo->query("SELECT id FROM usuarios WHERE email = 'revisor.uc@petshop.com'")->fetchColumn();
+    foreach (['teste uc 2026', 'Revisor Teste'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($revisor, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa nome + pedaço do e-mail ' . json_encode($fraca));
+    ok(recusa(fn() => Usuario::trocarSenha($maria, '01/01/2000ab', '01/01/2000ab'), 'data'), 'erro diz o motivo: data');
+    foreach (['correr no parque', 'cachorro come bolacha 9', 'gato late no telhado azul', 'banho do rex no sabado', 'Rex late p/ o carteiro', '84729163ab50'] as $boa)
+        ok(!recusa(fn() => Usuario::trocarSenha($maria, $boa, $boa), ''), 'trocar senha aceita ' . json_encode($boa));
+    // BT-02: o bcrypt só usa 72 bytes; acento conta 2
+    ok(recusa(fn() => Usuario::trocarSenha($maria, str_repeat('rex late ', 8) . 'x', str_repeat('rex late ', 8) . 'x'), 'entre 12 e 72'), 'senha com 73 bytes é recusada');
+    ok(recusa(fn() => Usuario::trocarSenha($maria, str_repeat('pão ', 18), str_repeat('pão ', 18)), 'entre 12 e 72'), 'senha com 72 caracteres e acento (90 bytes) é recusada');
+    ok(!recusa(fn() => Usuario::trocarSenha($maria, str_repeat('rex late ', 8), str_repeat('rex late ', 8)), ''), 'senha com 72 bytes é aceita');
     Usuario::editar($caixa, ['nome' => 'Caixa Um Silva', 'email' => 'Caixa.Silva@Teste.com', 'perfil' => 'financeiro']);
     $c = Usuario::buscar($caixa);
     ok($c['nome'] === 'Caixa Um Silva' && $c['email'] === 'caixa.silva@teste.com' && $c['perfil'] === 'financeiro', 'editar usuário muda nome, e-mail (minúsculo) e perfil');
@@ -536,6 +551,19 @@ try {
     $pdo->exec("UPDATE lotes SET validade = date('now','localtime','-2 days') WHERE codigo = 'LC-VENC'");
     $lista = array_column(Estoque::listaCompras(), null, 'id');
     ok(isset($lista[$vencido]) && (int) $lista[$vencido]['estoque'] === 3 && $lista[$vencido]['sugestao'] === 7, 'lista de compras: 10 unidades vencidas não contam (estoque 3, compra 7 para o dobro do mínimo)');
+    // os alertas de reposição usam o mesmo critério (sem vencido): antes 13 físicas > mínimo 5 escondiam o produto
+    ok(in_array($vencido, array_column(Produto::baixoEstoque(), 'id')) && Produto::precisaRepor(Produto::buscar($vencido)), 'alertas de reposição contam só o que dá para vender (lote vencido não conta)');
+    Estoque::entrada($vencido, 1, '  fornecedor lc com VENCIDO ');
+    ok(count(array_filter(Estoque::fornecedores(), fn($f) => mb_strtolower($f) === 'fornecedor lc com vencido')) === 1, 'fornecedores sugeridos sem repetir o nome');
+    ok(isset($ret[$quinzenal]['servico_id']) && (int) $ret[$quinzenal]['servico_id'] === $servico, 'retorno traz o serviço da última visita para o Agendar');
+    $sep = Usuario::criar(['nome' => 'Maria Silva', 'email' => 'maria.sep@teste.com', 'senha' => 'provisoria-sep-1', 'perfil' => 'vendedor']);
+    $idSep = (int) $pdo->query("SELECT id FROM usuarios WHERE email = 'maria.sep@teste.com'")->fetchColumn();
+    foreach (['s.e.n.h.a.2026', 'S-e-n-h-a-1234!', 'p.e.t.s.h.o.p.2026', 'M_a_r_i_a_2026', 'm.a.r.i.a.2026'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($idSep, $fraca, $fraca), 'fácil de adivinhar'), 'senha soletrada com separador é recusada ' . json_encode($fraca));
+    ok(!recusa(fn() => Usuario::trocarSenha($idSep, 'tomate azul na janela', 'tomate azul na janela'), 'fácil'), 'frase com espaços continua aceita');
+    ok(recusa(fn() => Usuario::trocarSenha($idSep, '15/11/1990 gato', '15/11/1990 gato'), 'é uma data'), 'data com uma palavra curta em volta é recusada');
+    foreach (range(1, 3) as $n) Estoque::entrada($vencido, 1, 'Distribuidora LC Certa');
+    Estoque::entrada($vencido, 1, 'distribuidora lc certa');
+    ok((Estoque::fornecedores()['distribuidora lc certa'] ?? '') === 'Distribuidora LC Certa', 'nome do fornecedor = o jeito mais usado, não o último digitado');
 
     $_SESSION = [];
 } catch (Throwable $e) {

@@ -77,11 +77,12 @@ class Usuario {
         }
         return null;
     }
-    /** Conta caracteres (não bytes), igual ao minlength/maxlength do formulário */
+    /** Mínimo em caracteres (igual ao minlength do formulário); máximo em bytes */
     private static function validarSenha(string $senha): void {
         if (trim($senha) === '') throw new DomainException('A senha não pode ser só espaços.');
-        // 12 = mínimo do OWASP ASVS (V2.1.1); vale para senhas novas, as já gravadas continuam entrando
-        if (mb_strlen($senha) < self::SENHA_MIN || mb_strlen($senha) > 1024) throw new DomainException('A senha deve ter entre ' . self::SENHA_MIN . ' e 1024 caracteres.');
+        // 12 = mínimo do OWASP ASVS (V2.1.1); vale para senhas novas, as já gravadas continuam entrando.
+        // 72 bytes: o bcrypt ignora o resto, então o que passasse disso não protegeria nada
+        if (mb_strlen($senha) < self::SENHA_MIN || strlen($senha) > 72) throw new DomainException('A senha deve ter entre ' . self::SENHA_MIN . ' e 72 caracteres (letra com acento conta como 2).');
     }
     /** Senhas das listas de vazamentos que são tentadas primeiro (comparadas em minúsculas) */
     private const SENHAS_OBVIAS = ['123456', '1234567', '12345678', '123456789', '1234567890', '654321', '123123', '112233', '121212', '102030',
@@ -117,7 +118,9 @@ class Usuario {
         // só números (102030405060, 135791357913): é o que se tenta logo depois das listas
         if (!preg_match('/\p{L}/u', $s)) throw new DomainException('Essa senha é fácil de adivinhar: tem só números e símbolos.' . $dica);
         // linha ou coluna do teclado com 6+ teclas seguidas, nos dois sentidos (qwertyuiop, asdfghjklç, qazwsxedc)
-        foreach (['1234567890', 'qwertyuiop', 'asdfghjklç', 'zxcvbnm', '1qaz2wsx3edc4rfv5tgb6yhn7ujm8ik9ol0p', 'qazwsxedcrfvtgbyhnujmikolp'] as $teclas)
+        // colunas de cima para baixo e de baixo para cima (1qaz2wsx, zaq1xsw2): o reverso do trecho não pega a ordem das colunas
+        foreach (['1234567890', 'qwertyuiop', 'asdfghjklç', 'zxcvbnm', '1qaz2wsx3edc4rfv5tgb6yhn7ujm8ik9ol0p', 'qazwsxedcrfvtgbyhnujmikolp',
+            'zaq1xsw2cde3vfr4bgt5nhy6mju7ki8lo9p0', 'zaqxswcdevfrbgtnhymjukilop'] as $teclas)
             for ($i = 0; $i + 6 <= mb_strlen($teclas); $i++) {
                 $trecho = mb_substr($teclas, $i, 6);
                 if (str_contains($s, $trecho) || str_contains($s, implode('', array_reverse(mb_str_split($trecho)))))
@@ -125,10 +128,25 @@ class Usuario {
             }
         if (count(array_unique($c)) < 5 || $seguidos * 2 > count($c))
             throw new DomainException('Essa senha é fácil de adivinhar: tem sequência ou caracteres repetidos (como 123456, abcdef ou aaaa).' . $dica);
-        if (in_array($s, self::SENHAS_OBVIAS, true) || ($l !== '' && in_array($l, array_map($letras, self::SENHAS_OBVIAS), true)))
+        // data completa com pouca coisa além dela (01/01/2000ab, 15/11/1990 gato): aniversário é das primeiras tentativas
+        if (mb_strlen($l) < 6 && preg_match('~\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}|\d{4}[/.-]\d{1,2}[/.-]\d{1,2}~', $s))
+            throw new DomainException('Essa senha é fácil de adivinhar: é uma data (como um aniversário).' . $dica);
+        // Tira da senha as palavras (também com troca por números/símbolos: P@ssw0rd, Fl4m3ng0) e recusa se sobram menos de 3 letras:
+        // pega palavra repetida (senhasenha), nome junto/invertido (silvamaria) e nome + pedaço do e-mail ("teste uc").
+        // Só se tirou alguma coisa: "84729163ab50" não tem palavra nenhuma.
+        $leet = ['a' => '[a@4]', 'e' => '[e3]', 'i' => '[i1!]', 'o' => '[o0]', 's' => '[s5$]', 't' => '[t7]'];
+        // sem separadores: "s.e.n.h.a" e "M_a_r_i_a" são a mesma palavra (ficam os símbolos que viram letra: @ $ !)
+        $sa = strtr(preg_replace('/[^\p{L}\d@$!]+/u', '', $s) ?? $s, $acentos);
+        $sobra = function (array $lista) use ($sa, $l, $leet, $letras): bool {
+            $lista = array_filter(array_unique($lista), fn($p) => $p !== '');
+            usort($lista, fn($a, $b) => mb_strlen($b) <=> mb_strlen($a)); // a mais longa primeiro: "petshop" antes de "pet"
+            $resto = mb_strlen($letras(preg_replace('/' . implode('|', array_map(fn($p) => strtr($p, $leet), $lista)) . '/u', '', $sa) ?? $sa));
+            return $resto < 3 && $resto < mb_strlen($l);
+        };
+        if (in_array($s, self::SENHAS_OBVIAS, true) || $sobra(array_map($letras, self::SENHAS_OBVIAS)))
             throw new DomainException('Essa senha é fácil de adivinhar: está na lista das senhas mais usadas.' . $dica);
-        // o e-mail, ou só o nome / a parte do e-mail com números e símbolos em volta
-        if (($email !== '' && $s === $email) || ($l !== '' && in_array($l, $palavras, true)))
+        // o e-mail (maria@teste.com1), ou só nome / e-mail / palavras da lista com números e símbolos em volta
+        if (($email !== '' && str_contains($s, $email)) || $sobra($palavras))
             throw new DomainException('Essa senha é fácil de adivinhar: usa seu nome ou seu e-mail.' . $dica);
     }
     /** Primeiro acesso com a senha inicial: o usuário escolhe a própria antes de usar o sistema */

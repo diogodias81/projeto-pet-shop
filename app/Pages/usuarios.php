@@ -48,6 +48,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Erro no cadastro: a gaveta reabre com nome, e-mail e perfil (a senha nunca volta para a tela)
     if (!in_array($_POST['acao'] ?? '', ['excluir', 'desativar', 'reativar', 'redefinir'], true)) {
       $_SESSION['form_usuario'] = array_intersect_key($_POST, array_flip(['id', 'nome', 'email', 'perfil']));
+      // o cursor volta para o campo do erro (sem campo claro: a senha, que precisa ser digitada de novo)
+      $m = $ex->getMessage();
+      $_SESSION['form_usuario']['_campo'] = stripos($m, 'senha') !== false ? 'senha' : (stripos($m, 'e-mail') !== false ? 'email' : (stripos($m, 'nome') !== false ? 'nome' : 'senha'));
     }
   }
 
@@ -119,7 +122,7 @@ $perfilAtual = $antigo['perfil'] ?? $editando['perfil'] ?? '';
         <input
           name="nome"
           value="<?= e($antigo['nome'] ?? $editando['nome'] ?? '') ?>"
-          maxlength="100"
+          maxlength="100"<?= ($antigo['_campo'] ?? '') === 'nome' ? ' data-foco' : '' ?>
           required>
       </label>
 
@@ -130,6 +133,7 @@ $perfilAtual = $antigo['perfil'] ?? $editando['perfil'] ?? '';
           type="email"
           name="email"
           value="<?= e($antigo['email'] ?? $editando['email'] ?? '') ?>"
+          autocomplete="username"<?= ($antigo['_campo'] ?? '') === 'email' ? ' data-foco' : '' ?>
           required>
       </label>
 
@@ -142,9 +146,9 @@ $perfilAtual = $antigo['perfil'] ?? $editando['perfil'] ?? '';
           type="password"
           name="senha"
           minlength="<?= Usuario::SENHA_MIN ?>"
-          maxlength="1024"
+          maxlength="72"
           autocomplete="new-password"
-          data-revelar<?= $antigo ? ' data-foco' : '' ?>
+          data-revelar<?= ($antigo['_campo'] ?? '') === 'senha' ? ' data-foco' : '' ?>
           required>
       </label>
       <?php endif; ?>
@@ -263,6 +267,9 @@ $perfilAtual = $antigo['perfil'] ?? $editando['perfil'] ?? '';
                     name="id"
                     value="<?= $u['id'] ?>">
 
+                  <?php // o gerenciador de senhas do navegador sabe de qual conta é a senha ?>
+                  <input type="text" name="usuario_email" value="<?= e($u['email']) ?>" autocomplete="username" hidden>
+
                   <label>
                     Nova senha provisória
 
@@ -272,7 +279,7 @@ $perfilAtual = $antigo['perfil'] ?? $editando['perfil'] ?? '';
                       placeholder="Mínimo <?= Usuario::SENHA_MIN ?> caracteres"
                       aria-label="Senha provisória para <?= e($u['nome']) ?>"
                       minlength="<?= Usuario::SENHA_MIN ?>"
-                      maxlength="1024"
+                      maxlength="72"
                       autocomplete="new-password"
                       data-revelar
                       required>

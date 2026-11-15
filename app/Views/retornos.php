@@ -1,7 +1,9 @@
 <?php
 // Quadro dos pets atrasados para voltar (Dashboard e Clientes). Espera $retornos = Agenda::retornos() e, se houver, $doses (Cliente::dosesAVencer)
 if (!$retornos) return;
-$dosePorPet = array_column($doses ?? [], null, 'pet_id'); // pet que também está no quadro de doses: a mesma mensagem lembra as duas coisas
+// pet que também está no quadro de doses: a mesma mensagem lembra a dose mais atrasada (a lista vem da que vence antes)
+$dosePorPet = [];
+foreach ($doses ?? [] as $d) $dosePorPet[$d['pet_id']] ??= $d;
 $primeiros = 5; // o resto fica atrás de "Mostrar todos": o quadro não empurra a busca nem os números da tela
 $linha = function (array $r) use ($dosePorPet): void { ?>
                 <tr>
@@ -14,7 +16,7 @@ $linha = function (array $r) use ($dosePorPet): void { ?>
                         <?php else: ?>
                             <a class="btn btn-light btn-sm" href="tel:<?= e($r['telefone']) ?>" title="Telefone fixo: sem WhatsApp"><i class="bi bi-telephone" aria-hidden="true"></i> Ligar<span class="visually-hidden"> para o dono de <?= e($r['pet']) ?></span></a>
                         <?php endif; ?>
-                        <a class="btn btn-light btn-sm" href="index.php?page=agenda&amp;pet=<?= (int) $r['pet_id'] ?>"><i class="bi bi-calendar-plus" aria-hidden="true"></i> Agendar<span class="visually-hidden"> <?= e($r['pet']) ?></span></a>
+                        <a class="btn btn-light btn-sm" href="index.php?page=agenda&amp;pet=<?= (int) $r['pet_id'] ?>&amp;servico=<?= (int) $r['servico_id'] ?>"><i class="bi bi-calendar-plus" aria-hidden="true"></i> Agendar<span class="visually-hidden"> <?= e($r['pet']) ?></span></a>
                     </td>
                 </tr>
 <?php }; ?>

@@ -262,6 +262,9 @@ document.querySelectorAll('[data-imprimir-secao]').forEach(btn => {
     });
 });
 
+// Lista de compras: o aviso de quantidade errada some quando a pessoa corrige o campo
+document.querySelectorAll('.qtd-compra').forEach(i => i.addEventListener('input', () => i.setCustomValidity('')));
+
 // Lista de compras: abre o WhatsApp com o texto pronto (sem número: a pessoa escolhe o fornecedor); quantidade 0 fica de fora
 
 document.querySelectorAll('[data-whatsapp-compras]').forEach(btn => {
@@ -271,8 +274,11 @@ document.querySelectorAll('[data-whatsapp-compras]').forEach(btn => {
         // só as linhas deste fornecedor (data-whatsapp-compras = nome do fornecedor; vazio = sem fornecedor registrado)
         const linhas = [...tabela.querySelectorAll('tbody tr')].filter(tr => tr.dataset.fornecedor === btn.dataset.whatsappCompras);
         // 2.7 ou -3 não viram 2 ou somem calados: o navegador mostra o erro no próprio campo (step=1, min=0)
-        const errado = linhas.map(tr => tr.querySelector('.qtd-compra')).find(i => !i.checkValidity() || i.value === '');
-        if (errado) { errado.setCustomValidity(errado.value === '' ? 'Informe a quantidade (0 para deixar de fora).' : ''); errado.reportValidity(); errado.setCustomValidity(''); return; }
+        // só números inteiros: o campo number aceita "1e2" (100) e o navegador não acusa
+        const campos = linhas.map(tr => tr.querySelector('.qtd-compra'));
+        campos.forEach(i => i.setCustomValidity(i.value === '' ? 'Informe a quantidade (0 para deixar de fora).' : (/^\d+$/.test(i.value) ? '' : 'Use só números inteiros, sem vírgula nem letra.')));
+        const errado = campos.find(i => !i.checkValidity());
+        if (errado) { errado.reportValidity(); return; }
         const itens = linhas
             .map(tr => [tr.querySelector('[data-produto]').textContent.trim(), Number(tr.querySelector('.qtd-compra').value)])
             .filter(([, qtd]) => qtd > 0)
@@ -414,7 +420,11 @@ document.querySelectorAll('.offcanvas.gaveta').forEach(el => {
     el.addEventListener('shown.bs.offcanvas', () => {
 
         // data-foco: depois de um erro, o campo que precisa ser corrigido ou digitado de novo
-        (el.querySelector('.offcanvas-body [data-foco]') || el.querySelector('.offcanvas-body input:not([type="hidden"]):not([type="file"]):not([type="radio"]), .offcanvas-body select'))?.focus();
+        const foco = el.querySelector('.offcanvas-body [data-foco]');
+        // campo obrigatório vazio antes dele (ex.: pet sem porte, serviço não sugerido): o cursor vai para esse primeiro
+        const vazio = foco && [...el.querySelectorAll('.offcanvas-body select[required], .offcanvas-body input[required]:not([type="hidden"])')]
+            .find(c => !c.value && (c.compareDocumentPosition(foco) & Node.DOCUMENT_POSITION_FOLLOWING));
+        (vazio || foco || el.querySelector('.offcanvas-body input:not([type="hidden"]):not([type="file"]):not([type="radio"]), .offcanvas-body select'))?.focus();
     });
 
     // Fechou sem salvar: tira ?editar= e &novo= do endereço, senão recarregar a página abria a gaveta de novo
@@ -1659,3 +1669,9 @@ document.querySelectorAll('[data-limpar-carrinho]').forEach(el => {
 
     try { localStorage.removeItem('pdv-carrinho:' + el.dataset.limparCarrinho); } catch (e) { }
 });
+
+
+// autofocus nem sempre vale depois de um redirecionamento (volta com erro): garante o cursor no campo marcado.
+// No fim do arquivo: o botão do olho (data-revelar) tira o campo de senha da página e o recoloca, e isso apagava o foco
+const autofoco = document.querySelector('[autofocus]');
+if (autofoco && document.activeElement !== autofoco) autofoco.focus();

@@ -56,8 +56,8 @@ class Venda {
                     $pdo->prepare('INSERT INTO venda_item_lotes (venda_item_id,lote_id,quantidade) VALUES (?,?,?)')->execute([$itemId, $loteId, $q]);
                 }
                 $subtotal += $qtd * $p['preco'];
-                if ($p['estoque'] - $qtd <= $p['estoque_minimo']) {
-                    $alertas[] = "{$p['nome']} atingiu o estoque mínimo (restam " . ($p['estoque'] - $qtd) . ").";
+                if ($p['vendavel'] - $qtd <= $p['estoque_minimo']) { // mesmo critério dos alertas: vencido não conta
+                    $alertas[] = "{$p['nome']} atingiu o estoque mínimo (restam " . ($p['vendavel'] - $qtd) . " para vender).";
                 }
             }
             $primeiro = null; // primeiro serviço: os outros têm de ser do mesmo dono

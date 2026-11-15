@@ -123,7 +123,7 @@ $rotuloPasso = ['em_atendimento' => ['Iniciar', 'play-fill', 'btn-primary'], 'pr
       <select name="servico_id" required>
         <option value="">Escolha…</option>
         <?php foreach ($servicosAtivos as $s): ?>
-          <option value="<?= $s['id'] ?>" data-duracao="<?= (int) $s['duracao_min'] ?>" <?= (int) ($antigo['servico_id'] ?? 0) === (int) $s['id'] ? 'selected' : '' ?>><?= e($s['nome']) ?> — <?= moeda($s['preco']) ?> (<?= $s['duracao_min'] ?> min)</option>
+          <option value="<?= $s['id'] ?>" data-duracao="<?= (int) $s['duracao_min'] ?>" <?= (int) ($antigo['servico_id'] ?? $_GET['servico'] ?? 0) === (int) $s['id'] ? 'selected' : '' ?>><?= e($s['nome']) ?> — <?= moeda($s['preco']) ?> (<?= $s['duracao_min'] ?> min)</option>
         <?php endforeach; ?>
       </select>
     </label>
@@ -240,7 +240,7 @@ $rotuloPasso = ['em_atendimento' => ['Iniciar', 'play-fill', 'btn-primary'], 'pr
             <?php // "pago" (pronto e pago) também avisa, mas só no dia do atendimento
             $prontoHoje = $a['status'] === 'pronto' || ($a['status'] === 'pago' && substr($a['inicio'], 0, 10) === date('Y-m-d'));
             $zap = $prontoHoje ? ['pronto', 'Avisar que está pronto'] : ($a['status'] === 'agendado' && $a['inicio'] >= date('Y-m-d H:i') ? ['lembrete', 'Lembrar'] : null); ?>
-            <?php if ($zap && $a['telefone'] && $a['dono_ativo']): ?>
+            <?php if ($zap && Cliente::celular((string) $a['telefone']) && $a['dono_ativo']): // fixo: o telefone do card serve para ligar ?>
               <a class="btn btn-light btn-sm" href="<?= e(Cliente::whatsapp($a['telefone'], Agenda::mensagem($a, $zap[0]))) ?>" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp" aria-hidden="true"></i> <?= $zap[1] ?><span class="visually-hidden"> (abre o WhatsApp)</span></a>
             <?php endif; ?>
             <?php if (Agenda::aCobrar($a) && $a['dono_ativo']): ?>

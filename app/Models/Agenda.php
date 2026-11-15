@@ -253,7 +253,7 @@ class Agenda {
     public static function retornos(): array {
         // fica de fora quem tem horário de hoje em diante, inclusive o de hoje que já começou ou está sendo atendido;
         // horário de dia anterior que ninguém fechou (falta não marcada) não conta: o último atendimento continua o antigo
-        $linhas = Database::pdo()->query("SELECT a.pet_id, date(a.inicio) AS dia, s.nome AS servico, p.nome AS pet, p.especie, c.id AS cliente_id, c.nome AS cliente, c.telefone
+        $linhas = Database::pdo()->query("SELECT a.pet_id, date(a.inicio) AS dia, a.servico_id, s.nome AS servico, p.nome AS pet, p.especie, c.id AS cliente_id, c.nome AS cliente, c.telefone
             FROM agendamentos a JOIN pets p ON p.id = a.pet_id JOIN clientes c ON c.id = a.cliente_id JOIN servicos s ON s.id = a.servico_id
             WHERE a.status IN ('pronto', 'pago') AND a.inicio <= strftime('%Y-%m-%d %H:%M', 'now', 'localtime') AND p.ativo = 1 AND c.ativo = 1
               AND NOT EXISTS (SELECT 1 FROM agendamentos f WHERE f.pet_id = a.pet_id AND f.status IN ('agendado', 'em_atendimento', 'pronto', 'pago')

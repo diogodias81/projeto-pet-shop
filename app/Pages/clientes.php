@@ -150,10 +150,7 @@ $doses = $busca === '' ? Cliente::dosesAVencer($avisoDoses) : [];
 $retornos = $busca === '' ? Agenda::retornos() : [];
 ?>
 
-<?php require BASE_PATH . '/app/Views/doses.php'; ?>
-
-<?php require BASE_PATH . '/app/Views/retornos.php'; ?>
-
+<?php // a busca vem antes dos avisos: é a tarefa principal da tela ?>
 <section class="card card-body mb-3">
 
   <form autocomplete="off" method="get" class="busca-barra" role="search">
@@ -166,6 +163,15 @@ $retornos = $busca === '' ? Agenda::retornos() : [];
     <button class="btn btn-light">Buscar</button>
     <?php if ($busca !== ''): ?><a class="btn btn-light" href="index.php?page=clientes">Limpar</a><?php endif; ?>
   </form>
+
+</section>
+
+<?php require BASE_PATH . '/app/Views/doses.php'; ?>
+
+<?php require BASE_PATH . '/app/Views/retornos.php'; ?>
+
+<section class="card card-body mb-3">
+
 
   <?php if (!$clientes): ?>
 
@@ -459,7 +465,9 @@ $hoje = date('Y-m-d');
       <dt>Telefone</dt>
       <dd>
         <a href="tel:+<?= e($whats) ?>"><?= e(Cliente::formatarTelefone($cliente['telefone'])) ?></a>
+        <?php if (Cliente::celular($cliente['telefone'])): // fixo não tem WhatsApp ?>
         · <a href="https://wa.me/<?= e($whats) ?>" target="_blank" rel="noopener noreferrer">WhatsApp <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>
+        <?php endif; ?>
       </dd>
       <?php if ($cliente['email']): ?><dt>E-mail</dt><dd><a href="mailto:<?= e($cliente['email']) ?>"><?= e($cliente['email']) ?></a></dd><?php endif; ?>
       <?php if ($cliente['endereco']): ?><dt>Endereço</dt><dd><?= e($cliente['endereco']) ?></dd><?php endif; ?>
@@ -519,7 +527,7 @@ $hoje = date('Y-m-d');
             </td>
             <td class="acoes">
               <?php // mesma janela do quadro de doses: vencida há mais tempo não é mais lembrada ?>
-              <?php if ($d['atual'] && $dias !== null && $dias <= $avisoDias && $dias >= -Cliente::DOSE_VENCIDA_AVISO_DIAS): ?>
+              <?php if ($d['atual'] && $dias !== null && $dias <= $avisoDias && $dias >= -Cliente::DOSE_VENCIDA_AVISO_DIAS && Cliente::celular($cliente['telefone'])): ?>
                 <a class="btn btn-light btn-sm btn-quadrado" href="<?= e(Cliente::whatsapp($cliente['telefone'], Cliente::mensagemDose($d + ['cliente' => $cliente['nome'], 'dias' => $dias]))) ?>" target="_blank" rel="noopener noreferrer" title="Lembrar pelo WhatsApp" aria-label="Lembrar o dono pelo WhatsApp (abre o WhatsApp)"><i class="bi bi-whatsapp" aria-hidden="true"></i></a>
               <?php endif; ?>
               <form method="post" data-confirmar="Excluir <?= e($d['nome']) ?> de <?= date('d/m/Y', strtotime($d['aplicada_em'])) ?> da carteirinha de <?= e($d['pet']) ?>?">

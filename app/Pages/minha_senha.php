@@ -19,10 +19,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   } catch (DomainException $ex) {
 
     flash($ex->getMessage(), 'erro');
+    // o cursor volta para o campo a corrigir (as senhas nunca voltam preenchidas)
+    $_SESSION['foco_senha'] = stripos($ex->getMessage(), 'atual') !== false ? 'atual' : 'senha';
   }
 
   redirect('minha_senha');
 }
+
+$foco = $_SESSION['foco_senha'] ?? 'atual';
+unset($_SESSION['foco_senha']);
 
 $subtituloTopo = 'Troque a senha que você usa para entrar no sistema.';
 
@@ -34,7 +39,7 @@ $subtituloTopo = 'Troque a senha que você usa para entrar no sistema.';
     <span class="icone-redondo" aria-hidden="true"><i class="bi bi-shield-lock"></i></span>
     <div>
       <h2>Alterar senha</h2>
-      <p class="card-sub" id="senha-ajuda">Pelo menos <?= Usuario::SENHA_MIN ?> caracteres (uma frase curta funciona bem). São recusadas: senhas comuns (senha123), só números, sequências (123456, abcdef, qwerty), caracteres repetidos e seu nome ou e-mail.</p>
+      <p class="card-sub" id="senha-ajuda">Pelo menos <?= Usuario::SENHA_MIN ?> caracteres (uma frase curta funciona bem). São recusadas: senhas comuns (senha123, também com 0 no lugar de o ou @ no lugar de a), só números, sequências (123456, abcdef, qwerty), caracteres repetidos, datas e seu nome ou e-mail. Máximo de 72 caracteres (letra com acento conta como 2).</p>
     </div>
   </div>
 
@@ -50,11 +55,10 @@ $subtituloTopo = 'Troque a senha que você usa para entrar no sistema.';
       <input
         type="password"
         name="atual"
-        maxlength="1024"
+        maxlength="72"
         autocomplete="current-password"
         data-revelar
-        required
-        autofocus>
+        required<?= $foco === 'atual' ? ' autofocus' : '' ?>>
     </label>
 
     <label>
@@ -65,10 +69,10 @@ $subtituloTopo = 'Troque a senha que você usa para entrar no sistema.';
         name="senha"
         aria-describedby="senha-ajuda"
         minlength="<?= Usuario::SENHA_MIN ?>"
-        maxlength="1024"
+        maxlength="72"
         autocomplete="new-password"
         data-revelar
-        required>
+        required<?= $foco === 'senha' ? ' autofocus' : '' ?>>
     </label>
 
     <label>
@@ -78,7 +82,7 @@ $subtituloTopo = 'Troque a senha que você usa para entrar no sistema.';
         type="password"
         name="confirmacao"
         minlength="<?= Usuario::SENHA_MIN ?>"
-        maxlength="1024"
+        maxlength="72"
         autocomplete="new-password"
         data-revelar
         required>

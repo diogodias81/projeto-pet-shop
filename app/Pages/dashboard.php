@@ -63,6 +63,8 @@ if ($doses) {
     $partes = array_filter([$vencidas ? $vencidas . ($vencidas > 1 ? ' doses vencidas' : ' dose vencida') : '', $aVencer ? $aVencer . ($aVencer > 1 ? ' vencem' : ' vence') . " em até $avisoDoses dias" : '']);
     $tarefas[] = ['alerta', 'shield-plus', 'Carteirinha: ' . implode(' e ', $partes), 'Vacina, vermífugo ou antipulgas. Lembre os donos pelo WhatsApp.', '#doses'];
 }
+$retornos = temPerfil(['admin', 'vendedor']) ? Agenda::retornos() : [];
+if ($retornos) $tarefas[] = ['alerta', 'calendar-heart', count($retornos) . (count($retornos) > 1 ? ' pets passaram' : ' pet passou') . ' do dia de voltar', 'Banho e tosa sem horário marcado. Chame os donos para agendar.', '#retornos'];
 
 $hora = (int) date('G');
 $saudacao = $hora < 12 ? 'Bom dia' : ($hora < 18 ? 'Boa tarde' : 'Boa noite');
@@ -126,10 +128,6 @@ $variacao = function (?float $pct): string {
     </section>
 </div>
 
-<?php require BASE_PATH . '/app/Views/doses.php'; ?>
-
-<?php $retornos = temPerfil(['admin', 'vendedor']) ? Agenda::retornos() : []; require BASE_PATH . '/app/Views/retornos.php'; ?>
-
 <section class="card card-body mb-3">
     <div class="card-titulo card-titulo-quebra">
         <div>
@@ -149,6 +147,11 @@ $variacao = function (?float $pct): string {
     </div>
     <p class="nota"><i class="bi bi-info-circle" aria-hidden="true"></i> Lucro bruto = faturamento − custo dos produtos vendidos. Resultado = lucro bruto − despesas. Produtos sem preço de custo cadastrado entram com custo zero.</p>
 </section>
+
+<?php // avisos depois dos números da loja: a lista "Para fazer hoje" já leva até eles ?>
+<?php require BASE_PATH . '/app/Views/doses.php'; ?>
+
+<?php require BASE_PATH . '/app/Views/retornos.php'; ?>
 
 <section class="grade">
     <div class="card card-body mb-3">

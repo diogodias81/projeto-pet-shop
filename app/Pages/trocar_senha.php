@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
       </p>
 
       <p class="text-body-secondary small mb-0" id="senha-ajuda">
-        Pelo menos <?= Usuario::SENHA_MIN ?> caracteres (uma frase curta funciona bem). São recusadas: senhas comuns (senha123), só números, sequências (123456, abcdef, qwerty), caracteres repetidos e seu nome ou e-mail.
+        Pelo menos <?= Usuario::SENHA_MIN ?> caracteres (uma frase curta funciona bem). São recusadas: senhas comuns (senha123, também com 0 no lugar de o ou @ no lugar de a), só números, sequências (123456, abcdef, qwerty), caracteres repetidos, datas e seu nome ou e-mail. Máximo de 72 caracteres (letra com acento conta como 2).
       </p>
     </div>
 
@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
         name="senha"
         aria-describedby="senha-ajuda"
         minlength="<?= Usuario::SENHA_MIN ?>"
-        maxlength="1024"
+        maxlength="72"
         autocomplete="new-password"
         data-revelar
         required
@@ -112,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
         type="password"
         name="confirmacao"
         minlength="<?= Usuario::SENHA_MIN ?>"
-        maxlength="1024"
+        maxlength="72"
         autocomplete="new-password"
         data-revelar
         required>

@@ -71,7 +71,7 @@ $prazos ??= Estoque::prazos();
                     <tr>
                         <th>Produto</th>
                         <th>Categoria</th>
-                        <th class="num">Estoque</th>
+                        <th class="num" title="Sem os lotes vencidos, como no caixa">Para vender</th>
                         <th class="num">Mínimo</th>
                     </tr>
                 </thead>
@@ -80,7 +80,7 @@ $prazos ??= Estoque::prazos();
                         <tr>
                             <td><?= e($p['nome']) ?></td>
                             <td><?= e($p['categoria'] ?? '—') ?></td>
-                            <td class="num"><span class="selo selo-alerta"><?= $p['estoque'] ?></span></td>
+                            <td class="num"><span class="selo selo-alerta"><?= $p['vendavel'] ?></span></td>
                             <td class="num"><?= $p['estoque_minimo'] ?></td>
                         </tr>
                     <?php endforeach; ?>

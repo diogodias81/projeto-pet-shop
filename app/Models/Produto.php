@@ -88,13 +88,13 @@ class Produto {
         Database::pdo()->prepare('UPDATE produtos SET ativo = 0, codigo_barras = NULL WHERE id = ?')->execute([$id]);
         Auditoria::registrar('produto_excluido', "{$p['nome']} (#$id)" . ($p['codigo_barras'] ? ", código {$p['codigo_barras']} liberado" : '') . ", estoque de {$p['estoque']} " . ((int) $p['estoque'] === 1 ? 'unidade' : 'unidades'));
     }
-    /** Precisa repor: estoque igual ou abaixo do mínimo (mínimo 0 = não controla reposição) */
+    /** Precisa repor: o que dá para vender (sem lote vencido) igual ou abaixo do mínimo (mínimo 0 = não controla reposição) */
     public static function precisaRepor(array $p): bool {
-        return $p['estoque_minimo'] > 0 && $p['estoque'] <= $p['estoque_minimo'];
+        return $p['estoque_minimo'] > 0 && ($p['vendavel'] ?? $p['estoque']) <= $p['estoque_minimo'];
     }
     /** Produtos que precisam de reposição (ver precisaRepor) */
     public static function baixoEstoque(): array {
-        return Database::pdo()->query('SELECT p.*, c.nome AS categoria FROM produtos p LEFT JOIN categorias c ON c.id=p.categoria_id WHERE p.ativo=1 AND p.estoque_minimo > 0 AND p.estoque <= p.estoque_minimo ORDER BY p.estoque')->fetchAll();
+        return Database::pdo()->query('SELECT * FROM (SELECT p.*, c.nome AS categoria, ' . self::VENDAVEL . ' AS vendavel FROM produtos p LEFT JOIN categorias c ON c.id=p.categoria_id WHERE p.ativo=1 AND p.estoque_minimo > 0) WHERE vendavel <= estoque_minimo ORDER BY vendavel')->fetchAll();
     }
     /** Margem sobre o preço de venda, em %. Null quando o custo não foi informado. */
     public static function margem(array $p): ?float {

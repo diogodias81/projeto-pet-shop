@@ -684,7 +684,8 @@ tbody tr:nth-last-child(-n+2):not(:nth-child(-n+2)) .menu-acoes-painel { top: au
   .barras small.sem-celular { visibility: hidden; }
   .barras small.celular { visibility: visible; }
   /* Seções longas recolhidas (app.js, section[data-recolher]): só o título fica visível */
-  section.recolhida > :not(h2) { display: none !important; }
+  section.recolhida > :not(h2, .card-titulo), section.recolhida .card-sub { display: none !important; } /* quadros com o h2 dentro de .card-titulo (doses, retorno) */
+  section.recolhida .card-titulo { margin-bottom: 0; } /* recolhido: sem o espaço que separava o título da tabela */
   h2 .recolher { margin-left: .5rem; vertical-align: middle; }
   /* Carrinho compacto: foto | nome em cima; quantidade, subtotal e Remover numa linha (era ~260px por item) */
   #v-tabela tbody tr { display: grid; grid-template-columns: 40px auto minmax(0, 1fr) auto auto; gap: .3rem .5rem; align-items: center; }
@@ -745,7 +746,7 @@ small.busca-aviso { display: block; width: 0; min-width: 100%; margin: .25rem 0 
   .card, .kpi { box-shadow: none; }
   .kpi-destaque { color: #000; background: none; border: 1px solid #ccc; }
   .so-imprimir { display: inline; }
-  section.recolhida > :not(h2) { display: revert !important; } /* mesma força da regra do celular, vem depois: vence */
+  section.recolhida > :not(h2, .card-titulo), section.recolhida .card-sub { display: revert !important; } /* mesma força da regra do celular, vem depois: vence */
   main:has(.comprovante) > :not(.comprovante) { display: none !important; }
   body.imprimir-secao .conteudo > :not(.imprimindo, .pagina-topo) { display: none !important; } /* data-imprimir-secao (app.js) */
   table input.qtd-compra { border: 0; padding: 0; text-align: right; background: none; box-shadow: none; } /* vence a regra geral de input: só o número no papel */

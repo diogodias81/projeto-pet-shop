@@ -201,6 +201,19 @@ class Estoque {
         return $lista;
     }
 
+    /**
+     * Fornecedores já usados nas entradas, um por nome (sem diferenciar maiúsculas nem espaços), para sugerir no formulário
+     * e dar nome ao pedido. Chave = nome em minúsculas; valor = o jeito escrito mais usado (um erro de digitação não troca o nome).
+     */
+    public static function fornecedores(): array {
+        $contagem = Database::pdo()->query("SELECT TRIM(fornecedor) AS nome, COUNT(*) AS vezes, MAX(id) AS ultimo FROM entradas_estoque
+            WHERE TRIM(fornecedor) <> '' GROUP BY TRIM(fornecedor) ORDER BY vezes DESC, ultimo DESC LIMIT 500")->fetchAll();
+        $nomes = [];
+        foreach ($contagem as $c) $nomes[mb_strtolower(preg_replace('/\s+/u', ' ', $c['nome']) ?? $c['nome'])] ??= $c['nome'];
+        natcasesort($nomes);
+        return $nomes;
+    }
+
     /** Últimas movimentações, filtradas pela mesma busca da tela (produto, código de barras ou lote) */
     public static function movimentacoes(string $busca = '', int $limite = 30): array {
         $sql = 'SELECT m.*, p.nome AS produto, l.codigo AS lote, l.validade, u.nome AS usuario FROM movimentacoes_estoque m JOIN produtos p ON p.id = m.produto_id LEFT JOIN lotes l ON l.id = m.lote_id LEFT JOIN usuarios u ON u.id = m.usuario_id';
