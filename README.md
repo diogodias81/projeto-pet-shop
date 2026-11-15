@@ -225,17 +225,6 @@ docker compose exec -T php php scripts/popular.php --apagar-tudo
 
 Nunca rode na loja com dados reais.
 
-### Experimentos do artigo
-
-Medem o sistema rodando, com as contas de demonstração (só leitura, menos o backup). Os resultados ficam em `artigo/experimentos/resultados.md`.
-
-```bash
-bash artigo/experimentos/verificar_seguranca.sh   # E2: cabeçalhos, sessão, CSRF, permissões
-bash artigo/experimentos/medir_desempenho.sh 30   # E3: tempo de resposta das telas (30 medições cada)
-docker compose exec -T -u www-data php php scripts/backup.php
-docker compose exec -T -u www-data php php < artigo/experimentos/testar_restauracao.php   # E5: restaura numa pasta temporária e compara
-```
-
 ### Estrutura
 
 ```text
@@ -266,10 +255,6 @@ scripts/
 storage/
 ├── petshop.sqlite    # Banco de dados (criado sozinho)
 └── backups/          # Backups locais, backup.log e ultimo.json (status lido pelo Dashboard)
-
-artigo/
-├── esboco-artigo-sbc.html / .pdf  # Esboço do artigo científico (template SBC)
-└── experimentos/     # Scripts e resultados: segurança (E2), desempenho (E3), backup (E5) e teste com usuários/SUS (E4)
 ```
 
 `storage/`, `.env` e as fotos ficam fora do git.
