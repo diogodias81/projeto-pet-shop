@@ -102,7 +102,7 @@ try {
     $caixa = (int) $pdo->query("SELECT id FROM usuarios WHERE email = 'caixa1@teste.com'")->fetchColumn();
     // Senha definitiva (primeiro acesso e "Minha senha") recusa as óbvias; a provisória do admin continua livre
     ok(recusa(fn() => Usuario::trocarSenha($caixa, 'Rex#banho9!', 'Rex#banho9!'), 'entre 12 e 1024'), 'senha definitiva com 11 caracteres é recusada');
-    foreach (['  senha123  ', 'Senha123!!!!', '999999999999', 'aaaaaaaaaaaa', 'PETSHOP 2026', 'caixa1@teste.com', '1234567890  ', '1234 5678 90', " caixa1\t2026!"] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($caixa, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa a senha óbvia ' . json_encode($fraca));
+    foreach (['  senha123  ', 'Senha123!!!!', '999999999999', 'aaaaaaaaaaaa', 'PETSHOP 2026', 'caixa1@teste.com', '1234567890  ', '1234 5678 90', " caixa1\t2026!", '111111111112', '123456789012', '000000000001', 'qwertyuiop12', '131313131313', 'abcdefghijkl', '987654321098'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($caixa, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa a senha óbvia ' . json_encode($fraca));
     ok(recusa(fn() => Usuario::alterarSenha($caixa, 'provisoria123', '   12345678   ', '   12345678   '), 'fácil de adivinhar'), 'minha senha recusa "   12345678   " (espaços em volta)');
     // Palavra óbvia, parte do e-mail ou nome do usuário ("Caixa Um") com números/símbolos em volta
     foreach (['admin1234567', 'Senha@2026!!', 'petshop20262026', 'caixa.1!2026', 'Caixa2026!!!'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($caixa, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa palavra óbvia/nome com números ' . json_encode($fraca));
@@ -110,6 +110,9 @@ try {
     Usuario::criar(['nome' => 'João Conceição', 'email' => 'joao.silva@teste.com', 'senha' => 'provisoria99', 'perfil' => 'vendedor']);
     $joao = (int) $pdo->query("SELECT id FROM usuarios WHERE email = 'joao.silva@teste.com'")->fetchColumn();
     foreach (['joao12345678', 'JOÃO20262026', 'conceicao123', 'silva2026!!!', 'joaosilva!!!'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($joao, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa nome sem acento/pedaço do e-mail ' . json_encode($fraca));
+    // frase com letras dobradas e vizinhas ("rr", "pa", "qu") não é confundida com sequência
+    Usuario::trocarSenha($joao, 'correr no parque', 'correr no parque');
+    ok((int) $pdo->query("SELECT trocar_senha FROM usuarios WHERE id = $joao")->fetchColumn() === 0, 'trocar senha aceita frase com letras repetidas/vizinhas');
     Usuario::trocarSenha($caixa, 'banho do rex 2x', 'banho do rex 2x');
     ok((int) $pdo->query("SELECT trocar_senha FROM usuarios WHERE id = $caixa")->fetchColumn() === 0, 'trocar senha aceita uma frase que não é óbvia');
     Usuario::editar($caixa, ['nome' => 'Caixa Um Silva', 'email' => 'Caixa.Silva@Teste.com', 'perfil' => 'financeiro']);
@@ -239,6 +242,16 @@ try {
     ok(Usuario::autenticar('antigo@petshop.com', 'Cachorro#Quente9', '127.0.0.9') !== null, 'a mesma senha continua entrando depois de regravada');
     ok(Usuario::autenticar('antigo@petshop.com', 'errada', '127.0.0.9') === null && $pdo->query("SELECT senha_hash FROM usuarios WHERE email = 'antigo@petshop.com'")->fetchColumn() === $novoHash, 'senha errada não mexe no hash');
     $pdo->exec("UPDATE usuarios SET ativo = 0 WHERE email = 'antigo@petshop.com'");
+    // Conta desativada com hash antigo também é regravada (senão o tempo de resposta curto revela que o e-mail existe)
+    $pdo->prepare("INSERT INTO usuarios (nome, email, senha_hash, perfil, ativo) VALUES ('Inativo', 'inativo@petshop.com', ?, 'vendedor', 0)")
+        ->execute([password_hash('Cachorro#Quente9', PASSWORD_BCRYPT, ['cost' => 4])]);
+    ok(recusa(fn() => Usuario::autenticar('inativo@petshop.com', 'Cachorro#Quente9', '127.0.0.9'), 'desativado')
+        && !password_needs_rehash($pdo->query("SELECT senha_hash FROM usuarios WHERE email = 'inativo@petshop.com'")->fetchColumn(), PASSWORD_DEFAULT), 'conta desativada com hash antigo regrava o hash ao acertar a senha');
+    // Senha errada em hash antigo leva o tempo do HASH_FALSO (também confere ele)
+    $t = microtime(true); Usuario::autenticar('naoexiste@petshop.com', 'errada', '127.0.0.10'); $tFalso = microtime(true) - $t;
+    $pdo->exec("UPDATE usuarios SET senha_hash = '" . password_hash('x', PASSWORD_BCRYPT, ['cost' => 10]) . "' WHERE email = 'inativo@petshop.com'");
+    $t = microtime(true); Usuario::autenticar('inativo@petshop.com', 'errada', '127.0.0.10'); $tAntigo = microtime(true) - $t;
+    ok(abs($tAntigo - $tFalso) < 0.3 * $tFalso, sprintf('senha errada em hash antigo leva o tempo do hash falso (%.3f s x %.3f s)', $tAntigo, $tFalso));
 
     $fontes = implode(array_map('file_get_contents', glob("$real/app/Models/*.php")));
     ok(!preg_match('/(?<!inTransaction\(\)\) )\$pdo->rollBack\(\)/', $fontes), 'nenhum rollBack sem conferir inTransaction()');

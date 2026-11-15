@@ -1,6 +1,8 @@
 FROM php:8.4-apache
 
+# upgrade: a imagem oficial pode ser anterior às correções de segurança do Debian (ex.: apache2, zlib)
 RUN apt-get update \
+    && apt-get upgrade -y \
     && apt-get install -y libsqlite3-dev libpng-dev libjpeg62-turbo-dev libwebp-dev \
     && docker-php-ext-configure gd --with-jpeg --with-webp \
     && docker-php-ext-install pdo_sqlite gd \

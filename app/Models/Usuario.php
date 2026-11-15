@@ -53,17 +53,25 @@ class Usuario {
         $u = $st->fetch();
         // Cursor de uma linha fica aberto até o closeCursor; aberto, a gravação seguinte dá "database is locked" na hora se outro processo grava (ver bootstrap)
         $st->closeCursor();
-        if (password_verify($senha, $u['senha_hash'] ?? self::HASH_FALSO) && $u) {
+        $certa = password_verify($senha, $u['senha_hash'] ?? self::HASH_FALSO) && $u;
+        // Hash de custo mais baixo que o padrão do PHP (atualização do PHP, senha antiga) confere mais rápido que o HASH_FALSO
+        // e revelaria que o e-mail existe: com a senha certa regrava com o custo atual (antes do teste de ativo, vale para conta
+        // desativada também); com a errada completa o trabalho que falta até o custo do HASH_FALSO.
+        if ($u && password_needs_rehash($u['senha_hash'], PASSWORD_DEFAULT)) {
+            if ($certa) {
+                // Não mexe na sessao_versao: é a mesma senha, ninguém precisa ser deslogado.
+                // "AND senha_hash = ?": se a senha foi trocada nesse meio-tempo, não volta o hash da antiga
+                $pdo->prepare('UPDATE usuarios SET senha_hash = ? WHERE id = ? AND senha_hash = ?')
+                    ->execute([password_hash($senha, PASSWORD_DEFAULT), $u['id'], $u['senha_hash']]);
+            } else {
+                // bcrypt de custo k leva ~2^k; 2^c + (2^c + ... + 2^(F-1)) = 2^F, o tempo do HASH_FALSO (custo F)
+                for ($k = max(4, (int) substr($u['senha_hash'], 4, 2)); $k < (int) substr(self::HASH_FALSO, 4, 2); $k++) password_hash('', PASSWORD_BCRYPT, ['cost' => $k]);
+            }
+        }
+        if ($certa) {
             // Só quem sabe a senha descobre que a conta foi desativada
             if (!$u['ativo']) throw new DomainException('Este usuário foi desativado. Fale com o administrador.');
             $pdo->prepare('DELETE FROM tentativas_login WHERE email = ? AND ip = ?')->execute([$chave, $ip]);
-            // Hash de custo mais baixo que o padrão do PHP (atualização do PHP, senha antiga): regrava com o custo atual.
-            // Além de mais forte, o login de quem existe volta a levar o mesmo tempo do HASH_FALSO (sem revelar e-mails).
-            // Não mexe na sessao_versao: é a mesma senha, ninguém precisa ser deslogado.
-            if (password_needs_rehash($u['senha_hash'], PASSWORD_DEFAULT)) {
-                $u['senha_hash'] = password_hash($senha, PASSWORD_DEFAULT);
-                $pdo->prepare('UPDATE usuarios SET senha_hash = ? WHERE id = ?')->execute([$u['senha_hash'], $u['id']]);
-            }
             Auditoria::registrar('login', $u['email'], $u);
             return $u;
         }
@@ -79,7 +87,7 @@ class Usuario {
     private const SENHAS_OBVIAS = ['123456', '1234567', '12345678', '123456789', '1234567890', '654321', '123123', '112233', '121212', '102030',
         '000000', '111111', '666666', '888888', 'abc123', 'abcdef', 'qwerty', 'qwerty123', 'asdfgh', 'password', 'senha', 'senha1', 'senha12',
         'senha123', 'senha1234', 'mudar123', 'trocar123', 'admin', 'admin123', 'teste', 'teste123', 'petshop', 'petshop123', 'pet123', 'brasil',
-        'iloveyou', 'amor123', 'flamengo', 'corinthians', 'palmeiras', 'gremio', 'vasco'];
+        'iloveyou', 'amor123', 'flamengo', 'corinthians', 'palmeiras', 'gremio', 'vasco', 'qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
     /** Senha definitiva (a que o próprio usuário escolhe): não aceita as que um invasor tenta primeiro */
     private static function validarSenhaDefinitiva(string $senha, int $id): void {
         self::validarSenha($senha);
@@ -100,9 +108,14 @@ class Usuario {
         $local = (string) strstr($email, '@', true);
         $palavras = array_merge(array_map($letras, self::SENHAS_OBVIAS), [$letras($local)],
             array_filter(array_map($letras, preg_split('/[^\p{L}]+/u', $local . ' ' . $u['nome']) ?: []), fn($p) => mb_strlen($p) >= 3));
-        // um caractere repetido (aaaaaa, 999999), da lista, o e-mail, ou só uma dessas palavras com números/símbolos em volta
-        if (in_array($s, self::SENHAS_OBVIAS, true) || preg_match('/^(.)\1*$/su', $s) || ($email !== '' && $s === $email) || ($l !== '' && in_array($l, $palavras, true)))
-            throw new DomainException('Essa senha é fácil de adivinhar (lista de senhas comuns, ou seu nome ou e-mail com números). Escolha outra: uma frase curta com palavras que só você associa funciona bem.');
+        // poucos caracteres diferentes (111111111112, 131313131313) ou sequência na maior parte (123456789012, abcdefghijkl):
+        // conta os vizinhos iguais ou seguidos (1-2, b-a, 7-7); numa frase eles são poucos
+        $c = mb_str_split($s);
+        $seguidos = 0;
+        for ($i = 1; $i < count($c); $i++) if (abs(mb_ord($c[$i]) - mb_ord($c[$i - 1])) <= 1) $seguidos++;
+        // da lista, o e-mail, ou só uma dessas palavras com números/símbolos em volta
+        if (count(array_unique($c)) < 5 || $seguidos * 2 > count($c) || in_array($s, self::SENHAS_OBVIAS, true) || ($email !== '' && $s === $email) || ($l !== '' && in_array($l, $palavras, true)))
+            throw new DomainException('Essa senha é fácil de adivinhar (lista de senhas comuns, sequência, ou seu nome ou e-mail com números). Escolha outra: uma frase curta com palavras que só você associa funciona bem.');
     }
     /** Primeiro acesso com a senha inicial: o usuário escolhe a própria antes de usar o sistema */
     public static function trocarSenha(int $id, string $senha, string $confirmacao): void {
