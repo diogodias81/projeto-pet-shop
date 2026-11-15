@@ -237,6 +237,18 @@ document.querySelectorAll('[data-imprimir-cupom]').forEach(btn => {
 });
 
 
+// <button data-mostrar-mais="id">: mostra as linhas que estavam escondidas (quadros de aviso longos) e some
+
+document.querySelectorAll('[data-mostrar-mais]').forEach(btn => {
+
+    btn.addEventListener('click', () => {
+        const resto = document.getElementById(btn.dataset.mostrarMais);
+        resto.hidden = false;
+        resto.querySelector('a, button')?.focus();
+        btn.remove();
+    });
+});
+
 // <button data-imprimir-secao="id">: imprime só aquela seção da página (ex.: lista de compras do Estoque)
 
 document.querySelectorAll('[data-imprimir-secao]').forEach(btn => {
@@ -256,11 +268,16 @@ document.querySelectorAll('[data-whatsapp-compras]').forEach(btn => {
 
     btn.addEventListener('click', () => {
         const tabela = document.querySelector('[data-lista-compras]');
-        const itens = [...tabela.querySelectorAll('tbody tr')]
-            .map(tr => [tr.querySelector('[data-produto]').textContent.trim(), parseInt(tr.querySelector('.qtd-compra').value, 10) || 0])
+        // só as linhas deste fornecedor (data-whatsapp-compras = nome do fornecedor; vazio = sem fornecedor registrado)
+        const linhas = [...tabela.querySelectorAll('tbody tr')].filter(tr => tr.dataset.fornecedor === btn.dataset.whatsappCompras);
+        // 2.7 ou -3 não viram 2 ou somem calados: o navegador mostra o erro no próprio campo (step=1, min=0)
+        const errado = linhas.map(tr => tr.querySelector('.qtd-compra')).find(i => !i.checkValidity() || i.value === '');
+        if (errado) { errado.setCustomValidity(errado.value === '' ? 'Informe a quantidade (0 para deixar de fora).' : ''); errado.reportValidity(); errado.setCustomValidity(''); return; }
+        const itens = linhas
+            .map(tr => [tr.querySelector('[data-produto]').textContent.trim(), Number(tr.querySelector('.qtd-compra').value)])
             .filter(([, qtd]) => qtd > 0)
             .map(([nome, qtd]) => `- ${nome}: ${qtd} un.`);
-        if (!itens.length) { alert('Coloque a quantidade de pelo menos um produto.'); return; }
+        if (!itens.length) { alert('Coloque a quantidade de pelo menos um produto deste fornecedor.'); return; }
         const texto = `Pedido - ${tabela.dataset.loja} - ${new Date().toLocaleDateString('pt-BR')}\n\n${itens.join('\n')}`;
         window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank', 'noopener');
     });
@@ -396,7 +413,8 @@ document.querySelectorAll('.offcanvas.gaveta').forEach(el => {
     // Ao abrir, o cursor vai para o primeiro campo (não para a caixa da gaveta)
     el.addEventListener('shown.bs.offcanvas', () => {
 
-        el.querySelector('.offcanvas-body input:not([type="hidden"]):not([type="file"]):not([type="radio"]), .offcanvas-body select')?.focus();
+        // data-foco: depois de um erro, o campo que precisa ser corrigido ou digitado de novo
+        (el.querySelector('.offcanvas-body [data-foco]') || el.querySelector('.offcanvas-body input:not([type="hidden"]):not([type="file"]):not([type="radio"]), .offcanvas-body select'))?.focus();
     });
 
     // Fechou sem salvar: tira ?editar= e &novo= do endereço, senão recarregar a página abria a gaveta de novo

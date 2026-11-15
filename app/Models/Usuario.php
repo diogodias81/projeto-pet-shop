@@ -113,9 +113,23 @@ class Usuario {
         $c = mb_str_split($s);
         $seguidos = 0;
         for ($i = 1; $i < count($c); $i++) if (abs(mb_ord($c[$i]) - mb_ord($c[$i - 1])) <= 1) $seguidos++;
-        // da lista, o e-mail, ou só uma dessas palavras com números/símbolos em volta
-        if (count(array_unique($c)) < 5 || $seguidos * 2 > count($c) || in_array($s, self::SENHAS_OBVIAS, true) || ($email !== '' && $s === $email) || ($l !== '' && in_array($l, $palavras, true)))
-            throw new DomainException('Essa senha é fácil de adivinhar (lista de senhas comuns, sequência, ou seu nome ou e-mail com números). Escolha outra: uma frase curta com palavras que só você associa funciona bem.');
+        $dica = ' Escolha outra: uma frase curta com palavras que só você associa funciona bem.';
+        // só números (102030405060, 135791357913): é o que se tenta logo depois das listas
+        if (!preg_match('/\p{L}/u', $s)) throw new DomainException('Essa senha é fácil de adivinhar: tem só números e símbolos.' . $dica);
+        // linha ou coluna do teclado com 6+ teclas seguidas, nos dois sentidos (qwertyuiop, asdfghjklç, qazwsxedc)
+        foreach (['1234567890', 'qwertyuiop', 'asdfghjklç', 'zxcvbnm', '1qaz2wsx3edc4rfv5tgb6yhn7ujm8ik9ol0p', 'qazwsxedcrfvtgbyhnujmikolp'] as $teclas)
+            for ($i = 0; $i + 6 <= mb_strlen($teclas); $i++) {
+                $trecho = mb_substr($teclas, $i, 6);
+                if (str_contains($s, $trecho) || str_contains($s, implode('', array_reverse(mb_str_split($trecho)))))
+                    throw new DomainException('Essa senha é fácil de adivinhar: tem uma sequência de teclas do teclado (como qwerty ou asdfgh).' . $dica);
+            }
+        if (count(array_unique($c)) < 5 || $seguidos * 2 > count($c))
+            throw new DomainException('Essa senha é fácil de adivinhar: tem sequência ou caracteres repetidos (como 123456, abcdef ou aaaa).' . $dica);
+        if (in_array($s, self::SENHAS_OBVIAS, true) || ($l !== '' && in_array($l, array_map($letras, self::SENHAS_OBVIAS), true)))
+            throw new DomainException('Essa senha é fácil de adivinhar: está na lista das senhas mais usadas.' . $dica);
+        // o e-mail, ou só o nome / a parte do e-mail com números e símbolos em volta
+        if (($email !== '' && $s === $email) || ($l !== '' && in_array($l, $palavras, true)))
+            throw new DomainException('Essa senha é fácil de adivinhar: usa seu nome ou seu e-mail.' . $dica);
     }
     /** Primeiro acesso com a senha inicial: o usuário escolhe a própria antes de usar o sistema */
     public static function trocarSenha(int $id, string $senha, string $confirmacao): void {

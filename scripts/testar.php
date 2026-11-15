@@ -102,7 +102,11 @@ try {
     $caixa = (int) $pdo->query("SELECT id FROM usuarios WHERE email = 'caixa1@teste.com'")->fetchColumn();
     // Senha definitiva (primeiro acesso e "Minha senha") recusa as óbvias; a provisória do admin continua livre
     ok(recusa(fn() => Usuario::trocarSenha($caixa, 'Rex#banho9!', 'Rex#banho9!'), 'entre 12 e 1024'), 'senha definitiva com 11 caracteres é recusada');
-    foreach (['  senha123  ', 'Senha123!!!!', '999999999999', 'aaaaaaaaaaaa', 'PETSHOP 2026', 'caixa1@teste.com', '1234567890  ', '1234 5678 90', " caixa1\t2026!", '111111111112', '123456789012', '000000000001', 'qwertyuiop12', '131313131313', 'abcdefghijkl', '987654321098'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($caixa, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa a senha óbvia ' . json_encode($fraca));
+    foreach (['  senha123  ', 'Senha123!!!!', '999999999999', 'aaaaaaaaaaaa', 'PETSHOP 2026', 'caixa1@teste.com', '1234567890  ', '1234 5678 90', " caixa1\t2026!", '111111111112', '123456789012', '000000000001', 'qwertyuiop12', '131313131313', 'abcdefghijkl', '987654321098', 'qwertyuiopas', 'asdfghjklçzx', 'qazwsxedcrfv', '102030405060', '135791357913'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($caixa, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa a senha óbvia ' . json_encode($fraca));
+    ok(recusa(fn() => Usuario::trocarSenha($caixa, '102030405060', '102030405060'), 'só números'), 'erro diz o motivo: só números');
+    ok(recusa(fn() => Usuario::trocarSenha($caixa, 'qwertyuiopas', 'qwertyuiopas'), 'teclas do teclado'), 'erro diz o motivo: sequência do teclado');
+    ok(recusa(fn() => Usuario::trocarSenha($caixa, '  senha123  ', '  senha123  '), 'mais usadas'), 'erro diz o motivo: lista das mais usadas');
+    ok(recusa(fn() => Usuario::trocarSenha($caixa, 'caixa1@teste.com', 'caixa1@teste.com'), 'nome ou seu e-mail'), 'erro diz o motivo: nome ou e-mail');
     ok(recusa(fn() => Usuario::alterarSenha($caixa, 'provisoria123', '   12345678   ', '   12345678   '), 'fácil de adivinhar'), 'minha senha recusa "   12345678   " (espaços em volta)');
     // Palavra óbvia, parte do e-mail ou nome do usuário ("Caixa Um") com números/símbolos em volta
     foreach (['admin1234567', 'Senha@2026!!', 'petshop20262026', 'caixa.1!2026', 'Caixa2026!!!'] as $fraca) ok(recusa(fn() => Usuario::trocarSenha($caixa, $fraca, $fraca), 'fácil de adivinhar'), 'trocar senha recusa palavra óbvia/nome com números ' . json_encode($fraca));
@@ -494,8 +498,9 @@ try {
         Cliente::salvarPet(['cliente_id' => $dono, 'nome' => $nome, 'especie' => 'cao']);
         $id = (int) $pdo->query("SELECT id FROM pets WHERE nome = '$nome'")->fetchColumn();
         $ins = $pdo->prepare("INSERT INTO agendamentos (cliente_id, pet_id, servico_id, inicio, fim, preco, status) VALUES (?, ?, ?, ?, ?, 45, ?)");
-        foreach ($atendimentos as [$dias, $status]) {
-            $quando = date('Y-m-d 10:00', strtotime("$dias days"));
+        foreach ($atendimentos as $at) {
+            [$dias, $status] = $at;
+            $quando = date('Y-m-d ' . ($at[2] ?? '10:00'), strtotime("$dias days"));
             $ins->execute([$dono, $id, $servico, $quando, $quando, $status]);
         }
         return $id;
@@ -504,13 +509,30 @@ try {
     $emDia = $pet('RT em dia', [[-40, 'pago'], [-20, 'pago'], [-10, 'pago']]);                 // média 15, faz 10: em dia
     $umSo = $pet('RT um so', [[-31, 'pago'], [-5, 'cancelado'], [-3, 'faltou']]);              // 1 atendimento (cancelado e falta não contam): 30 dias, faz 31
     $marcado = $pet('RT marcado', [[-40, 'pago'], [3, 'agendado']]);                           // atrasado, mas já tem horário
+    $naLoja = $pet('RT na loja', [[-40, 'pago'], [0, 'em_atendimento', '00:00']]);             // horário de hoje que já começou: está na loja
+    $hojeCedo = $pet('RT hoje cedo', [[-40, 'pago'], [0, 'agendado', '00:00']]);               // horário de hoje já passou, ainda não fechado
+    $esquecido = $pet('RT esquecido', [[-40, 'pago'], [-1, 'agendado']]);                      // ontem, ninguém marcou a falta: continua atrasado
     $sumido = $pet('RT sumido', [[-120, 'pago'], [-95, 'pago']]);                              // faz 95 dias: passou do limite
     $ret = array_column(Agenda::retornos(), null, 'pet_id');
     ok(isset($ret[$quinzenal]) && $ret[$quinzenal]['intervalo'] === 15 && $ret[$quinzenal]['faz_dias'] === 20, 'retorno: pet que vem a cada 15 dias aparece com 20 dias sem vir');
     ok(!isset($ret[$emDia]), 'retorno: pet dentro do intervalo de costume não aparece');
     ok(isset($ret[$umSo]) && $ret[$umSo]['intervalo'] === Agenda::RETORNO_PADRAO_DIAS, 'retorno: pet com um atendimento usa 30 dias; cancelado e falta não contam');
     ok(!isset($ret[$marcado]) && !isset($ret[$sumido]), 'retorno: com horário marcado ou há mais de 90 dias fica de fora');
-    ok(str_contains(Agenda::mensagemRetorno($ret[$quinzenal]), 'Olá, Rita! ') && str_contains(Agenda::mensagemRetorno($ret[$quinzenal]), '20 dias do último banho de RT quinzenal'), 'retorno: mensagem do WhatsApp com o primeiro nome e os dias');
+    ok(!isset($ret[$naLoja]) && !isset($ret[$hojeCedo]), 'retorno: pet com horário hoje (já começou ou em atendimento) fica de fora');
+    ok(isset($ret[$esquecido]), 'retorno: horário de ontem que ninguém fechou não tira o pet do aviso');
+    $msg = Agenda::mensagemRetorno($ret[$quinzenal]);
+    $servicoNome = (string) $pdo->query("SELECT nome FROM servicos WHERE id = $servico")->fetchColumn();
+    ok(str_contains($msg, 'Olá, Rita! ') && str_contains($msg, "20 dias da última visita de RT quinzenal ($servicoNome)"), 'retorno: mensagem com o primeiro nome, os dias e o serviço da última visita');
+    $comDose = Agenda::mensagemRetorno($ret[$quinzenal], ['tipo' => 'vacina', 'nome' => 'V10', 'dias' => 3, 'proxima_em' => date('Y-m-d', strtotime('+3 days'))]);
+    ok(str_contains($comDose, 'Aproveitando: a próxima dose de vacina (V10) vence em ' . date('d/m', strtotime('+3 days'))), 'retorno: pet com dose vencendo lembra as duas coisas na mesma mensagem');
+    ok(Cliente::celular('91988887777') && !Cliente::celular('9132245566') && !Cliente::celular('91888877776'), 'celular: DDD + 9 + 8 números; fixo fica sem WhatsApp');
+
+    // Lista de compras: lote vencido não conta como estoque (o caixa também não vende)
+    $vencido = $novo('LC com vencido', 5, 3, 0);
+    Estoque::entrada($vencido, 10, 'Fornecedor LC com vencido', 'LC-VENC', date('Y-m-d', strtotime('+1 day')));
+    $pdo->exec("UPDATE lotes SET validade = date('now','localtime','-2 days') WHERE codigo = 'LC-VENC'");
+    $lista = array_column(Estoque::listaCompras(), null, 'id');
+    ok(isset($lista[$vencido]) && (int) $lista[$vencido]['estoque'] === 3 && $lista[$vencido]['sugestao'] === 7, 'lista de compras: 10 unidades vencidas não contam (estoque 3, compra 7 para o dobro do mínimo)');
 
     $_SESSION = [];
 } catch (Throwable $e) {

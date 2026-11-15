@@ -181,7 +181,7 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
 
   <section class="card card-body mb-3" id="est-compras"<?= $busca === '' ? ' data-recolher' : '' ?>>
 
-    <h2>Lista de compras</h2>
+    <h2>Lista de compras<span class="so-imprimir"> · <?= date('d/m/Y') ?></span></h2>
 
     <?php if (!$compras): ?>
 
@@ -209,13 +209,13 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
 
           <?php foreach ($compras as $c): ?>
 
-            <tr>
+            <tr data-fornecedor="<?= e($c['fornecedor'] ?? '') ?>">
               <td data-produto><?= e($c['nome']) ?></td>
               <td class="num"><?= $c['estoque'] ?></td>
               <td class="num"><?= $c['estoque_minimo'] ?></td>
               <td class="num"><?= number_format($c['por_semana'], 1, ',', '') ?></td>
               <td class="num">
-                <input class="form-control form-control-sm qtd-compra" autocomplete="off" type="number" min="0" max="99999" value="<?= $c['sugestao'] ?>" aria-label="Comprar de <?= e($c['nome']) ?>">
+                <input class="form-control form-control-sm qtd-compra" autocomplete="off" type="number" min="0" max="99999" step="1" inputmode="numeric" value="<?= $c['sugestao'] ?>" aria-label="Comprar de <?= e($c['nome']) ?>">
               </td>
               <td><?= e($c['fornecedor'] ?? '—') ?></td>
               <td class="num"><?= $c['preco_custo'] > 0 ? moeda($c['preco_custo']) : '—' ?></td>
@@ -229,7 +229,10 @@ $secoes = ($gerencia ? ['est-entrada' => 'Entrada'] : []) + ['alertas' => 'Alert
 
       <div class="d-flex gap-2 flex-wrap">
         <button type="button" class="btn btn-light" data-imprimir-secao="est-compras"><i class="bi bi-printer" aria-hidden="true"></i> Imprimir</button>
-        <button type="button" class="btn btn-light" data-whatsapp-compras><i class="bi bi-whatsapp" aria-hidden="true"></i> Enviar pelo WhatsApp</button>
+        <?php // um pedido por fornecedor: cada um recebe só o que vende (sem fornecedor registrado = "Outros") ?>
+        <?php foreach (array_unique(array_map(fn($c) => (string) ($c['fornecedor'] ?? ''), $compras)) as $forn): ?>
+          <button type="button" class="btn btn-light" data-whatsapp-compras="<?= e($forn) ?>"><i class="bi bi-whatsapp" aria-hidden="true"></i> Pedido<?= $forn !== '' ? ' para ' . e($forn) : ' dos sem fornecedor' ?></button>
+        <?php endforeach; ?>
       </div>
 
     <?php endif; ?>

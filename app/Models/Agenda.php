@@ -251,11 +251,13 @@ class Agenda {
      * Intervalo = média entre os últimos 6 atendimentos (2 ou mais) ou RETORNO_PADRAO_DIAS. Quem já tem horário marcado fica de fora.
      */
     public static function retornos(): array {
-        $linhas = Database::pdo()->query("SELECT a.pet_id, date(a.inicio) AS dia, p.nome AS pet, p.especie, c.id AS cliente_id, c.nome AS cliente, c.telefone
-            FROM agendamentos a JOIN pets p ON p.id = a.pet_id JOIN clientes c ON c.id = a.cliente_id
+        // fica de fora quem tem horário de hoje em diante, inclusive o de hoje que já começou ou está sendo atendido;
+        // horário de dia anterior que ninguém fechou (falta não marcada) não conta: o último atendimento continua o antigo
+        $linhas = Database::pdo()->query("SELECT a.pet_id, date(a.inicio) AS dia, s.nome AS servico, p.nome AS pet, p.especie, c.id AS cliente_id, c.nome AS cliente, c.telefone
+            FROM agendamentos a JOIN pets p ON p.id = a.pet_id JOIN clientes c ON c.id = a.cliente_id JOIN servicos s ON s.id = a.servico_id
             WHERE a.status IN ('pronto', 'pago') AND a.inicio <= strftime('%Y-%m-%d %H:%M', 'now', 'localtime') AND p.ativo = 1 AND c.ativo = 1
               AND NOT EXISTS (SELECT 1 FROM agendamentos f WHERE f.pet_id = a.pet_id AND f.status IN ('agendado', 'em_atendimento', 'pronto', 'pago')
-                  AND f.inicio > strftime('%Y-%m-%d %H:%M', 'now', 'localtime'))
+                  AND date(f.inicio) >= date('now', 'localtime'))
             ORDER BY a.pet_id, a.inicio")->fetchAll();
         $porPet = [];
         foreach ($linhas as $l) { $porPet[$l['pet_id']]['dados'] = $l; $porPet[$l['pet_id']]['dias'][$l['dia']] = true; }
@@ -275,10 +277,13 @@ class Agenda {
         return $lista;
     }
 
-    /** Mensagem pronta para chamar o dono de um pet atrasado (ver retornos) */
-    public static function mensagemRetorno(array $r): string {
-        return 'Olá, ' . Cliente::primeiroNome($r['cliente']) . '! Aqui é da ' . (config('loja')['nome'] ?? config('app_nome'))
-            . ". Já faz {$r['faz_dias']} dias do último banho de {$r['pet']}. Quer agendar um horário?";
+    /** Mensagem pronta para chamar o dono de um pet atrasado (ver retornos); com $dose (de Cliente::dosesAVencer), lembra a dose na mesma mensagem */
+    public static function mensagemRetorno(array $r, ?array $dose = null): string {
+        $texto = 'Olá, ' . Cliente::primeiroNome($r['cliente']) . '! Aqui é da ' . (config('loja')['nome'] ?? config('app_nome'))
+            . ". Já faz {$r['faz_dias']} dias da última visita de {$r['pet']} ({$r['servico']}). Quer agendar um horário?";
+        if ($dose) $texto .= ' Aproveitando: a próxima dose de ' . mb_strtolower(Cliente::TIPOS_DOSE[$dose['tipo']]) . " ({$dose['nome']}) "
+            . ($dose['dias'] < 0 ? 'venceu em ' : 'vence em ') . date('d/m', strtotime($dose['proxima_em'])) . '.';
+        return $texto;
     }
 
     /** Mensagem pronta do WhatsApp: 'lembrete' (do horário marcado) ou 'pronto' (pode vir buscar) */

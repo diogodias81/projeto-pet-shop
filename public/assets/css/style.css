@@ -36,7 +36,7 @@ h3 { font-size: .95rem; font-weight: 650; margin: 1.5rem 0 .6rem; }
 .lateral-cta { display: flex; align-items: center; justify-content: center; gap: .4rem; padding: .6rem; }
 .lateral-nav { display: grid; gap: 1rem; }
 .lateral-grupo { display: grid; gap: .1rem; }
-.lateral-titulo { padding: 0 .75rem .3rem; font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--suave); opacity: .75; }
+.lateral-titulo { padding: 0 .75rem .3rem; font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--suave); }
 .lateral .nav-link { position: relative; display: flex; align-items: center; gap: .7rem; padding: .5rem .75rem; border-radius: 10px; color: var(--suave); font-weight: 550; font-size: .93rem; transition: background .15s, color .15s; }
 .lateral .nav-link .bi { font-size: 1.05rem; }
 .lateral .nav-link .badge { margin-left: auto; }
@@ -343,7 +343,7 @@ section.card > h2 > .btn:first-of-type { margin-left: auto; }
   .lateral .nav-link { padding-block: .26rem; }
   .lateral-usuario { position: sticky; bottom: 0; margin-bottom: .75rem; padding: .45rem .5rem; box-shadow: 0 .75rem 0 var(--painel); }
   /* 843px de menu em 657 de tela: títulos compactos (o menu rola e o usuário fica preso embaixo) e usuário numa linha só */
-  .lateral-titulo { padding-bottom: .1rem; font-size: .62rem; }
+  .lateral-titulo { padding-bottom: .1rem; font-size: .68rem; }
   .lateral-quem { grid-column: 2; }
   .lateral-quem strong { display: block; white-space: nowrap; text-overflow: ellipsis; } /* "Administra/dor" quebrava no meio */
   .lateral-usuario > .btn-icone, .lateral-usuario > form { grid-row: 1; }
@@ -748,7 +748,7 @@ small.busca-aviso { display: block; width: 0; min-width: 100%; margin: .25rem 0 
   section.recolhida > :not(h2) { display: revert !important; } /* mesma força da regra do celular, vem depois: vence */
   main:has(.comprovante) > :not(.comprovante) { display: none !important; }
   body.imprimir-secao .conteudo > :not(.imprimindo, .pagina-topo) { display: none !important; } /* data-imprimir-secao (app.js) */
-  .qtd-compra { border: 0; padding: 0; text-align: right; background: none; }
+  table input.qtd-compra { border: 0; padding: 0; text-align: right; background: none; box-shadow: none; } /* vence a regra geral de input: só o número no papel */
   .comprovante { border: 0; max-width: none; margin: 0; padding: 0; box-shadow: none; -webkit-mask: none; mask: none; }
 }
 
@@ -826,4 +826,7 @@ small.busca-aviso { display: block; width: 0; min-width: 100%; margin: .25rem 0 
 .resumo-gaveta { grid-template-columns: 1fr auto; } .resumo-gaveta dd { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* Lista de compras (Estoque) */
-.qtd-compra { width: 5.5rem; margin-left: auto; text-align: right; }
+table input.qtd-compra { width: 5.5rem; min-width: 0; margin-left: auto; text-align: right; } /* "table": vence o min-width: 9rem da regra geral de input */
+table input.qtd-compra:invalid { border-color: var(--erro); }
+/* Quadros de aviso (doses, retorno): botões com 44px de altura no celular, fáceis de acertar */
+@media (max-width: 640px) { .quadro-aviso .btn-sm { min-height: 44px; display: inline-flex; align-items: center; } }

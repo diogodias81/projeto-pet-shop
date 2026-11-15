@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
       </p>
 
       <p class="text-body-secondary small mb-0" id="senha-ajuda">
-        Pelo menos <?= Usuario::SENHA_MIN ?> caracteres (uma frase curta funciona bem). São recusadas as senhas comuns (123456, senha123) e seu nome ou e-mail, mesmo com números; evite também datas.
+        Pelo menos <?= Usuario::SENHA_MIN ?> caracteres (uma frase curta funciona bem). São recusadas: senhas comuns (senha123), só números, sequências (123456, abcdef, qwerty), caracteres repetidos e seu nome ou e-mail.
       </p>
     </div>
 
@@ -87,6 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['page'] ?? '') === 'trocar_s
     <?php endif; ?>
 
     <?= csrf_campo() ?>
+    <?php // o gerenciador de senhas do navegador associa a senha nova a esta conta ?>
+    <input type="text" name="usuario_email" value="<?= e(usuario()['email'] ?? '') ?>" autocomplete="username" hidden>
 
     <label>
       Nova senha

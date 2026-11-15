@@ -1,7 +1,7 @@
 <?php
 class Produto {
     /** Quantidade que pode ser vendida: soma dos lotes sem validade ou ainda não vencidos */
-    private const VENDAVEL = "(SELECT COALESCE(SUM(l.quantidade),0) FROM lotes l WHERE l.produto_id = p.id AND (l.validade IS NULL OR l.validade >= date('now','localtime')))";
+    public const VENDAVEL = "(SELECT COALESCE(SUM(l.quantidade),0) FROM lotes l WHERE l.produto_id = p.id AND (l.validade IS NULL OR l.validade >= date('now','localtime')))";
 
     /** Lista e pesquisa produtos ativos por nome, código de barras ou categoria */
     public static function listar(string $busca = '', int $categoriaId = 0): array {

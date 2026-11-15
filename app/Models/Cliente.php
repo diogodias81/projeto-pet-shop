@@ -65,6 +65,11 @@ class Cliente {
         return $st->fetch();
     }
 
+    /** Celular (DDD + 9 + 8 números): telefone fixo não tem WhatsApp na maioria das vezes */
+    public static function celular(string $telefone): bool {
+        return (bool) preg_match('/^\d{2}9\d{8}$/', $telefone);
+    }
+
     /** Link do WhatsApp para o telefone (só números, com DDD) com a mensagem já escrita */
     public static function whatsapp(string $telefone, string $texto = ''): string {
         return 'https://wa.me/55' . $telefone . ($texto !== '' ? '?text=' . rawurlencode($texto) : '');

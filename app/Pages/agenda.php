@@ -137,7 +137,7 @@ $rotuloPasso = ['em_atendimento' => ['Iniciar', 'play-fill', 'btn-primary'], 'pr
       <label>
         Horário
         <script type="application/json" id="agenda-ocupados"><?= json_encode(Agenda::ocupados()) ?></script>
-        <select name="hora" required data-hoje="<?= $hoje ?>" data-agora="<?= date('H:i') ?>" data-fecha="<?= e(config('agenda_fecha')) ?>" data-limite="<?= max(1, (int) config('banho_tosa_simultaneos')) ?>">
+        <select name="hora" required<?= $petEscolhido && !$antigo ? ' data-foco' : '' ?> data-hoje="<?= $hoje ?>" data-agora="<?= date('H:i') ?>" data-fecha="<?= e(config('agenda_fecha')) ?>" data-limite="<?= max(1, (int) config('banho_tosa_simultaneos')) ?>">
           <option value="">Escolha…</option>
           <?php foreach (Agenda::horarios() as $h): ?>
             <option value="<?= $h ?>" <?= ($antigo['hora'] ?? '') === $h ? 'selected' : '' ?>><?= $h ?></option>

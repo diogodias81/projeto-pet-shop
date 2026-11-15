@@ -144,7 +144,7 @@ $perfilAtual = $antigo['perfil'] ?? $editando['perfil'] ?? '';
           minlength="<?= Usuario::SENHA_MIN ?>"
           maxlength="1024"
           autocomplete="new-password"
-          data-revelar
+          data-revelar<?= $antigo ? ' data-foco' : '' ?>
           required>
       </label>
       <?php endif; ?>

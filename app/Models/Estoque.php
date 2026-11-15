@@ -180,10 +180,10 @@ class Estoque {
     /**
      * Lista de compras: produtos no mínimo ou abaixo e os que chegam nele em até 14 dias pela venda dos últimos 30.
      * Sugestão = 30 dias de venda + mínimo − estoque, e pelo menos o que falta para o dobro do mínimo (produto parado).
-     * Mínimo 0 = não controla reposição (mesma regra de Produto::precisaRepor).
+     * Mínimo 0 = não controla reposição (mesma regra de Produto::precisaRepor). Estoque = o que dá para vender (sem lote vencido), como no caixa.
      */
     public static function listaCompras(): array {
-        $st = Database::pdo()->prepare("SELECT p.id, p.nome, p.estoque, p.estoque_minimo, p.preco_custo,
+        $st = Database::pdo()->prepare("SELECT p.id, p.nome, " . Produto::VENDAVEL . " AS estoque, p.estoque_minimo, p.preco_custo,
                 COALESCE((SELECT -SUM(m.quantidade) FROM movimentacoes_estoque m
                     WHERE m.produto_id = p.id AND m.tipo IN ('venda', 'devolucao', 'cancelamento') AND m.criado_em >= ?), 0) AS vendidos30,
                 (SELECT e.fornecedor FROM entradas_estoque e WHERE e.produto_id = p.id AND TRIM(e.fornecedor) <> '' ORDER BY e.id DESC LIMIT 1) AS fornecedor

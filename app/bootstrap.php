@@ -85,14 +85,14 @@ Database::migrar();
 
 // Recarrega o usuário a cada requisição: excluído, desativado ou com a senha trocada em outra sessão perde a sessão, perfil alterado vale na hora.
 if (isset($_SESSION['user'])) {
-    $st = Database::pdo()->prepare('SELECT id, nome, perfil, trocar_senha, sessao_versao FROM usuarios WHERE id = ? AND ativo = 1 AND sessao_versao = ?');
+    $st = Database::pdo()->prepare('SELECT id, nome, email, perfil, trocar_senha, sessao_versao FROM usuarios WHERE id = ? AND ativo = 1 AND sessao_versao = ?');
     $st->execute([$_SESSION['user']['id'], $_SESSION['user']['sessao_versao'] ?? 0]);
     $u = $st->fetch();
     // Cursor aberto segura a leitura a requisição toda: o BEGIN IMMEDIATE seguinte dá "database is locked" na hora, sem esperar o busy_timeout
     $st->closeCursor();
 
     if ($u) {
-        $_SESSION['user'] = ['id' => (int) $u['id'], 'nome' => $u['nome'], 'perfil' => $u['perfil'], 'trocar_senha' => (int) $u['trocar_senha'], 'sessao_versao' => (int) $u['sessao_versao']];
+        $_SESSION['user'] = ['id' => (int) $u['id'], 'nome' => $u['nome'], 'email' => $u['email'], 'perfil' => $u['perfil'], 'trocar_senha' => (int) $u['trocar_senha'], 'sessao_versao' => (int) $u['sessao_versao']];
     } else {
         $_SESSION = ['csrf' => bin2hex(random_bytes(16))];
         session_regenerate_id(true);
